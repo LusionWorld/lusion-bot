@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Config & secrets
+config.json
+.env
+*.env
+
+# Databases (runtime data, not source)
+banco/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+
+# Emoji manifest (auto-generated)
+src/utils/emojis/.emoji-manifest.json
