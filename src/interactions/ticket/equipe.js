@@ -23,6 +23,8 @@ const { getEmoji, getConfigDB } = require("./helpers");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
+const { t } = require("../../utils/i18n");
+
 function getOnOffEmoji(status) {
   return status ? getEmoji(emojis.on) : getEmoji(emojis.off);
 }
@@ -39,7 +41,7 @@ function safeReply(interaction, options) {
   });
 }
 
-function criarPainelPrincipal(db) {
+function criarPainelPrincipal(db, guildId) {
   const teamRoles = db.get("team") || [];
   const usersPerms = db.get("usersperms") || {};
   const totalRoles = teamRoles.length;
@@ -50,52 +52,49 @@ function criarPainelPrincipal(db) {
       ? teamRoles
           .slice(0, 5)
           .map((id) => `<@&${id}>`)
-          .join(", ") + (totalRoles > 5 ? ` e mais ${totalRoles - 5}...` : "")
-      : "Nenhum cargo configurado";
+          .join(", ") +
+          (totalRoles > 5 ? ` ${t("eq_e_mais", guildId, { n: totalRoles - 5 })}` : "")
+      : t("eq_nenhum_cargo", guildId);
 
   const usersText =
     totalUsers > 0
-      ? `${totalUsers} usuário(s) com permissões personalizadas`
-      : "Nenhum usuário configurado";
+      ? t("eq_usuarios_com_perms", guildId, { n: totalUsers })
+      : t("eq_nenhum_usuario", guildId);
 
   const btnAdicionarCargo = new ButtonBuilder()
     .setCustomId("eq_add_role")
-    .setLabel("Gerenciar Cargos")
+    .setLabel(t("eq_btn_gerenciar_cargos", guildId))
     .setEmoji(getEmoji(emojis.role))
     .setStyle(ButtonStyle.Secondary);
 
   const btnAdicionarUsuario = new ButtonBuilder()
     .setCustomId("eq_add_user")
-    .setLabel("Gerenciar Usuários")
+    .setLabel(t("eq_btn_gerenciar_usuarios", guildId))
     .setEmoji(getEmoji(emojis.users))
     .setStyle(ButtonStyle.Secondary);
 
   const btnListar = new ButtonBuilder()
     .setCustomId("eq_listar")
-    .setLabel("Ver Equipe")
+    .setLabel(t("eq_btn_ver_equipe", guildId))
     .setEmoji(getEmoji(emojis.user))
     .setStyle(ButtonStyle.Secondary);
 
   const btnLimpar = new ButtonBuilder()
     .setCustomId("eq_limpar")
-    .setLabel("Limpar Tudo")
+    .setLabel(t("eq_btn_limpar_tudo", guildId))
     .setEmoji(getEmoji(emojis.lixeira))
     .setStyle(ButtonStyle.Danger);
 
   const btnVoltar = new ButtonBuilder()
     .setCustomId("configurar_ticket")
-    .setLabel("Voltar")
+    .setLabel(t("btn_voltar", guildId))
     .setEmoji(getEmoji(emojis.arrowl))
     .setStyle(ButtonStyle.Secondary);
 
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${emojis.suporte} **Permissões de Atendimento**`,
-      ),
-      new TextDisplayBuilder().setContent(
-        "Gerencie quais cargos e usuários podem atender ou configurar tickets.",
-      ),
+      new TextDisplayBuilder().setContent(t("eq_titulo", guildId)),
+      new TextDisplayBuilder().setContent(t("eq_desc", guildId)),
     )
     .addSeparatorComponents(
       new SeparatorBuilder()
@@ -104,8 +103,7 @@ function criarPainelPrincipal(db) {
     )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${emojis.role} **Cargos permitidos:** ${rolesText}\n` +
-          `${emojis.users} **Usuários:** ${usersText}`,
+        t("eq_painel_status", guildId, { cargos: rolesText, usuarios: usersText }),
       ),
     )
     .addSeparatorComponents(
@@ -125,7 +123,7 @@ function criarPainelPrincipal(db) {
   return [container];
 }
 
-function criarPainelGerenciarCargos(guild, db) {
+function criarPainelGerenciarCargos(guild, db, guildId) {
   const teamRoles = db.get("team") || [];
 
   const rolesText =
@@ -137,11 +135,11 @@ function criarPainelGerenciarCargos(guild, db) {
           })
           .filter(Boolean)
           .join("\n")
-      : "Nenhum cargo definido ainda.";
+      : t("eq_nenhum_cargo_definido", guildId);
 
   const select = new RoleSelectMenuBuilder()
     .setCustomId("eq_select_roles")
-    .setPlaceholder("Selecione os cargos permitidos")
+    .setPlaceholder(t("eq_select_cargos_placeholder", guildId))
     .setMinValues(0)
     .setMaxValues(25);
 
@@ -151,18 +149,14 @@ function criarPainelGerenciarCargos(guild, db) {
 
   const btnVoltar = new ButtonBuilder()
     .setCustomId("team_ticket")
-    .setLabel("Voltar")
+    .setLabel(t("btn_voltar", guildId))
     .setEmoji(getEmoji(emojis.arrowl))
     .setStyle(ButtonStyle.Secondary);
 
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${emojis.role} **Gerenciar Cargos**`,
-      ),
-      new TextDisplayBuilder().setContent(
-        "Selecione os cargos que poderão atender tickets. Remova um cargo desmarcando-o.",
-      ),
+      new TextDisplayBuilder().setContent(t("eq_gerenciar_cargos_titulo", guildId)),
+      new TextDisplayBuilder().setContent(t("eq_gerenciar_cargos_desc", guildId)),
     )
     .addSeparatorComponents(
       new SeparatorBuilder()
@@ -170,7 +164,7 @@ function criarPainelGerenciarCargos(guild, db) {
         .setSpacing(SeparatorSpacingSize.Small),
     )
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(`**Cargos atuais:**\n${rolesText}`),
+      new TextDisplayBuilder().setContent(t("eq_cargos_atuais", guildId, { cargos: rolesText })),
     )
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(select),
@@ -180,45 +174,45 @@ function criarPainelGerenciarCargos(guild, db) {
   return [container];
 }
 
-function criarPainelGerenciarUsuario(userId, db) {
+function criarPainelGerenciarUsuario(userId, db, guildId) {
   const perms = db.get(`usersperms.${userId}`) || [];
   const hasAtender = perms.includes("Atender ticket");
   const hasConfigurar = perms.includes("Configurar bot");
 
   const btnAtender = new ButtonBuilder()
     .setCustomId(`eq_perm_atender_${userId}`)
-    .setLabel("Atender Ticket")
+    .setLabel(t("eq_perm_atender", guildId))
     .setEmoji(getOnOffEmoji(hasAtender))
     .setStyle(hasAtender ? ButtonStyle.Success : ButtonStyle.Secondary);
 
   const btnConfigurar = new ButtonBuilder()
     .setCustomId(`eq_perm_configurar_${userId}`)
-    .setLabel("Configurar Bot")
+    .setLabel(t("eq_perm_configurar", guildId))
     .setEmoji(getOnOffEmoji(hasConfigurar))
     .setStyle(hasConfigurar ? ButtonStyle.Success : ButtonStyle.Secondary);
 
   const btnRemover = new ButtonBuilder()
     .setCustomId(`eq_remover_usuario_${userId}`)
-    .setLabel("Remover Usuário")
+    .setLabel(t("eq_btn_remover_usuario", guildId))
     .setEmoji(getEmoji(emojis.lixeira))
     .setStyle(ButtonStyle.Danger);
 
   const btnVoltar = new ButtonBuilder()
     .setCustomId("team_ticket")
-    .setLabel("Voltar")
+    .setLabel(t("btn_voltar", guildId))
     .setEmoji(getEmoji(emojis.arrowl))
     .setStyle(ButtonStyle.Secondary);
 
+  const atenderLabel = t("eq_perm_atender", guildId);
+  const configurarLabel = t("eq_perm_configurar", guildId);
   const statusText =
-    `${hasAtender ? emojis.check : emojis.cancel} Atender ticket\n` +
-    `${hasConfigurar ? emojis.check : emojis.cancel} Configurar bot`;
+    `${hasAtender ? emojis.check : emojis.cancel} ${atenderLabel}\n` +
+    `${hasConfigurar ? emojis.check : emojis.cancel} ${configurarLabel}`;
 
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${emojis.user} **Permissões do Usuário**`,
-      ),
-      new TextDisplayBuilder().setContent(`Usuário: <@${userId}>`),
+      new TextDisplayBuilder().setContent(t("eq_permissoes_usuario_titulo", guildId)),
+      new TextDisplayBuilder().setContent(t("eq_permissoes_usuario_usuario", guildId, { userId })),
     )
     .addSeparatorComponents(
       new SeparatorBuilder()
@@ -226,9 +220,7 @@ function criarPainelGerenciarUsuario(userId, db) {
         .setSpacing(SeparatorSpacingSize.Small),
     )
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `**Status das permissões:**\n${statusText}`,
-      ),
+      new TextDisplayBuilder().setContent(t("eq_status_permissoes", guildId, { status: statusText })),
     )
     .addSeparatorComponents(
       new SeparatorBuilder()
@@ -243,14 +235,14 @@ function criarPainelGerenciarUsuario(userId, db) {
   return [container];
 }
 
-function criarPainelListarEquipe(guild, db) {
+function criarPainelListarEquipe(guild, db, guildId) {
   const teamRoles = db.get("team") || [];
   const usersPerms = db.get("usersperms") || {};
   const entries = Object.entries(usersPerms);
 
   const btnVoltar = new ButtonBuilder()
     .setCustomId("team_ticket")
-    .setLabel("Voltar")
+    .setLabel(t("btn_voltar", guildId))
     .setEmoji(getEmoji(emojis.arrowl))
     .setStyle(ButtonStyle.Secondary);
 
@@ -262,17 +254,22 @@ function criarPainelListarEquipe(guild, db) {
             return r ? `• ${r.toString()}` : null;
           })
           .filter(Boolean)
-          .join("\n") || "Cargos não encontrados no servidor"
-      : "Nenhum cargo configurado";
+          .join("\n") || t("eq_cargos_nao_encontrados", guildId)
+      : t("eq_nenhum_cargo", guildId);
 
-  let usersText = "Nenhum usuário com permissões personalizadas";
+  const permMap = {
+    "Atender ticket": t("eq_perm_atender", guildId),
+    "Configurar bot": t("eq_perm_configurar", guildId),
+  };
+
+  let usersText = t("eq_sem_usuarios_perms", guildId);
   if (entries.length > 0) {
     usersText = entries
       .map(([uid, perms]) => {
         const permList =
           perms.length > 0
-            ? perms.map((p) => `  ${emojis.check} ${p}`).join("\n")
-            : `  ${emojis.cancel} Sem permissões`;
+            ? perms.map((p) => `  ${emojis.check} ${permMap[p] || p}`).join("\n")
+            : `  ${emojis.cancel} ${t("eq_sem_permissoes", guildId)}`;
         return `<@${uid}>\n${permList}`;
       })
       .join("\n\n");
@@ -280,9 +277,7 @@ function criarPainelListarEquipe(guild, db) {
 
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${emojis.users} **Equipe de Atendimento**`,
-      ),
+      new TextDisplayBuilder().setContent(t("eq_equipe_titulo", guildId)),
     )
     .addSeparatorComponents(
       new SeparatorBuilder()
@@ -290,9 +285,7 @@ function criarPainelListarEquipe(guild, db) {
         .setSpacing(SeparatorSpacingSize.Small),
     )
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${emojis.role} **Cargos permitidos:**\n${rolesText}`,
-      ),
+      new TextDisplayBuilder().setContent(t("eq_cargos_lista", guildId, { cargos: rolesText })),
     )
     .addSeparatorComponents(
       new SeparatorBuilder()
@@ -300,9 +293,7 @@ function criarPainelListarEquipe(guild, db) {
         .setSpacing(SeparatorSpacingSize.Small),
     )
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${emojis.user} **Usuários com permissões:**\n${usersText}`,
-      ),
+      new TextDisplayBuilder().setContent(t("eq_usuarios_lista", guildId, { usuarios: usersText })),
     )
     .addActionRowComponents(new ActionRowBuilder().addComponents(btnVoltar));
 
@@ -337,10 +328,11 @@ module.exports = {
     if (!interaction._fromPainel) return;
     if (!interaction.guild) return;
 
+    const guildId = interaction.guildId;
     const db = getConfigDB(interaction.guild.id);
 
     if (customId === "team_ticket") {
-      const components = criarPainelPrincipal(db);
+      const components = criarPainelPrincipal(db, guildId);
       return safeUpdate(interaction, {
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -350,7 +342,7 @@ module.exports = {
     }
 
     if (customId === "eq_add_role") {
-      const components = criarPainelGerenciarCargos(interaction.guild, db);
+      const components = criarPainelGerenciarCargos(interaction.guild, db, guildId);
       return safeUpdate(interaction, {
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -362,17 +354,15 @@ module.exports = {
     if (interaction.isRoleSelectMenu() && customId === "eq_select_roles") {
       db.set("team", interaction.values);
 
-      const components = criarPainelPrincipal(db);
+      const components = criarPainelPrincipal(db, guildId);
       const rolesText =
         interaction.values.length > 0
           ? interaction.values.map((id) => `<@&${id}>`).join(", ")
-          : "Nenhum cargo";
+          : t("eq_nenhum_cargo_salvo", guildId);
 
       const container = new ContainerBuilder().addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          `${emojis.check} **Cargos atualizados!**`,
-        ),
-        new TextDisplayBuilder().setContent(`Cargos salvos: ${rolesText}`),
+        new TextDisplayBuilder().setContent(t("eq_cargos_atualizados", guildId)),
+        new TextDisplayBuilder().setContent(t("eq_cargos_salvos", guildId, { cargos: rolesText })),
       );
 
       return safeUpdate(interaction, {
@@ -386,16 +376,16 @@ module.exports = {
     if (customId === "eq_add_user") {
       const modal = new ModalBuilder()
         .setCustomId("modal_eq_add_user")
-        .setTitle("Adicionar Usuário à Equipe");
+        .setTitle(t("eq_modal_add_user_titulo", guildId));
 
       const userSelect = new UserSelectMenuBuilder()
         .setCustomId("eq_user_select_modal")
-        .setPlaceholder("Escolha um usuário")
+        .setPlaceholder(t("eq_select_usuario_placeholder", guildId))
         .setRequired(true);
 
       const userLabel = new LabelBuilder()
-        .setLabel("Selecione o usuário")
-        .setDescription("O usuário receberá permissões personalizadas")
+        .setLabel(t("eq_label_selecionar_usuario", guildId))
+        .setDescription(t("eq_label_usuario_desc", guildId))
         .setUserSelectMenuComponent(userSelect);
 
       modal.addLabelComponents(userLabel);
@@ -410,7 +400,7 @@ module.exports = {
 
       if (!userId) {
         const container = new ContainerBuilder().addTextDisplayComponents(
-          new TextDisplayBuilder().setContent("❌ Nenhum usuário selecionado."),
+          new TextDisplayBuilder().setContent(t("eq_nenhum_usuario_selecionado", guildId)),
         );
         return safeReply(interaction, {
           components: [container],
@@ -422,7 +412,7 @@ module.exports = {
       const currentPerms = db.get(`usersperms.${userId}`) || [];
       db.set(`usersperms.${userId}`, currentPerms);
 
-      const components = criarPainelGerenciarUsuario(userId, db);
+      const components = criarPainelGerenciarUsuario(userId, db, guildId);
       return interaction.update({
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -443,7 +433,7 @@ module.exports = {
       perms = [...new Set(perms)];
       db.set(`usersperms.${userId}`, perms);
 
-      const components = criarPainelGerenciarUsuario(userId, db);
+      const components = criarPainelGerenciarUsuario(userId, db, guildId);
       return safeUpdate(interaction, {
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -464,7 +454,7 @@ module.exports = {
       perms = [...new Set(perms)];
       db.set(`usersperms.${userId}`, perms);
 
-      const components = criarPainelGerenciarUsuario(userId, db);
+      const components = criarPainelGerenciarUsuario(userId, db, guildId);
       return safeUpdate(interaction, {
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -481,11 +471,11 @@ module.exports = {
 
       const container = new ContainerBuilder().addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `${emojis.check} Usuário <@${userId}> removido da equipe.`,
+          t("eq_usuario_removido", guildId, { userId }),
         ),
       );
 
-      const mainComponents = criarPainelPrincipal(db);
+      const mainComponents = criarPainelPrincipal(db, guildId);
 
       return safeUpdate(interaction, {
         components: [container, ...mainComponents],
@@ -496,7 +486,7 @@ module.exports = {
     }
 
     if (customId === "eq_listar") {
-      const components = criarPainelListarEquipe(interaction.guild, db);
+      const components = criarPainelListarEquipe(interaction.guild, db, guildId);
       return safeUpdate(interaction, {
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -508,18 +498,18 @@ module.exports = {
     if (customId === "eq_limpar") {
       const modal = new ModalBuilder()
         .setCustomId("modal_eq_limpar")
-        .setTitle("Confirmar Limpeza de Permissões");
+        .setTitle(t("eq_modal_limpar_titulo", guildId));
 
       const inputConfirm = new TextInputBuilder()
         .setCustomId("confirmacao_limpar")
-        .setLabel("Digite CONFIRMAR para prosseguir")
-        .setPlaceholder("CONFIRMAR")
+        .setLabel(t("eq_label_confirmar_limpeza", guildId))
+        .setPlaceholder(t("eq_confirmar_palavra", guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       const label = new LabelBuilder()
-        .setLabel("⚠️ Atenção: ação irreversível!")
-        .setDescription("Todos os cargos e permissões serão removidos")
+        .setLabel(t("eq_label_atencao", guildId))
+        .setDescription(t("eq_label_atencao_desc", guildId))
         .setTextInputComponent(inputConfirm);
 
       modal.addLabelComponents(label);
@@ -532,11 +522,11 @@ module.exports = {
         .trim()
         .toUpperCase();
 
-      if (resposta !== "CONFIRMAR") {
+      const expected = t("eq_confirmar_palavra", guildId).trim().toUpperCase();
+
+      if (resposta !== expected) {
         const container = new ContainerBuilder().addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(
-            "❌ Confirmação incorreta. Nenhuma permissão foi alterada.",
-          ),
+          new TextDisplayBuilder().setContent(t("eq_confirmacao_incorreta", guildId)),
         );
         return safeReply(interaction, {
           components: [container],
@@ -548,12 +538,8 @@ module.exports = {
       db.set("usersperms", {});
 
       const container = new ContainerBuilder().addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          `${emojis.check} **Permissões resetadas com sucesso!**`,
-        ),
-        new TextDisplayBuilder().setContent(
-          "Todos os cargos e permissões de usuários foram removidos.",
-        ),
+        new TextDisplayBuilder().setContent(t("eq_permissoes_resetadas", guildId)),
+        new TextDisplayBuilder().setContent(t("eq_permissoes_resetadas_desc", guildId)),
       );
 
       return safeReply(interaction, {
@@ -563,7 +549,7 @@ module.exports = {
     }
 
     if (customId === "adicionar_cargo") {
-      const components = criarPainelGerenciarCargos(interaction.guild, db);
+      const components = criarPainelGerenciarCargos(interaction.guild, db, guildId);
       return safeUpdate(interaction, {
         components,
         flags: MessageFlags.IsComponentsV2,
@@ -575,16 +561,16 @@ module.exports = {
     if (customId === "adicionar_usuario") {
       const modal = new ModalBuilder()
         .setCustomId("modal_eq_add_user")
-        .setTitle("Adicionar Usuário à Equipe");
+        .setTitle(t("eq_modal_add_user_titulo", guildId));
 
       const userSelect = new UserSelectMenuBuilder()
         .setCustomId("eq_user_select_modal")
-        .setPlaceholder("Escolha um usuário")
+        .setPlaceholder(t("eq_select_usuario_placeholder", guildId))
         .setRequired(true);
 
       const userLabel = new LabelBuilder()
-        .setLabel("Selecione o usuário")
-        .setDescription("O usuário receberá permissões personalizadas")
+        .setLabel(t("eq_label_selecionar_usuario", guildId))
+        .setDescription(t("eq_label_usuario_desc", guildId))
         .setUserSelectMenuComponent(userSelect);
 
       modal.addLabelComponents(userLabel);

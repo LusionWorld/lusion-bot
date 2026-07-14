@@ -4,7 +4,8 @@ node_modules/
 # Config & secrets
 config.json
 .env
-*.env
+.env.*
+!.env.example
 
 # Databases (runtime data, not source)
 banco/
@@ -24,3 +25,4 @@ desktop.ini
 
 # Emoji manifest (auto-generated)
 src/utils/emojis/.emoji-manifest.json
+src/utils/emojis/.emoji-setup-done

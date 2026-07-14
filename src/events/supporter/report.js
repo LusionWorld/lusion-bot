@@ -66,7 +66,5 @@ module.exports = {
         } catch {}
       }
     })
-
-    console.log('[Supporter] Monthly report cron scheduled.')
   },
 }

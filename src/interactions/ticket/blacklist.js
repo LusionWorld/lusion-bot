@@ -19,6 +19,7 @@ const {
 const path = require("path");
 const fs = require("fs");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
+const { t } = require("../../utils/i18n");
 const emojis = getEmojis();
 
 function getEmoji(raw) {
@@ -121,31 +122,31 @@ function buildBlacklistPanel(guildId) {
 
   const addUserBtn = new ButtonBuilder()
     .setCustomId("bl_add_user")
-    .setLabel("Adicionar Usuário")
+    .setLabel(t("bl_btn_add_usuario", guildId))
     .setEmoji(getEmoji(emojis.user))
     .setStyle(ButtonStyle.Secondary);
 
   const addRoleBtn = new ButtonBuilder()
     .setCustomId("bl_add_role")
-    .setLabel("Adicionar Cargo")
+    .setLabel(t("bl_btn_add_cargo", guildId))
     .setEmoji(getEmoji(emojis.role))
     .setStyle(ButtonStyle.Secondary);
 
   const listBtn = new ButtonBuilder()
     .setCustomId("bl_listar")
-    .setLabel("Ver Lista")
+    .setLabel(t("bl_btn_ver_lista", guildId))
     .setEmoji(getEmoji(emojis.clipboard))
     .setStyle(ButtonStyle.Secondary);
 
   const clearBtn = new ButtonBuilder()
     .setCustomId("bl_limpar")
-    .setLabel("Limpar Tudo")
+    .setLabel(t("bl_btn_limpar", guildId))
     .setEmoji(getEmoji(emojis.trashcan))
     .setStyle(ButtonStyle.Danger);
 
   const voltarBtn = new ButtonBuilder()
     .setCustomId("configurar_ticket")
-    .setLabel("Voltar")
+    .setLabel(t("bl_btn_voltar", guildId))
     .setEmoji(getEmoji(emojis.arrowl))
     .setStyle(ButtonStyle.Secondary);
 
@@ -156,7 +157,7 @@ function buildBlacklistPanel(guildId) {
     new ContainerBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `# ${emojis.block} Sistema de Blacklist`,
+          `# ${emojis.block} ${t("bl_titulo", guildId)}`,
         ),
       )
       .addSeparatorComponents(
@@ -166,14 +167,14 @@ function buildBlacklistPanel(guildId) {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.user} Usuários Bloqueados**\nTotal: **${usuarios.length}** usuário(s) na blacklist.`,
+              `**${emojis.user} ${t("bl_usuarios_titulo", guildId)}**\nTotal: **${usuarios.length}**`,
             ),
           )
           .setButtonAccessory(addUserBtn),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.role} Cargos Bloqueados**\nTotal: **${cargos.length}** cargo(s) na blacklist.`,
+              `**${emojis.role} ${t("bl_roles_titulo", guildId)}**\nTotal: **${cargos.length}**`,
             ),
           )
           .setButtonAccessory(addRoleBtn),
@@ -183,7 +184,7 @@ function buildBlacklistPanel(guildId) {
       )
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `-# ${emojis.info} Total de entradas bloqueadas: **${totalBloqueados}**`,
+          `-# ${emojis.info} Total: **${totalBloqueados}**`,
         ),
       )
       .addSeparatorComponents(
@@ -242,13 +243,13 @@ module.exports = {
     if (customId === "bl_add_user") {
       const select = new UserSelectMenuBuilder()
         .setCustomId("bl_select_user")
-        .setPlaceholder("Selecione um usuário para bloquear")
+        .setPlaceholder(t("bl_modal_add_usuario_placeholder", guildId))
         .setMinValues(1)
         .setMaxValues(10);
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("bl_btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -257,10 +258,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `# ${emojis.block} Adicionar à Blacklist`,
+                `# ${emojis.block} ${t("bl_titulo", guildId)}`,
               ),
               new TextDisplayBuilder().setContent(
-                `**${emojis.user} Selecione os usuários** que deseja bloquear de abrir tickets.\nVocê pode selecionar até **10 usuários** por vez.`,
+                `**${emojis.user} ${t("bl_usuarios_titulo", guildId)}**`,
               ),
             )
             .addSeparatorComponents(
@@ -280,13 +281,13 @@ module.exports = {
     if (customId === "bl_add_role") {
       const select = new RoleSelectMenuBuilder()
         .setCustomId("bl_select_role")
-        .setPlaceholder("Selecione um cargo para bloquear")
+        .setPlaceholder(t("bl_modal_add_cargo_placeholder", guildId))
         .setMinValues(1)
         .setMaxValues(10);
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("bl_btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -295,10 +296,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `# ${emojis.block} Adicionar à Blacklist`,
+                `# ${emojis.block} ${t("bl_titulo", guildId)}`,
               ),
               new TextDisplayBuilder().setContent(
-                `**${emojis.role} Selecione os cargos** que deseja bloquear de abrir tickets.\nVocê pode selecionar até **10 cargos** por vez.`,
+                `**${emojis.role} ${t("bl_roles_titulo", guildId)}**`,
               ),
             )
             .addSeparatorComponents(
@@ -334,15 +335,15 @@ module.exports = {
 
       let msg = "";
       if (adicionados.length > 0) {
-        msg += `${emojis.check} **${adicionados.length}** usuário(s) adicionado(s) à blacklist:\n${adicionados.map((id) => `<@${id}>`).join(", ")}\n`;
+        msg += `${emojis.check} **${adicionados.length}** ${t("bl_add_usuario_sucesso", guildId)}\n${adicionados.map((id) => `<@${id}>`).join(", ")}\n`;
       }
       if (jaExistiam.length > 0) {
-        msg += `${emojis.warning} **${jaExistiam.length}** usuário(s) já estavam na blacklist:\n${jaExistiam.map((id) => `<@${id}>`).join(", ")}`;
+        msg += `${emojis.warning} **${jaExistiam.length}** ${t("bl_usuario_ja_existe", guildId)}\n${jaExistiam.map((id) => `<@${id}>`).join(", ")}`;
       }
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar ao Painel")
+        .setLabel(t("bl_btn_voltar_painel", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -351,9 +352,9 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `# ${emojis.block} Blacklist Atualizada`,
+                `# ${emojis.block} ${t("bl_titulo", guildId)}`,
               ),
-              new TextDisplayBuilder().setContent(msg.trim() || `${emojis.cancel} Nenhuma alteração foi feita.`),
+              new TextDisplayBuilder().setContent(msg.trim() || `${emojis.cancel} ${t("bl_usuario_nao_encontrado", guildId)}`),
             )
             .addSeparatorComponents(
               new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
@@ -387,15 +388,15 @@ module.exports = {
 
       let msg = "";
       if (adicionados.length > 0) {
-        msg += `${emojis.check} **${adicionados.length}** cargo(s) adicionado(s) à blacklist:\n${adicionados.map((id) => `<@&${id}>`).join(", ")}\n`;
+        msg += `${emojis.check} **${adicionados.length}** ${t("bl_add_cargo_sucesso", guildId)}\n${adicionados.map((id) => `<@&${id}>`).join(", ")}\n`;
       }
       if (jaExistiam.length > 0) {
-        msg += `${emojis.warning} **${jaExistiam.length}** cargo(s) já estavam na blacklist:\n${jaExistiam.map((id) => `<@&${id}>`).join(", ")}`;
+        msg += `${emojis.warning} **${jaExistiam.length}** ${t("bl_cargo_ja_existe", guildId)}\n${jaExistiam.map((id) => `<@&${id}>`).join(", ")}`;
       }
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar ao Painel")
+        .setLabel(t("bl_btn_voltar_painel", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -404,9 +405,9 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `# ${emojis.block} Blacklist Atualizada`,
+                `# ${emojis.block} ${t("bl_titulo", guildId)}`,
               ),
-              new TextDisplayBuilder().setContent(msg.trim() || `${emojis.cancel} Nenhuma alteração foi feita.`),
+              new TextDisplayBuilder().setContent(msg.trim() || `${emojis.cancel} ${t("bl_cargo_nao_encontrado", guildId)}`),
             )
             .addSeparatorComponents(
               new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
@@ -437,18 +438,18 @@ module.exports = {
           ? usuariosPage
               .map((id, i) => `**${pageU * PAGE_SIZE + i + 1}.** <@${id}> \`${id}\``)
               .join("\n")
-          : `${emojis.info} Nenhum usuário bloqueado.`;
+          : `${emojis.info} ${t("bl_usuarios_vazio", guildId)}`;
 
       const cargosText =
         cargosPage.length > 0
           ? cargosPage
               .map((id, i) => `**${pageR * PAGE_SIZE + i + 1}.** <@&${id}> \`${id}\``)
               .join("\n")
-          : `${emojis.info} Nenhum cargo bloqueado.`;
+          : `${emojis.info} ${t("bl_roles_vazio", guildId)}`;
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("bl_btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -457,7 +458,7 @@ module.exports = {
       if (usuarios.length > 0) {
         const removeUserBtn = new ButtonBuilder()
           .setCustomId("bl_remove_user_0")
-          .setLabel("Remover Usuário")
+          .setLabel(t("bl_btn_add_usuario", guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Danger);
         rows.unshift(new ActionRowBuilder().addComponents(removeUserBtn));
@@ -466,7 +467,7 @@ module.exports = {
       if (cargos.length > 0) {
         const removeRoleBtn = new ButtonBuilder()
           .setCustomId("bl_remove_role_0")
-          .setLabel("Remover Cargo")
+          .setLabel(t("bl_btn_add_cargo", guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Danger);
         if (rows[0]?.components?.length < 5) {
@@ -481,10 +482,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `# ${emojis.block} Lista da Blacklist`,
+                `# ${emojis.block} ${t("bl_titulo", guildId)}`,
               ),
               new TextDisplayBuilder().setContent(
-                `**${emojis.user} Usuários Bloqueados** (${usuarios.length})\n${usuariosText}`,
+                `**${emojis.user} ${t("bl_usuarios_titulo", guildId)}** (${usuarios.length})\n${usuariosText}`,
               ),
             )
             .addSeparatorComponents(
@@ -492,7 +493,7 @@ module.exports = {
             )
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `**${emojis.role} Cargos Bloqueados** (${cargos.length})\n${cargosText}`,
+                `**${emojis.role} ${t("bl_roles_titulo", guildId)}** (${cargos.length})\n${cargosText}`,
               ),
             )
             .addSeparatorComponents(
@@ -518,13 +519,13 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId("modal_bl_remove_user")
-        .setTitle("Remover Usuário da Blacklist");
+        .setTitle(t("bl_modal_add_usuario_titulo", guildId));
 
       const input = new TextInputBuilder()
         .setCustomId("bl_user_id_input")
-        .setLabel("ID do Usuário")
+        .setLabel(t("bl_modal_add_usuario_label", guildId))
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("Cole o ID do usuário aqui")
+        .setPlaceholder(t("bl_modal_add_usuario_placeholder", guildId))
         .setRequired(true)
         .setMinLength(15)
         .setMaxLength(20);
@@ -545,13 +546,13 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId("modal_bl_remove_role")
-        .setTitle("Remover Cargo da Blacklist");
+        .setTitle(t("bl_modal_add_cargo_titulo", guildId));
 
       const input = new TextInputBuilder()
         .setCustomId("bl_role_id_input")
-        .setLabel("ID do Cargo")
+        .setLabel(t("bl_modal_add_cargo_label", guildId))
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("Cole o ID do cargo aqui")
+        .setPlaceholder(t("bl_modal_add_cargo_placeholder", guildId))
         .setRequired(true)
         .setMinLength(15)
         .setMaxLength(20);
@@ -567,7 +568,7 @@ module.exports = {
       if (!usuarios.includes(idInput)) {
         const voltarBtn = new ButtonBuilder()
           .setCustomId("bl_listar")
-          .setLabel("Voltar à Lista")
+          .setLabel(t("bl_btn_voltar_lista", guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -576,7 +577,7 @@ module.exports = {
             new ContainerBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  `${emojis.cancel} O usuário \`${idInput}\` **não está** na blacklist.`,
+                  `${emojis.cancel} ${t("bl_usuario_nao_encontrado", guildId)} \`${idInput}\``,
                 ),
               )
               .addActionRowComponents(
@@ -592,7 +593,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar ao Painel")
+        .setLabel(t("bl_btn_voltar_painel", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -601,7 +602,7 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.check} Usuário <@${idInput}> removido da blacklist com sucesso.`,
+                `${emojis.check} ${t("bl_remover_usuario_sucesso", guildId)} <@${idInput}>`,
               ),
             )
             .addActionRowComponents(
@@ -619,7 +620,7 @@ module.exports = {
       if (!cargos.includes(idInput)) {
         const voltarBtn = new ButtonBuilder()
           .setCustomId("bl_listar")
-          .setLabel("Voltar à Lista")
+          .setLabel(t("bl_btn_voltar_lista", guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -628,7 +629,7 @@ module.exports = {
             new ContainerBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  `${emojis.cancel} O cargo \`${idInput}\` **não está** na blacklist.`,
+                  `${emojis.cancel} ${t("bl_cargo_nao_encontrado", guildId)} \`${idInput}\``,
                 ),
               )
               .addActionRowComponents(
@@ -644,7 +645,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar ao Painel")
+        .setLabel(t("bl_btn_voltar_painel", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -653,7 +654,7 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.check} Cargo <@&${idInput}> removido da blacklist com sucesso.`,
+                `${emojis.check} ${t("bl_remover_cargo_sucesso", guildId)} <@&${idInput}>`,
               ),
             )
             .addActionRowComponents(
@@ -678,13 +679,13 @@ module.exports = {
 
       const confirmarBtn = new ButtonBuilder()
         .setCustomId("bl_confirm_limpar")
-        .setLabel("Confirmar")
+        .setLabel(t("bl_btn_limpar", guildId))
         .setEmoji(getEmoji(emojis.check))
         .setStyle(ButtonStyle.Danger);
 
       const cancelarBtn = new ButtonBuilder()
         .setCustomId("bl_cancel_limpar")
-        .setLabel("Cancelar")
+        .setLabel(t("bl_btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.cancel))
         .setStyle(ButtonStyle.Secondary);
 
@@ -693,10 +694,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `# ${emojis.warning} Confirmar Limpeza`,
+                `# ${emojis.warning} ${t("bl_titulo", guildId)}`,
               ),
               new TextDisplayBuilder().setContent(
-                `Tem certeza que deseja remover **todos os ${total} itens** da blacklist?\nEsta ação não pode ser desfeita.`,
+                `${t("bl_desc", guildId)} **${total}**`,
               ),
             )
             .addSeparatorComponents(
@@ -716,7 +717,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Voltar ao Painel")
+        .setLabel(t("bl_btn_voltar_painel", guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -725,7 +726,7 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.check} Blacklist limpa com sucesso. Todos os bloqueios foram removidos.`,
+                `${emojis.check} ${t("bl_limpar_sucesso", guildId)}`,
               ),
             )
             .addActionRowComponents(

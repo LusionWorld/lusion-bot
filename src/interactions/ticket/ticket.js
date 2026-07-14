@@ -26,15 +26,13 @@ const fs = require("fs");
 const path = require("path");
 const { JsonDatabase } = require("wio.db");
 const discordTranscripts = require("discord-html-transcripts");
-const fetch = require("node-fetch");
-const FormData = require("form-data");
-const { PassThrough } = require("stream");
 const cron = require("node-cron");
 const { parse, isAfter, isBefore } = require("date-fns");
 const sqlite3 = require("sqlite3").verbose();
 
 const { get } = require("http");
 
+const { t } = require("../../utils/i18n");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 const { criarModalFormulario } = require("./formulario-estacao");
@@ -90,65 +88,12 @@ function getEstacoesDB(guildId) {
   return db;
 }
 
-async function enviarTranscriptParaAPI(buffer, filename, client) {
-  const form = new FormData();
-  const stream = new PassThrough();
-  stream.end(buffer);
 
-  form.append("file", stream, {
-    filename,
-    contentType: "text/html",
-  });
-
-  const botId = client?.user?.id;
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
-
-    const response = await fetch(
-      "https://labzapi.squareweb.app/transcript/upload",
-      {
-        method: "POST",
-        body: form,
-        headers: {
-          ...form.getHeaders(),
-          "x-bot-id": botId || "desconhecido",
-        },
-        signal: controller.signal,
-      },
-    ).finally(() => clearTimeout(timeout));
-
-    const contentType = response.headers.get("content-type");
-
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("❌ Resposta não é JSON:", text.substring(0, 200));
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (response.ok && data.fileName) {
-      const match = data.fileName.match(/transcript-(labz\d{10})\.html/);
-      const cleanId = match ? match[1] : data.fileName.replace(".html", "");
-      const url = `https://labzapi.squareweb.app/transcript/viewer/${cleanId}`;
-      return url;
-    } else {
-      console.error("❌ Erro ao enviar transcript:", data);
-      return null;
-    }
-  } catch (error) {
-    if (error.name === "AbortError") {
-      console.error("❌ Timeout ao enviar transcript (60s)");
-    } else {
-      console.error("❌ Erro de conexão com a API:", error.message);
-    }
-    return null;
-  }
-}
+const _dbConnectionPool = new Map();
 
 function getDBConnection(guildId) {
+  if (_dbConnectionPool.has(guildId)) return _dbConnectionPool.get(guildId);
+
   const folderPath = path.resolve(
     __dirname,
     "../../../banco/ticket",
@@ -199,19 +144,27 @@ function getDBConnection(guildId) {
       comentario TEXT,
       avaliado_em INTEGER NOT NULL
     )`);
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON tickets(guild_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_fechado ON tickets(guild_id, fechado_em)`);
+    db.run(`PRAGMA journal_mode=WAL`);
+    db.run(`ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]'`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN fechado_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN message_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN motivo_abertura TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN nome_categoria TEXT DEFAULT NULL`, () => {});
   });
 
+  _dbConnectionPool.set(guildId, db);
   return db;
 }
 
-function closeDB(db) {
-  if (db) {
-    db.close((err) => {
-      if (err) {
-        console.error("Erro ao fechar banco:", err);
-      }
-    });
-  }
+function closeDB(_db) {
+  // conexões são mantidas no pool — não fechar
 }
 
 function isWithinSchedule(schedule, horarioAtivo) {
@@ -248,7 +201,10 @@ function isWithinSchedule(schedule, horarioAtivo) {
   return nowDate >= startTime && nowDate <= endTime;
 }
 
+const _personalizacaoCache = new Map();
 function getPersonalizacaoDB(guildId) {
+  if (_personalizacaoCache.has(guildId)) return _personalizacaoCache.get(guildId);
+
   const db = new JsonDatabase({
     databasePath: path.resolve(
       __dirname,
@@ -283,16 +239,21 @@ function getPersonalizacaoDB(guildId) {
     }
   }
 
+  _personalizacaoCache.set(guildId, db);
   return db;
 }
 
+const _configDBCache = new Map();
 function getConfigDB(guildId) {
-  return new JsonDatabase({
+  if (_configDBCache.has(guildId)) return _configDBCache.get(guildId);
+  const db = new JsonDatabase({
     databasePath: path.resolve(
       __dirname,
       `../../../banco/ticket/${guildId}/config.json`,
     ),
   });
+  _configDBCache.set(guildId, db);
+  return db;
 }
 
 function enviarMensagemMotivoTicket(channel, nomeOpcao, guildId, estacaoId) {
@@ -416,26 +377,6 @@ function parseEmoji(emojiString, guild) {
   return { name: emojiString };
 }
 
-function gerarBotoesContainer(configBotoes = [], transcriptURL) {
-  if (!Array.isArray(configBotoes) || configBotoes.length === 0) return null;
-  const row = new ActionRowBuilder();
-  for (const botao of configBotoes) {
-    const button = new ButtonBuilder()
-      .setStyle(ButtonStyle.Link)
-      .setURL(transcriptURL || "");
-    if (botao.label) {
-      button.setLabel(
-        botao.label.replaceAll("{transcript}", transcriptURL || ""),
-      );
-    }
-    if (botao.emoji) {
-      button.setEmoji(botao.emoji);
-    }
-    row.addComponents(button);
-  }
-  return row.components.length > 0 ? row : null;
-}
-
 async function criarTicketComMotivo(interaction, ticketData, motivo) {
   if (!interaction.deferred && !interaction.replied) {
     await interaction
@@ -449,7 +390,7 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
 
   if (isBlacklisted(guild.id, interaction.user.id, interaction.member?.roles)) {
     return interaction.editReply({
-      content: `${emojis.block} Você está na blacklist e não pode abrir tickets neste servidor.`,
+      content: t("ticket_blacklist", guild.id),
     });
   }
 
@@ -462,7 +403,7 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
 
   if (ticketsDoUsuario.size >= limitTickets) {
     return interaction.editReply({
-      content: `${emojis.cancel} Você atingiu o limite de ${limitTickets} ticket(s) aberto(s).`,
+      content: t("ticket_limite_atingido", guild.id),
     });
   }
 
@@ -472,7 +413,7 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
       if (estacao.horario_ativo && !isWithinSchedule(estacao.schedule, true)) {
         const msg =
           estacao.mensagem_fora_horario ||
-          `${emojis.cancel} Esta área de suporte está fechada neste horário. Tente novamente mais tarde.`;
+          t("ticket_fora_horario", guild.id);
         return interaction.editReply({ content: msg });
       }
 
@@ -493,7 +434,7 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
 
         if (ticketsNaEstacao.size >= estacao.limite_tickets) {
           return interaction.editReply({
-            content: `${emojis.cancel} Você atingiu o limite de ${estacao.limite_tickets} ticket(s) para esta área de suporte.`,
+            content: t("ticket_limite_atingido", guild.id),
           });
         }
       }
@@ -868,14 +809,14 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
 
     let descricaoProcessada =
       embedTicket.descricao ||
-      `Olá ${interaction.user}, sua solicitação foi recebida! Aguarde a equipe de suporte.`;
+      t("ticket_aberto_desc", guild.id, { user: interaction.user.toString() });
 
     descricaoProcessada = descricaoProcessada
-      .replace(/{staff}/g, "Ticket ainda não assumido")
+      .replace(/{staff}/g, t("ticket_sem_staff", guild.id))
       .replace(/{user}/g, autorMention)
       .replace(/{abertura}/g, aberturaTimestamp)
-      .replace(/{motivo}/g, motivo || "Não informado")
-      .replace(/{categoria}/g, ticketData.nome || "Não especificada");
+      .replace(/{motivo}/g, motivo || t("ticket_motivo_nao_informado", guild.id))
+      .replace(/{categoria}/g, ticketData.nome || t("ticket_categoria_nao_especificada", guild.id));
 
     containerComponents.push(
       new TextDisplayBuilder().setContent(descricaoProcessada),
@@ -1007,14 +948,14 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
     const containerResposta = new ContainerBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `${emojis.success} Seu ticket foi aberto com sucesso!`,
+          t("ticket_aberto_sucesso", guild.id),
         ),
       )
       .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
       .addActionRowComponents(
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setLabel("Ir ao Ticket")
+            .setLabel(t("ticket_btn_ir", guild.id))
             .setStyle(ButtonStyle.Link)
             .setURL(
               `https://discord.com/channels/${guild.id}/${canalCriado.id}`,
@@ -1039,7 +980,7 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
             components: [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  `📋 **Informações do Ticket**\n\n${_linhas}`,
+                  `${t("ticket_info_titulo", guild.id)}\n\n${_linhas}`,
                 ),
               ),
             ],
@@ -1151,10 +1092,10 @@ module.exports = {
 
       const container = new ContainerBuilder().addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `# ${config.title || `${emojis.star} Avalie o Atendimento`}`,
+          `# ${config.title || `${emojis.star} ${t("avaliacao_recebida_titulo", guildId)}`}`,
         ),
         new TextDisplayBuilder().setContent(
-          config.descricao || "Quantas estrelas você dá para o atendimento?",
+          config.descricao || t("avaliacao_desc_fallback", guildId),
         ),
       );
 
@@ -1177,36 +1118,36 @@ module.exports = {
         new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId(`avaliacao_estrelas_${guildId}_${canalId}`)
-            .setPlaceholder("Selecione de 1 a 5 estrelas")
+            .setPlaceholder(t("avaliacao_placeholder", guildId))
             .addOptions([
               {
-                label: "⭐ 1 Estrela",
+                label: t("avaliacao_1_label", guildId),
                 value: "1",
-                description: "Péssimo atendimento",
+                description: t("avaliacao_1_desc", guildId),
                 emoji: "😞",
               },
               {
-                label: "⭐⭐ 2 Estrelas",
+                label: t("avaliacao_2_label", guildId),
                 value: "2",
-                description: "Atendimento ruim",
+                description: t("avaliacao_2_desc", guildId),
                 emoji: "😕",
               },
               {
-                label: "⭐⭐⭐ 3 Estrelas",
+                label: t("avaliacao_3_label", guildId),
                 value: "3",
-                description: "Atendimento regular",
+                description: t("avaliacao_3_desc", guildId),
                 emoji: "😐",
               },
               {
-                label: "⭐⭐⭐⭐ 4 Estrelas",
+                label: t("avaliacao_4_label", guildId),
                 value: "4",
-                description: "Bom atendimento",
+                description: t("avaliacao_4_desc", guildId),
                 emoji: "😊",
               },
               {
-                label: "⭐⭐⭐⭐⭐ 5 Estrelas",
+                label: t("avaliacao_5_label", guildId),
                 value: "5",
-                description: "Atendimento excelente",
+                description: t("avaliacao_5_desc", guildId),
                 emoji: "🤩",
               },
             ]),
@@ -1234,13 +1175,13 @@ module.exports = {
       try {
         const modal = new ModalBuilder()
           .setCustomId(`modal_avaliacao_${guildId}_${canalId}_${estrelas}`)
-          .setTitle("Avaliação do Atendimento");
+          .setTitle(t("avaliacao_modal_titulo", guildId));
 
         const comentarioInput = new TextInputBuilder()
           .setCustomId("comentario")
-          .setLabel("Como foi o atendimento? (Opcional)")
+          .setLabel(t("avaliacao_comentario_label", guildId))
           .setStyle(TextInputStyle.Paragraph)
-          .setPlaceholder("Deixe seu comentário sobre o atendimento...")
+          .setPlaceholder(t("avaliacao_comentario_placeholder", guildId))
           .setRequired(false)
           .setMaxLength(1000);
 
@@ -1267,7 +1208,7 @@ module.exports = {
               canalId,
               interaction.user.id,
               estrelasNum,
-              "Sem comentário",
+              t("avaliacao_sem_comentario", guildId),
               Date.now(),
             ],
             async function (err) {
@@ -1280,22 +1221,22 @@ module.exports = {
               const estrelinhas = (emojis.star || "⭐").repeat(estrelasNum);
               const avaliacaoTexto =
                 estrelasNum === 5
-                  ? "Excelente"
+                  ? t("avaliacao_texto_5", guildId)
                   : estrelasNum === 4
-                    ? "Bom"
+                    ? t("avaliacao_texto_4", guildId)
                     : estrelasNum === 3
-                      ? "Regular"
+                      ? t("avaliacao_texto_3", guildId)
                       : estrelasNum === 2
-                        ? "Ruim"
-                        : "Péssimo";
+                        ? t("avaliacao_texto_2", guildId)
+                        : t("avaliacao_texto_1", guildId);
 
               const containerSucesso1 =
                 new ContainerBuilder().addTextDisplayComponents(
                   new TextDisplayBuilder().setContent(
-                    `# ${emojis.star} Avaliação Recebida`,
+                    `# ${emojis.star} ${t("avaliacao_recebida_titulo", guildId)}`,
                   ),
                   new TextDisplayBuilder().setContent(
-                    `${emojis.check} **Obrigado pela sua avaliação!**\n\n${estrelinhas} **(${avaliacaoTexto})**\n\n${emojis.sparks} Seu feedback é muito importante para nós!`,
+                    t("avaliacao_recebida_desc", guildId, { estrelinhas, texto: avaliacaoTexto }),
                   ),
                 );
 
@@ -1347,7 +1288,7 @@ module.exports = {
       const ticketCanalId = parts[1];
       const estrelas = parts[2];
       const comentario =
-        interaction.fields.getTextInputValue("comentario") || "Sem comentário";
+        interaction.fields.getTextInputValue("comentario") || t("avaliacao_sem_comentario", guildId);
 
       const estrelasNum = parseInt(estrelas);
 
@@ -1379,13 +1320,13 @@ module.exports = {
                 if (deferFailed) {
                   interaction.user
                     .send({
-                      content: `${emojis.cancel} Erro ao salvar sua avaliação.`,
+                      content: t("avaliacao_erro_salvar", guildId),
                     })
                     .catch(console.error);
                 } else {
                   interaction
                     .editReply({
-                      content: `${emojis.cancel} Erro ao salvar sua avaliação.`,
+                      content: t("avaliacao_erro_salvar", guildId),
                       flags: MessageFlags.Ephemeral,
                     })
                     .catch(console.error);
@@ -1396,19 +1337,20 @@ module.exports = {
               const estrelinhas = (emojis.star || "⭐").repeat(estrelasNum);
               const avaliacaoTexto =
                 estrelasNum === 5
-                  ? "Excelente"
+                  ? t("avaliacao_texto_5", guildId)
                   : estrelasNum === 4
-                    ? "Bom"
+                    ? t("avaliacao_texto_4", guildId)
                     : estrelasNum === 3
-                      ? "Regular"
+                      ? t("avaliacao_texto_3", guildId)
                       : estrelasNum === 2
-                        ? "Ruim"
-                        : "Péssimo";
+                        ? t("avaliacao_texto_2", guildId)
+                        : t("avaliacao_texto_1", guildId);
+              const semComentario = t("avaliacao_sem_comentario", guildId);
 
               const containerSucesso2 =
                 new ContainerBuilder().addTextDisplayComponents(
                   new TextDisplayBuilder().setContent(
-                    `# ${emojis.star} Avaliação Recebida`,
+                    `# ${emojis.star} ${t("avaliacao_recebida_titulo", guildId)}`,
                   ),
                   new TextDisplayBuilder().setContent(
                     config.descricaoRecebida
@@ -1417,11 +1359,11 @@ module.exports = {
                           .replace("{avaliacao}", avaliacaoTexto)
                           .replace(
                             "{comentario}",
-                            comentario !== "Sem comentário"
+                            comentario !== semComentario
                               ? `\n\n${emojis.message} *"${comentario}"*`
                               : "",
                           )
-                      : `${emojis.check} **Obrigado pela sua avaliação!**\n\n${estrelinhas} **(${avaliacaoTexto})**\n\n${emojis.sparks} Seu feedback é muito importante para nós!`,
+                      : t("avaliacao_recebida_desc", guildId, { estrelinhas, texto: avaliacaoTexto }),
                   ),
                 );
 
@@ -1460,12 +1402,12 @@ module.exports = {
 
                       const staffTexto = staffId
                         ? `<@${staffId}>`
-                        : "Sem Staff";
+                        : t("avaliacao_sem_staff", guildId);
 
                       const containerLogAvaliacao =
                         new ContainerBuilder().addTextDisplayComponents(
                           new TextDisplayBuilder().setContent(
-                            `# ${config.title || `${emojis.star} Nova Avaliação`}`,
+                            `# ${config.title || `${emojis.star} ${t("avaliacao_nova_titulo", guildId)}`}`,
                           ),
                           new TextDisplayBuilder().setContent(
                             config.descricao
@@ -1486,11 +1428,16 @@ module.exports = {
                                     `<t:${Math.floor(Date.now() / 1000)}:f>`,
                                   )
                                   .replace("{staff}", staffTexto)
-                              : `**Usuário:** ${interaction.user} (\`${
-                                  interaction.user.id
-                                }\`)\n**Ticket ID:** \`${ticketCanalId}\`\n**Staff:** ${staffTexto}\n**Avaliação:** ${estrelinhas} **(${estrelasNum}/5)**\n**Comentário:** ${comentario}\n**Data:** <t:${Math.floor(
-                                  Date.now() / 1000,
-                                )}:f>`,
+                              : t("avaliacao_log_desc_fallback", guildId, {
+                                  userMention: `${interaction.user}`,
+                                  userId: interaction.user.id,
+                                  ticketId: ticketCanalId,
+                                  staff: staffTexto,
+                                  estrelinhas,
+                                  nota: estrelasNum,
+                                  comentario,
+                                  data: `<t:${Math.floor(Date.now() / 1000)}:f>`,
+                                }),
                           ),
                         );
 
@@ -1605,10 +1552,11 @@ module.exports = {
                   }
 
                   if (temAvaliacao) {
+                    const semComentarioDM = t("avaliacao_sem_comentario", guildId);
                     const novoContainer =
                       new ContainerBuilder().addTextDisplayComponents(
                         new TextDisplayBuilder().setContent(
-                          `# ${config.title || `${emojis.star} Avaliação Recebida`}`,
+                          `# ${config.title || `${emojis.star} ${t("avaliacao_recebida_titulo", guildId)}`}`,
                         ),
                         new TextDisplayBuilder().setContent(
                           config.descricaoRecebida
@@ -1617,15 +1565,18 @@ module.exports = {
                                 .replace("{avaliacao}", `${estrelasNum}/5`)
                                 .replace(
                                   "{comentario}",
-                                  comentario !== "Sem comentário"
+                                  comentario !== semComentarioDM
                                     ? `\n\n${emojis.message} *"${comentario}"*`
                                     : "",
                                 )
-                            : `${emojis.check} **Obrigado pela sua avaliação!**\n\n${estrelinhas} **(${estrelasNum}/5)**${
-                                comentario !== "Sem comentário"
+                            : t("avaliacao_recebida_desc", guildId, {
+                                estrelinhas,
+                                texto: `${estrelasNum}/5`,
+                              }) + (
+                                comentario !== semComentarioDM
                                   ? `\n\n${emojis.message} *"${comentario}"*`
                                   : ""
-                              }\n\n${emojis.sparks} Seu feedback é muito importante para nós!`,
+                              ),
                         ),
                       );
 
@@ -1692,42 +1643,42 @@ module.exports = {
       const donoTicketId = interaction.channel.topic?.split("Labz - ")[1];
       if (interaction.user.id !== donoTicketId) {
         return interaction.reply({
-          content: `${emojis.cancel} Apenas quem abriu o ticket pode usar esse painel.`,
+          content: t("sem_permissao_painel_membro", guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
       const container = new ContainerBuilder()
         .addTextDisplayComponents(
-          new TextDisplayBuilder().setContent("**Painel do Membro**"),
+          new TextDisplayBuilder().setContent(t("painel_membro_titulo", guildId)),
         )
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "Escolha uma ação no menu abaixo:",
+            t("painel_membro_desc", guildId),
           ),
         )
         .addActionRowComponents(
           new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
               .setCustomId("painel_membro_menu")
-              .setPlaceholder("Escolha uma ação")
+              .setPlaceholder(t("painel_membro_placeholder", guildId))
               .addOptions([
                 {
-                  label: "Sair do ticket",
+                  label: t("btn_sair_ticket", guildId),
                   value: "sair_ticket",
                   emoji: getEmoji(emojis.arrowl),
                 },
                 {
-                  label: "Notificar staff",
+                  label: t("btn_notificar_staff", guildId),
                   value: "notificar_staff",
                   emoji: getEmoji(emojis.user),
                 },
                 {
-                  label: "Adicionar membro",
+                  label: t("btn_add_membro", guildId),
                   value: "adicionar_membro",
                   emoji: getEmoji(emojis.invite),
                 },
                 {
-                  label: "Remover membro",
+                  label: t("btn_remove_membro", guildId),
                   value: "remover_membro",
                   emoji: getEmoji(emojis.minus),
                 },
@@ -1754,18 +1705,18 @@ module.exports = {
         );
         if (!podeVer) {
           return interaction.reply({
-            content: `${emojis.cancel} Apenas quem abriu o ticket pode sair dele.`,
+            content: t("sem_permissao_sair", guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
         const modal = new ModalBuilder()
           .setCustomId("modal_sair_ticket_confirmar")
-          .setTitle(`Confirmar saída do ticket`)
+          .setTitle(t("modal_sair_titulo", guildId))
           .addComponents(
             new ActionRowBuilder().addComponents(
               new TextInputBuilder()
                 .setCustomId("confirmacao")
-                .setLabel("Digite 'CONFIRMAR' para sair")
+                .setLabel(t("modal_sair_label", guildId))
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true)
                 .setPlaceholder("CONFIRMAR"),
@@ -1794,7 +1745,7 @@ module.exports = {
         if (!hasTeamRole && !hasUserPerm) {
           closeDB(dbsql);
           return interaction.reply({
-            content: `${emojis.cancel} Você não tem permissão para assumir este ticket.`,
+            content: t("sem_permissao_assumir", guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
@@ -1806,7 +1757,7 @@ module.exports = {
               console.error("Erro ao atualizar ticket:", err);
               closeDB(dbsql);
               return interaction.reply({
-                content: `${emojis.cancel} Ocorreu um erro ao assumir o ticket.`,
+                content: t("ticket_err_assumir", guildId),
                 flags: MessageFlags.Ephemeral,
               });
             }
@@ -1857,9 +1808,8 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                     const configAssumido = dbPersonalizacao.get(
                       "embedassumido",
                     ) || {
-                      title: `${emojis.textc} Seu Ticket foi Assumido`,
-                      descricao:
-                        "O staff {staff} assumiu seu ticket. Aguarde o atendimento.",
+                      title: t("ticket_assumido", guildId, { staff: `<@${user.id}>` }),
+                      descricao: t("ticket_assumido_dm", guildId, { staff: `<@${user.id}>` }),
                     };
 
                     let descricaoProcessada = configAssumido.descricao || "";
@@ -1873,7 +1823,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                         new TextDisplayBuilder().setContent(
                           `# ${
                             configAssumido.title ||
-                            `${emojis.textc} Seu Ticket foi Assumido`
+                            t("ticket_assumido", guildId, { staff: `<@${user.id}>` })
                           }`,
                         ),
                         new TextDisplayBuilder().setContent(
@@ -1943,8 +1893,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                 closeDB(dbsql);
                 if (err || !row?.message_id) {
                   return interaction.reply({
-                    content:
-                      "${emojis.cancel} Não foi possível localizar a mensagem principal do ticket.",
+                    content: t("ticket_msg_nao_localizada", guildId),
                     flags: MessageFlags.Ephemeral,
                   });
                 }
@@ -1954,7 +1903,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                   );
                   if (!msgOriginal) {
                     return interaction.reply({
-                      content: `${emojis.cancel} Mensagem do ticket não encontrada.`,
+                      content: t("ticket_msg_nao_encontrada", guildId),
                       flags: MessageFlags.Ephemeral,
                     });
                   }
@@ -1964,17 +1913,14 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                     (comp) => comp.type === "TEXT_DISPLAY",
                   );
                   const textoAtual = textDisplayAtual?.text || "";
+                  const semStaff = t("ticket_sem_staff", guildId);
                   const textoPadrao = embedConfig.descricao
-                    ? embedConfig.descricao.replace(
-                        /{staff}/g,
-                        "Ticket ainda não assumido",
-                      )
-                    : "Ticket ainda não assumido";
+                    ? embedConfig.descricao.replace(/{staff}/g, semStaff)
+                    : semStaff;
 
                   if (textoAtual !== textoPadrao && textoAtual.includes("<@")) {
                     return interaction.reply({
-                      content:
-                        "${emojis.cancel} Este ticket já foi assumido por outra pessoa.",
+                      content: t("ticket_ja_assumido_outro", guildId),
                       flags: MessageFlags.Ephemeral,
                     });
                   }
@@ -1993,11 +1939,11 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                     .replace(/{abertura}/g, aberturaTimestamp)
                     .replace(
                       /{motivo}/g,
-                      row.motivo_abertura || "Não informado",
+                      row.motivo_abertura || t("ticket_motivo_nao_informado", guildId),
                     )
                     .replace(
                       /{categoria}/g,
-                      row.nome_categoria || "Não especificada",
+                      row.nome_categoria || t("ticket_categoria_nao_especificada", guildId),
                     );
 
                   function parseEmojiLocal(raw, guild) {
@@ -2134,7 +2080,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                   const _assumidoComponents = [
                     new ContainerBuilder().addTextDisplayComponents(
                       new TextDisplayBuilder().setContent(
-                        `${emojis.check} **Ticket assumido.**`,
+                        t("ticket_assumido_ok", guildId),
                       ),
                     ),
                   ];
@@ -2148,7 +2094,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                 } catch (error) {
                   console.error("Erro ao buscar ou editar mensagem:", error);
                   return interaction.reply({
-                    content: `${emojis.cancel} Erro ao atualizar mensagem do ticket.`,
+                    content: t("ticket_err_atualizar_msg", guildId),
                     flags: MessageFlags.Ephemeral,
                   });
                 }
@@ -2168,67 +2114,67 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         const hasUserPerm = usersPerms[user.id]?.includes("Atender ticket");
         if (!hasTeamRole && !hasUserPerm) {
           return interaction.reply({
-            content: `${emojis.cancel} Você não tem permissão para acessar o Painel Staff.`,
+            content: t("sem_permissao_painel_staff", guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
         const container = new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("**Painel Staff**"),
+            new TextDisplayBuilder().setContent(t("painel_staff_titulo", guildId)),
           )
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Selecione uma ação abaixo para gerenciar este ticket:",
+              t("painel_staff_desc", guildId),
             ),
           )
           .addActionRowComponents(
             new ActionRowBuilder().addComponents(
               new StringSelectMenuBuilder()
                 .setCustomId("painel_staff_select")
-                .setPlaceholder("Selecione uma ação")
+                .setPlaceholder(t("painel_staff_placeholder", guildId))
                 .addOptions([
                   {
-                    label: "Assumir ticket",
+                    label: t("btn_assumir", guildId),
                     value: "assumir_ticket",
                     emoji: getEmoji(emojis.check),
                   },
                   {
-                    label: "Renomear ticket",
+                    label: t("staff_opt_renomear", guildId),
                     value: "renomear_ticket",
                     emoji: getEmoji(emojis.title),
                   },
                   {
-                    label: "Notificar usuário",
+                    label: t("staff_opt_notificar_usuario", guildId),
                     value: "notificar_usuario",
                     emoji: getEmoji(emojis.send),
                   },
                   {
-                    label: "Criar call",
+                    label: t("staff_opt_criar_call", guildId),
                     value: "criar_call",
                     emoji: getEmoji(emojis.mic),
                   },
                   {
-                    label: "Deletar call",
+                    label: t("staff_opt_deletar_call", guildId),
                     value: "deletar_call",
                     emoji: getEmoji(emojis.lixeira),
                   },
                   {
-                    label: "Adicionar membro",
+                    label: t("btn_add_membro", guildId),
                     value: "adicionar_membro",
                     emoji: getEmoji(emojis.invite),
                   },
                   {
-                    label: "Remover membro",
+                    label: t("btn_remove_membro", guildId),
                     value: "remover_membro",
                     emoji: getEmoji(emojis.minus),
                   },
                   {
-                    label: "Fechar ticket",
+                    label: t("btn_fechar", guildId),
                     value: "fechar_ticket",
                     emoji: getEmoji(emojis.lock),
                   },
                   {
-                    label: "Gerenciar tags",
+                    label: t("staff_opt_gerenciar_tags", guildId),
                     value: "gerenciar_tags",
                     emoji: emojis.thread || "🏷️",
                   },
@@ -2255,14 +2201,14 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         const hasUserPerm = usersPerms[user.id]?.includes("Atender ticket");
         if (!hasTeamRole && !hasUserPerm) {
           return interaction.reply({
-            content: `${emojis.cancel} Você não tem permissão para usar essa ação.`,
+            content: t("sem_permissao_acao", guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
         if (customId === "recusar_adicionar") {
           const container = new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "🚫 A adição de usuários foi cancelada.",
+              t("membro_adicionar_cancelado", guildId),
             ),
           );
           return interaction.update({
@@ -2284,9 +2230,9 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
             }
             const container = new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.check} Usuários adicionados: ${usuariosIds
-                  .map((id) => `<@${id}>`)
-                  .join(", ")}`,
+                t("membro_adicionados", guildId, {
+                  users: usuariosIds.map((id) => `<@${id}>`).join(", "),
+                }),
               ),
             );
             return interaction.update({
@@ -2296,7 +2242,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           } catch (error) {
             console.error("Erro ao adicionar membros:", error);
             return interaction.reply({
-              content: `${emojis.cancel} Ocorreu um erro ao adicionar os usuários.`,
+              content: t("membro_erro_adicionar", guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -2318,14 +2264,14 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         const hasUserPerm = usersPerms[user.id]?.includes("Atender ticket");
         if (!hasTeamRole && !hasUserPerm) {
           return interaction.reply({
-            content: `${emojis.cancel} Você não tem permissão para usar essa ação.`,
+            content: t("sem_permissao_acao", guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
         if (customId === "recusar_remover") {
           const container = new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "🚫 A remoção de usuários foi cancelada.",
+              t("membro_remover_cancelado", guildId),
             ),
           );
           return interaction.update({
@@ -2340,7 +2286,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           const idsPermitidos = usuariosIds.filter((id) => id !== autorId);
           if (idsPermitidos.length === 0) {
             return interaction.reply({
-              content: `${emojis.cancel} Não é possível remover o autor do ticket.`,
+              content: t("sem_permissao_remover_autor", guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -2355,9 +2301,9 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
             }
             const container = new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.check} Usuários removidos: ${idsPermitidos
-                  .map((id) => `<@${id}>`)
-                  .join(", ")}`,
+                t("membro_removidos", guildId, {
+                  users: idsPermitidos.map((id) => `<@${id}>`).join(", "),
+                }),
               ),
             );
             return interaction.update({
@@ -2367,7 +2313,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           } catch (error) {
             console.error("Erro ao remover membros:", error);
             return interaction.reply({
-              content: `${emojis.cancel} Ocorreu um erro ao remover os usuários.`,
+              content: t("membro_erro_remover", guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -2391,20 +2337,20 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       );
       if (!hasTeamRole && !hasUserPerm) {
         return interaction.reply({
-          content: `${emojis.cancel} Você não tem permissão para fechar este ticket.`,
+          content: t("sem_permissao_fechar", guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
       const modal = new ModalBuilder()
         .setCustomId("modal_fechar_ticket")
-        .setTitle("Fechar Ticket")
+        .setTitle(t("modal_fechar_titulo", guildId))
         .addComponents(
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId("motivo")
-              .setLabel("Motivo do fechamento (opcional)")
+              .setLabel(t("modal_motivo_fechamento_label", guildId))
               .setStyle(TextInputStyle.Paragraph)
-              .setPlaceholder("Descreva o motivo do fechamento (opcional)")
+              .setPlaceholder(t("modal_motivo_fechamento_placeholder", guildId))
               .setRequired(false),
           ),
         );
@@ -2418,7 +2364,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       const confirmText = interaction.fields.getTextInputValue("confirmacao");
       if (confirmText.toLowerCase() !== "confirmar") {
         return interaction.reply({
-          content: `${emojis.cancel} Você não digitou 'CONFIRMAR'. Cancelado.`,
+          content: t("modal_sair_cancelado", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -2441,19 +2387,18 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           await fecharTicketAutomaticamente(
             interaction.guild,
             interaction.channel.id,
-            "Usuário saiu do ticket",
+            t("ticket_sair_motivo", interaction.guildId),
             interaction.client,
           );
           return interaction.reply({
-            content:
-              "${emojis.check} Você saiu do ticket e ele foi fechado automaticamente.",
+            content: t("ticket_sair_fechar_auto", interaction.guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
 
         const containerSaida = new ContainerBuilder().addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `${emojis.arrowl} **${interaction.user.tag}** saiu do ticket.`,
+            t("saiu_ticket", interaction.guildId, { emoji: emojis.arrowl, user: interaction.user.tag }),
           ),
           new TextDisplayBuilder().setContent(
             `${emojis.calendario} **Data:** <t:${Math.floor(Date.now() / 1000)}:f>`,
@@ -2461,7 +2406,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         );
 
         await interaction.reply({
-          content: `${emojis.check} Você saiu do ticket.`,
+          content: t("voce_saiu_ticket", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -2472,7 +2417,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       } catch (error) {
         console.error("Erro ao remover permissões:", error);
         return interaction.reply({
-          content: `${emojis.cancel} Erro ao sair do ticket.`,
+          content: t("ticket_sair_err", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -2488,13 +2433,13 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       try {
         await canal.setName(novoNome);
         await interaction.reply({
-          content: `${emojis.check} Canal renomeado para: \`${novoNome}\``,
+          content: t("ticket_renomeado", interaction.guildId, { nome: novoNome }),
           flags: MessageFlags.Ephemeral,
         });
       } catch (err) {
         console.error("Erro ao renomear canal:", err);
         await interaction.reply({
-          content: `${emojis.cancel} Ocorreu um erro ao tentar renomear o canal.`,
+          content: t("ticket_renomear_erro", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -2518,7 +2463,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       if (!fs.existsSync(personalizacaoPath)) {
         return interaction.editReply({
-          content: `${emojis.cancel} Configuração não encontrada.`,
+          content: t("config_nao_encontrada", interaction.guildId),
         });
       }
 
@@ -2535,7 +2480,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       if (!foundTicketData) {
         return interaction.editReply({
-          content: `${emojis.cancel} Dados do ticket não encontrados.`,
+          content: t("dados_ticket_nao_encontrados", interaction.guildId),
         });
       }
 
@@ -2566,7 +2511,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
             const containerErro =
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "Erro ao fechar o ticket no banco.",
+                  t("ticket_fechar_erro_banco", guildId),
                 ),
               );
 
@@ -2619,7 +2564,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           const embedLogsUserData = dbPersonalizacao.get("embedlogsuser") || {};
           const canalTexto = `<#${canal.id}> (${canal.name})`;
           const staffTexto = `${interaction.user} (\`${interaction.user.id}\`)`;
-          const autorTexto = autorId ? `<@${autorId}>` : "Não identificado";
+          const autorTexto = autorId ? `<@${autorId}>` : t("ticket_nao_identificado", guildId);
           const abertoTimestamp = Math.floor(canal.createdTimestamp / 1000);
           const fechadoTimestamp = Math.floor(Date.now() / 1000);
           const abertura = `<t:${abertoTimestamp}:f>`;
@@ -2714,12 +2659,6 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                   saveImages: false,
                   poweredBy: false,
                 },
-              );
-              const transcriptBuffer = attachment.attachment;
-              const transcriptURL = await enviarTranscriptParaAPI(
-                transcriptBuffer,
-                fileName,
-                client,
               );
               const containerUserComponents = [
                 new TextDisplayBuilder().setContent(
@@ -2818,35 +2757,6 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                 ),
               );
 
-              let rowLog = null;
-              let rowUser = null;
-              if (transcriptURL) {
-                if (
-                  transcriptCfg.staff === true &&
-                  Array.isArray(embedLogsData.botoes)
-                ) {
-                  rowLog = gerarBotoesContainer(
-                    embedLogsData.botoes,
-                    transcriptURL,
-                  );
-                  if (rowLog) {
-                    containerLog = containerLog.addActionRowComponents(rowLog);
-                  }
-                }
-                if (
-                  transcriptCfg.user === true &&
-                  Array.isArray(embedLogsUserData.botoes)
-                ) {
-                  rowUser = gerarBotoesContainer(
-                    embedLogsUserData.botoes,
-                    transcriptURL,
-                  );
-                  if (rowUser) {
-                    containerUser =
-                      containerUser.addActionRowComponents(rowUser);
-                  }
-                }
-              }
               if (logCfg.ativo === true && logCfg.canal) {
                 const canalLog = guild.channels.cache.get(logCfg.canal);
                 if (canalLog) {
@@ -2854,6 +2764,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                     .send({
                       flags: MessageFlags.IsComponentsV2,
                       components: [containerLog],
+                      files: transcriptCfg.staff === true ? [attachment] : [],
                     })
                     .catch(console.error);
                 }
@@ -2907,6 +2818,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                       const avalMsg = await membro.send({
                         flags: MessageFlags.IsComponentsV2,
                         components: componentesUnificados,
+                        files: transcriptCfg.user === true ? [attachment] : [],
                       });
                       if (criteriosEAvaliacao || avaliacaoAtiva) {
                         dbConfig.set(`aval_dm_msg_${canalId}`, avalMsg.id);
@@ -3445,7 +3357,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           } catch (err) {
             console.error("Erro ao enviar container no canal:", err);
             await interaction.reply({
-              content: `${emojis.cancel} Falha ao enviar notificação no canal.`,
+              content: t("ticket_notif_erro_canal", interaction.guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -3457,7 +3369,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
             });
           } catch {
             canal.send(
-              `⚠️ ${staff}, não foi possível enviar uma DM para <@${autorId}>.`,
+              t("ticket_notif_sem_dm", interaction.guildId, { staffMention: `${staff}`, autorId }),
             );
           }
 
@@ -3478,7 +3390,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           );
           if (callExistente) {
             return interaction.reply({
-              content: `${emojis.cancel} Já existe uma call criada para este ticket.`,
+              content: t("ticket_call_existente", interaction.guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -3522,7 +3434,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           });
 
           await interaction.reply({
-            content: `${emojis.voicec || "📞"} Call criada com sucesso: <#${canalVoz.id}>`,
+            content: `${emojis.voicec || "📞"} ${t("ticket_call_criada", interaction.guildId, { canalId: canalVoz.id })}`,
           });
         }
 
@@ -3539,13 +3451,13 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           );
           if (!call) {
             return interaction.reply({
-              content: `${emojis.cancel} Nenhuma call foi encontrada para este ticket.`,
+              content: t("ticket_call_nao_encontrada", interaction.guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
           await call.delete("Call do ticket removida pelo painel staff");
           return interaction.reply({
-            content: `A call foi deletada com sucesso.`,
+            content: t("ticket_call_deletada", interaction.guildId),
           });
         }
 
@@ -3554,14 +3466,14 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           const container = new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.user} Selecione os membros que você deseja adicionar diretamente ao ticket:`,
+                t("membro_selecionar_adicionar_staff", interaction.guildId),
               ),
             )
             .addActionRowComponents(
               new ActionRowBuilder().addComponents(
                 new UserSelectMenuBuilder()
                   .setCustomId("select_usuarios_adicionar_direto")
-                  .setPlaceholder("Selecione os usuários para adicionar")
+                  .setPlaceholder(t("membro_adicionar_placeholder", interaction.guildId))
                   .setMinValues(1)
                   .setMaxValues(25),
               ),
@@ -3578,21 +3490,21 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           const autorId = topic.split("Labz - ")[1];
           if (!autorId) {
             return interaction.reply({
-              content: `${emojis.cancel} Não foi possível identificar o autor do ticket.`,
+              content: t("membro_identificar_erro", interaction.guildId),
               flags: MessageFlags.Ephemeral,
             });
           }
           const container = new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${emojis.minus} Selecione os membros para remover do ticket (o autor <@${autorId}> não pode ser removido).`,
+                t("membro_selecionar_remover_staff", interaction.guildId, { autorId }),
               ),
             )
             .addActionRowComponents(
               new ActionRowBuilder().addComponents(
                 new UserSelectMenuBuilder()
                   .setCustomId("select_usuarios_remover_direto")
-                  .setPlaceholder("Selecione os usuários para remover")
+                  .setPlaceholder(t("membro_remover_placeholder", interaction.guildId))
                   .setMinValues(1)
                   .setMaxValues(25),
               ),
@@ -3606,15 +3518,15 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         if (selected === "fechar_ticket") {
           const modal = new ModalBuilder()
             .setCustomId("modal_fechar_ticket")
-            .setTitle("Motivo do fechamento (opcional)")
+            .setTitle(t("modal_motivo_fechamento_label", interaction.guildId))
             .addComponents(
               new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                   .setCustomId("motivo")
-                  .setLabel("Descreva o motivo do fechamento (opcional)")
+                  .setLabel(t("modal_motivo_fechamento_placeholder", interaction.guildId))
                   .setStyle(TextInputStyle.Paragraph)
                   .setRequired(false)
-                  .setPlaceholder("Ex: Ticket resolvido, sem resposta, etc."),
+                  .setPlaceholder(t("modal_motivo_exemplo_placeholder", interaction.guildId)),
               ),
             );
           return await interaction.showModal(modal);
@@ -3645,7 +3557,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       if (!podeVer) {
         return interaction.reply({
-          content: `${emojis.cancel} Apenas quem abriu o ticket pode usar esse painel.`,
+          content: t("sem_permissao_painel_membro", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -3653,12 +3565,12 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       if (selected === "sair_ticket") {
         const modal = new ModalBuilder()
           .setCustomId("modal_sair_ticket_confirmar")
-          .setTitle(`Confirmar saída do ticket`)
+          .setTitle(t("modal_sair_titulo", interaction.guildId))
           .addComponents(
             new ActionRowBuilder().addComponents(
               new TextInputBuilder()
                 .setCustomId("confirmacao")
-                .setLabel("Digite 'CONFIRMAR' para sair")
+                .setLabel(t("modal_sair_label", interaction.guildId))
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true)
                 .setPlaceholder("CONFIRMAR"),
@@ -3682,7 +3594,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
             if (err) {
               console.error("Erro ao buscar staff do ticket:", err);
               return interaction.reply({
-                content: `${emojis.cancel} Erro ao buscar informações do ticket.`,
+                content: t("ticket_erro_buscar_info", guildId),
                 flags: MessageFlags.Ephemeral,
               });
             }
@@ -3691,7 +3603,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
             if (!staffId) {
               return interaction.reply({
-                content: `${emojis.cancel} Nenhum staff assumiu este ticket ainda.`,
+                content: t("staff_nao_assumiu", guildId),
                 flags: MessageFlags.Ephemeral,
               });
             }
@@ -3702,14 +3614,16 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
             if (!staffUser) {
               return interaction.reply({
-                content:
-                  "${emojis.cancel} Não foi possível encontrar o staff que assumiu o ticket.",
+                content: t("ticket_staff_nao_encontrado", guildId),
                 flags: MessageFlags.Ephemeral,
               });
             }
 
             await interaction.reply({
-              content: `${emojis.bell} <@${staffId}>, você foi notificado pelo usuário ${interaction.user} neste ticket.`,
+              content: t("ticket_notificacao_staff", guildId, {
+                staffId,
+                user: `${interaction.user}`,
+              }),
             });
           },
         );
@@ -3718,14 +3632,14 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       if (selected === "adicionar_membro") {
         const userSelectMenu = new UserSelectMenuBuilder()
           .setCustomId("select_usuarios_adicionar")
-          .setPlaceholder("Selecione os usuários para adicionar")
+          .setPlaceholder(t("membro_adicionar_placeholder", interaction.guildId))
           .setMinValues(1)
           .setMaxValues(25);
 
         const container = new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Selecione os usuários que deseja adicionar ao ticket:",
+              t("membro_selecionar_adicionar", interaction.guildId),
             ),
           )
           .addActionRowComponents(
@@ -3746,21 +3660,21 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
         if (!autorId) {
           return interaction.reply({
-            content: `${emojis.cancel} Não foi possível identificar o autor do ticket.`,
+            content: t("membro_identificar_erro", interaction.guildId),
             flags: MessageFlags.Ephemeral,
           });
         }
 
         const select = new UserSelectMenuBuilder()
           .setCustomId("select_usuarios_remover")
-          .setPlaceholder("Selecione os usuários para remover")
+          .setPlaceholder(t("membro_remover_placeholder", interaction.guildId))
           .setMinValues(1)
           .setMaxValues(5);
 
         const container = new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `Selecione os membros que você deseja remover (o autor do ticket <@${autorId}> não pode ser removido).`,
+              t("membro_selecionar_remover", interaction.guildId, { autorId }),
             ),
           )
           .addActionRowComponents(new ActionRowBuilder().addComponents(select));
@@ -3780,7 +3694,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       if (usuariosSelecionados.length === 0) {
         return interaction.reply({
-          content: `${emojis.cancel} Você deve selecionar pelo menos um usuário.`,
+          content: t("membro_precisa_selecionar", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -3789,20 +3703,21 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       const btnAdicionar = new ButtonBuilder()
         .setCustomId(`confirmar_adicionar|${usuariosSelecionados.join(",")}`)
-        .setLabel("Adicionar usuários")
+        .setLabel(t("membro_adicionar_btn", interaction.guildId))
         .setStyle(ButtonStyle.Success);
 
       const btnRecusar = new ButtonBuilder()
         .setCustomId("recusar_adicionar")
-        .setLabel("Recusar usuários")
+        .setLabel(t("membro_recusar_btn", interaction.guildId))
         .setStyle(ButtonStyle.Danger);
 
       const containerConfirm = new ContainerBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "**Confirmação de usuários a adicionar**\n\n" +
-              descricao +
-              `\n\n*Selecionados por ${interaction.user.tag}*`,
+            t("membro_adicionar_confirmacao", interaction.guildId, {
+              lista: descricao,
+              tag: interaction.user.tag,
+            }),
           ),
         )
         .addActionRowComponents(
@@ -3814,7 +3729,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         components: [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Solicitação de adição de membro enviada.",
+              t("membro_adicionar_solicitacao", interaction.guildId),
             ),
           ),
         ],
@@ -3825,7 +3740,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         components: [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Confirme se deseja adicionar os seguintes usuários:",
+              t("membro_adicionar_confirmar", interaction.guildId),
             ),
           ),
           containerConfirm,
@@ -3847,7 +3762,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       if (paraRemover.length === 0) {
         return interaction.reply({
-          content: `${emojis.cancel} Você não pode remover o autor do ticket.`,
+          content: t("membro_nao_pode_remover_autor", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -3860,20 +3775,21 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
       const btnRemover = new ButtonBuilder()
         .setCustomId(`confirmar_remover|${paraRemover.join(",")}`)
-        .setLabel("Remover usuários")
+        .setLabel(t("membro_remover_btn", interaction.guildId))
         .setStyle(ButtonStyle.Danger);
 
       const btnRecusar = new ButtonBuilder()
         .setCustomId("recusar_remover")
-        .setLabel("Cancelar")
+        .setLabel(t("btn_cancelar", interaction.guildId))
         .setStyle(ButtonStyle.Secondary);
 
       const containerConfirm = new ContainerBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "**Confirmação de remoção de usuários**\n\n" +
-              descricao +
-              `\n\n*Solicitado por ${interaction.user.tag}*`,
+            t("membro_remover_confirmacao", interaction.guildId, {
+              lista: descricao,
+              tag: interaction.user.tag,
+            }),
           ),
         )
         .addActionRowComponents(
@@ -3885,7 +3801,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         components: [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "${emojis.check} Solicitação de remoção enviada para aprovação...",
+              t("notif_remocao_aprovacao", interaction.guildId),
             ),
           ),
         ],
@@ -3896,7 +3812,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         components: [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "${emojis.bell} Uma solicitação de remoção foi enviada. Apenas membros autorizados podem aprovar ou recusar.",
+              t("notif_remocao_enviada", interaction.guildId),
             ),
           ),
           containerConfirm,
@@ -4098,7 +4014,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
           const canalTexto = `<#${canal.id}> (${canal.name})`;
           const staffTexto = `${client.user} (\`${client.user.id}\`)`;
-          const autorTexto = autorId ? `<@${autorId}>` : "Não identificado";
+          const autorTexto = autorId ? `<@${autorId}>` : t("ticket_nao_identificado", guildId);
           const abertoTimestamp = Math.floor(canal.createdTimestamp / 1000);
           const fechadoTimestamp = Math.floor(Date.now() / 1000);
           const abertura = `<t:${abertoTimestamp}:f>`;
@@ -4201,13 +4117,6 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                 },
               );
 
-              const transcriptBuffer = attachment.attachment;
-              const transcriptURL = await enviarTranscriptParaAPI(
-                transcriptBuffer,
-                fileName,
-                client,
-              );
-
               const containerUserComponents = [
                 new TextDisplayBuilder().setContent(
                   `# ${
@@ -4237,38 +4146,6 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                   ...containerUserComponents,
                 );
 
-              let rowLog = null;
-              let rowUser = null;
-
-              if (transcriptURL) {
-                if (
-                  transcriptCfg.staff === true &&
-                  Array.isArray(embedLogsData.botoes)
-                ) {
-                  rowLog = gerarBotoesContainer(
-                    embedLogsData.botoes,
-                    transcriptURL,
-                  );
-                  if (rowLog) {
-                    containerLog = containerLog.addActionRowComponents(rowLog);
-                  }
-                }
-
-                if (
-                  transcriptCfg.user === true &&
-                  Array.isArray(embedLogsUserData.botoes)
-                ) {
-                  rowUser = gerarBotoesContainer(
-                    embedLogsUserData.botoes,
-                    transcriptURL,
-                  );
-                  if (rowUser) {
-                    containerUser =
-                      containerUser.addActionRowComponents(rowUser);
-                  }
-                }
-              }
-
               if (logCfg.ativo === true && logCfg.canal) {
                 const canalLog = guild.channels.cache.get(logCfg.canal);
                 if (canalLog) {
@@ -4276,6 +4153,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                     .send({
                       flags: MessageFlags.IsComponentsV2,
                       components: [containerLog],
+                      files: transcriptCfg.staff === true ? [attachment] : [],
                     })
                     .catch(console.error);
                 }
@@ -4291,6 +4169,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                       .send({
                         flags: MessageFlags.IsComponentsV2,
                         components: [containerUser],
+                        files: transcriptCfg.user === true ? [attachment] : [],
                       })
                       .catch(() => {});
                   }
@@ -4710,5 +4589,3 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
     }
   },
 };
-
-module.exports.enviarTranscriptParaAPI = enviarTranscriptParaAPI;

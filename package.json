@@ -1,13 +1,13 @@
 {
-  "name": "labz-tickets",
+  "name": "labz-magdalinny",
   "version": "1.5.0",
-  "description": "Sistema de Tickets Labz",
+  "description": "Bot Labz - Cliente magdalinny",
   "main": "index.js",
   "scripts": {
-    "start": "node --expose-gc index.js",
-    "dev": "nodemon --expose-gc index.js",
+    "start": "cross-env NODE_ENV=production node --expose-gc index.js",
+    "dev": "node --expose-gc index.js",
     "dev:logs": "concurrently \"nodemon --expose-gc index.js\" \"node ./scripts/logger.js\"",
-    "start:basic": "node --expose-gc index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@vitalets/google-translate-api": "^9.2.1",
@@ -28,6 +28,11 @@
     "sqlite3": "^5.1.7",
     "winston": "^3.19.0",
     "wio.db": "^4.0.22"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4",
+    "cross-env": "^10.1.0",
+    "nodemon": "^3.1.14"
   },
   "engines": {
     "node": ">=18.0.0"

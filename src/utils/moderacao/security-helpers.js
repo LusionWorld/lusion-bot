@@ -2,9 +2,9 @@ const { ContainerBuilder, MessageFlags } = require('discord.js')
 const emojis = require('../emojis/emojis.json')
 
 const PRIORITY = {
-  high:   { color: 0xFF0000, icon: '🚨', label: 'HIGH' },
-  medium: { color: 0xFF8800, icon: '⚠️',  label: 'MEDIUM' },
-  low:    { color: 0x3498DB, icon: 'ℹ️',  label: 'LOW' },
+  high:   { color: 0xFF0000, icon: emojis.danger,  label: 'HIGH' },
+  medium: { color: 0xFF8800, icon: emojis.warning, label: 'MEDIUM' },
+  low:    { color: 0x3498DB, icon: emojis.info,    label: 'LOW' },
 }
 
 async function sendSecurityAlert(guild, cfg, opts = {}) {

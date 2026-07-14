@@ -6,6 +6,8 @@ const {
   ModalBuilder,
   TextInputBuilder,
   StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  LabelBuilder,
   TextInputStyle,
   ChannelSelectMenuBuilder,
   ChannelType,
@@ -25,6 +27,7 @@ const {
 
 const path = require("path");
 const { JsonDatabase } = require("wio.db");
+const { t, getGuildLocale, setGuildLocale, LOCALE_LABELS, SUPPORTED } = require("../../utils/i18n");
 
 const {
   getEmoji,
@@ -74,39 +77,39 @@ function buildOutrosTicketComponents(guildId) {
 
   const limiteBtn = new ButtonBuilder()
     .setCustomId("limite_ticket")
-    .setLabel("Alterar Limite")
+    .setLabel(t("outros_limite_btn", guildId))
     .setEmoji(getEmoji(emojis.lock))
     .setStyle(ButtonStyle.Secondary);
   const toggleMencionar = new ButtonBuilder()
     .setCustomId("toggle_mencionar_ao_abrir")
-    .setLabel("Mencionar ao Abrir")
+    .setLabel(t("outros_mencionar_btn", guildId))
     .setEmoji(getEmoji(mencionarAoAbrir ? emojis.check : emojis.cancel))
     .setStyle(mencionarAoAbrir ? ButtonStyle.Success : ButtonStyle.Secondary);
   const toggleAssumido = new ButtonBuilder()
     .setCustomId("toggle_notificar_ao_assumir")
-    .setLabel("Notificar ao Assumir")
+    .setLabel(t("outros_notificar_btn", guildId))
     .setEmoji(getEmoji(notificarAutorAoAssumir ? emojis.check : emojis.cancel))
     .setStyle(
       notificarAutorAoAssumir ? ButtonStyle.Success : ButtonStyle.Secondary,
     );
   const toggleMotivo = new ButtonBuilder()
     .setCustomId("toggle_solicitar_motivo")
-    .setLabel("Solicitar Motivo")
+    .setLabel(t("outros_motivo_btn", guildId))
     .setEmoji(getEmoji(solicitarMotivo ? emojis.check : emojis.cancel))
     .setStyle(solicitarMotivo ? ButtonStyle.Success : ButtonStyle.Secondary);
   const toggleFecharSairServidor = new ButtonBuilder()
     .setCustomId("toggle_fechar_ao_sair_servidor")
-    .setLabel("Fechar ao Sair do Servidor")
+    .setLabel(t("outros_fechar_servidor_btn", guildId))
     .setEmoji(getEmoji(fecharAoSair ? emojis.check : emojis.cancel))
     .setStyle(fecharAoSair ? ButtonStyle.Success : ButtonStyle.Secondary);
   const toggleFecharSairTicket = new ButtonBuilder()
     .setCustomId("toggle_fechar_ao_sair_ticket")
-    .setLabel("Fechar ao Sair do Ticket")
+    .setLabel(t("outros_fechar_ticket_btn", guildId))
     .setEmoji(getEmoji(fecharAoSairTicket ? emojis.check : emojis.cancel))
     .setStyle(fecharAoSairTicket ? ButtonStyle.Success : ButtonStyle.Secondary);
   const voltarBtn = new ButtonBuilder()
     .setCustomId("configurar_ticket")
-    .setLabel("Voltar")
+    .setLabel(t("btn_voltar", guildId))
     .setEmoji(getEmoji(emojis.arrowl))
     .setStyle(ButtonStyle.Secondary);
 
@@ -114,7 +117,7 @@ function buildOutrosTicketComponents(guildId) {
     new ContainerBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `# ${emojis.settings} Configurações Adicionais`,
+          t("outros_pg1_titulo", guildId),
         ),
       )
       .addSeparatorComponents(
@@ -124,42 +127,42 @@ function buildOutrosTicketComponents(guildId) {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.lock} Limite de Tickets**\nMáximo por usuário: **${valorAtual}**`,
+              t("outros_limite_secao", guildId, { valor: valorAtual }),
             ),
           )
           .setButtonAccessory(limiteBtn),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.bell} Mencionar ao Abrir**\nMarca a equipe automaticamente.`,
+              t("outros_mencionar_secao", guildId),
             ),
           )
           .setButtonAccessory(toggleMencionar),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.message} Notificar ao Assumir**\nDM ao usuário quando ticket for assumido.`,
+              t("outros_notificar_secao", guildId),
             ),
           )
           .setButtonAccessory(toggleAssumido),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.clipboard} Solicitar Motivo**\nPede motivo ao abrir o ticket.`,
+              t("outros_motivo_secao", guildId),
             ),
           )
           .setButtonAccessory(toggleMotivo),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.cancel} Fechar ao Sair do Servidor**\nFecha ticket quando usuário sai.`,
+              t("outros_fechar_servidor_secao", guildId),
             ),
           )
           .setButtonAccessory(toggleFecharSairServidor),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.block} Fechar ao Sair do Ticket**\nFecha quando autor remove suas permissões.`,
+              t("outros_fechar_ticket_secao", guildId),
             ),
           )
           .setButtonAccessory(toggleFecharSairTicket),
@@ -176,52 +179,52 @@ function buildOutrosTicketComponents(guildId) {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.thread} Tags de Tickets**\nEtiquetas personalizadas para categorizar tickets.`,
+              t("outros_tags_secao", guildId),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId("config_tags_sistema")
-              .setLabel("Configurar Tags")
+              .setLabel(t("outros_tags_btn", guildId))
               .setEmoji(getEmoji(emojis.thread))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.chart} Painel de Visão Geral**\nEmbed em tempo real com tickets abertos por categoria.`,
+              t("outros_overview_secao", guildId),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId("config_overview_")
-              .setLabel("Configurar Painel")
+              .setLabel(t("outros_overview_btn", guildId))
               .setEmoji(getEmoji(emojis.chart))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.star} Avaliação por Critérios**\nVelocidade, qualidade e simpatia + ranking de staff.`,
+              t("outros_avaliacao_secao", guildId),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId("config_avaliacao_criterios")
-              .setLabel("Configurar Avaliação")
+              .setLabel(t("outros_avaliacao_btn", guildId))
               .setEmoji(getEmoji(emojis.star))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${emojis.clock} Inatividade Automática**\nAvisa e fecha tickets sem resposta por X horas.`,
+              t("outros_inatividade_secao", guildId),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId("config_inatividade_auto")
-              .setLabel("Configurar")
+              .setLabel(t("btn_configurar", guildId))
               .setEmoji(getEmoji(emojis.clock))
               .setStyle(ButtonStyle.Secondary),
           ),
@@ -300,6 +303,8 @@ module.exports = {
       "limite_ticket",
       "enviar_ticket_painel",
       "atualizar_painel_embed_principal",
+      "config_idioma",
+      "set_idioma_",
       "toggle_",
       "perm_",
       "cor_",
@@ -400,6 +405,7 @@ module.exports = {
           interaction.customId.includes("enviar_") ||
           interaction.customId.includes("ia_") ||
           interaction.customId.includes("estacao") ||
+          interaction.customId === "set_idioma_select" ||
           interaction.customId.startsWith("emoji_escolher_") ||
           interaction.customId.startsWith("editar_embed_estacao:"))) ||
       (interaction.isChannelSelectMenu() &&
@@ -438,37 +444,37 @@ module.exports = {
 
       const sistemaBtn = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Painel")
+        .setLabel(t("btn_painel", interaction.guildId))
         .setEmoji(getEmoji(emojis.laptop))
         .setStyle(ButtonStyle.Secondary);
 
       const teamBtn = new ButtonBuilder()
         .setCustomId("team_ticket")
-        .setLabel("Equipe")
+        .setLabel(t("btn_equipe", interaction.guildId))
         .setEmoji(getEmoji(emojis.users))
         .setStyle(ButtonStyle.Secondary);
 
       const horariosBtn = new ButtonBuilder()
         .setCustomId("horarios_ticket")
-        .setLabel("Horários")
+        .setLabel(t("btn_horarios", interaction.guildId))
         .setEmoji(getEmoji(emojis.clock))
         .setStyle(ButtonStyle.Secondary);
 
       const personalizarBtn = new ButtonBuilder()
         .setCustomId("personalizar_ticket")
-        .setLabel("Visual")
+        .setLabel(t("btn_visual", interaction.guildId))
         .setEmoji(getEmoji(emojis.brush))
         .setStyle(ButtonStyle.Secondary);
 
       const estacoesBtn = new ButtonBuilder()
         .setCustomId("gerenciar_estacoes")
-        .setLabel("Estações")
+        .setLabel(t("btn_estacoes", interaction.guildId))
         .setEmoji(getEmoji(emojis.cube))
         .setStyle(ButtonStyle.Secondary);
 
       const toggleBtn = new ButtonBuilder()
         .setCustomId("toggle_system")
-        .setLabel("Sistema")
+        .setLabel(t("btn_sistema", interaction.guildId))
         .setEmoji(systemStatus ? getEmoji(emojis.on) : getEmoji(emojis.off))
         .setStyle(systemStatus ? ButtonStyle.Success : ButtonStyle.Secondary);
 
@@ -482,37 +488,37 @@ module.exports = {
 
       const logsBtn = new ButtonBuilder()
         .setCustomId("logs_ticket")
-        .setLabel("Logs")
+        .setLabel(t("btn_logs", interaction.guildId))
         .setEmoji(getEmoji(emojis.logs))
         .setStyle(ButtonStyle.Secondary);
 
       const transcriptBtn = new ButtonBuilder()
         .setCustomId("transcript_ticket")
-        .setLabel("Transcript")
+        .setLabel(t("btn_transcript", interaction.guildId))
         .setEmoji(getEmoji(emojis.yaml))
         .setStyle(ButtonStyle.Secondary);
 
       const avaliacaoBtn = new ButtonBuilder()
         .setCustomId("avaliacao_ticket")
-        .setLabel("Avaliação")
+        .setLabel(t("btn_avaliacao", interaction.guildId))
         .setEmoji(getEmoji(emojis.fav))
         .setStyle(ButtonStyle.Secondary);
 
       const iaBtn = new ButtonBuilder()
         .setCustomId("ia_ticket")
-        .setLabel("IA")
+        .setLabel(t("btn_ia", interaction.guildId))
         .setEmoji(getEmoji(emojis.bot))
         .setStyle(ButtonStyle.Secondary);
 
       const outrosBtn = new ButtonBuilder()
         .setCustomId("outros_ticket")
-        .setLabel("Outros")
+        .setLabel(t("btn_outros", interaction.guildId))
         .setEmoji(getEmoji(emojis.settings))
         .setStyle(ButtonStyle.Secondary);
 
       const blacklistBtn = new ButtonBuilder()
         .setCustomId("blacklist_ticket")
-        .setLabel("Blacklist")
+        .setLabel(t("btn_blacklist", interaction.guildId))
         .setEmoji(getEmoji(emojis.block))
         .setStyle(ButtonStyle.Secondary);
 
@@ -526,7 +532,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("voltar_inicio")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
@@ -546,7 +552,7 @@ module.exports = {
               `${emojis.L_}${emojis.A_}${emojis.B_}${emojis.Z_} | ${interaction.guild.name}`,
             ),
             new TextDisplayBuilder().setContent(
-              `Personalize seu sistema de tickets clicando nos botões abaixo. Configure categorias, canais, botões e otimize o seu atendimento.\n\n-# Ping do bot: ${client.ws.ping}ms`,
+              `${t("painel_desc", interaction.guildId)}\n\n-# Ping do bot: ${client.ws.ping}ms`,
             ),
           )
           .addSeparatorComponents(
@@ -568,85 +574,93 @@ module.exports = {
     if (interaction.customId === "voltar_inicio") {
       const buttonConfig = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Configurar")
+        .setLabel(t("btn_configurar", interaction.guildId))
         .setEmoji(getEmoji(emojis.settings))
         .setStyle(ButtonStyle.Primary);
 
       const buttonBanco = new ButtonBuilder()
         .setCustomId("banco_ticket")
-        .setLabel("Banco de Dados")
+        .setLabel(t("btn_banco", interaction.guildId))
         .setEmoji(getEmoji(emojis.cardbox))
         .setStyle(ButtonStyle.Primary);
 
       const buttonPix = new ButtonBuilder()
         .setCustomId("pix_ticket")
-        .setLabel("Pix")
+        .setLabel(t("btn_pix", interaction.guildId))
         .setEmoji(getEmoji(emojis.dollar))
         .setStyle(ButtonStyle.Primary);
 
       const enviarTicketBtn = new ButtonBuilder()
         .setCustomId("enviar_ticket_painel")
-        .setLabel("Enviar Ticket")
+        .setLabel(t("btn_enviar_ticket", interaction.guildId))
         .setEmoji(getEmoji(emojis.embeds))
         .setStyle(ButtonStyle.Success);
 
       const iaSetupBtn = new ButtonBuilder()
         .setCustomId("ia_setup_inicial")
-        .setLabel("Setup com IA")
+        .setLabel(t("btn_ia_setup", interaction.guildId))
         .setEmoji(getEmoji(emojis.bot))
         .setStyle(ButtonStyle.Success);
 
       const buttonSuporte = new ButtonBuilder()
-        .setLabel("Suporte")
+        .setLabel(t("btn_suporte", interaction.guildId))
         .setEmoji(getEmoji(emojis.suporte))
         .setStyle(ButtonStyle.Link)
         .setURL("https://discord.gg/MmUB4H3uCM");
 
+      const buttonIdioma = new ButtonBuilder()
+        .setCustomId("config_idioma")
+        .setLabel(t("btn_alterar_idioma", interaction.guildId))
+        .setEmoji(getEmoji(emojis.world))
+        .setStyle(ButtonStyle.Secondary);
+
       const components = [
         new ContainerBuilder().addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `# Painel Principal | ${interaction.guild.name}`,
+            t("painel_principal_titulo", interaction.guildId, {
+              guild: interaction.guild.name,
+            }),
           ),
         ),
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `Use os botões abaixo para acessar as configurações e o banco de dados e muito mais!\n\n-# Ping do bot: ${client.ws.ping}ms`,
+              `${t("painel_principal_desc", interaction.guildId)}\n\n-# Ping do bot: ${client.ws.ping}ms`,
             ),
           )
           .addSectionComponents(
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "**Configurar Ticket**\nGerencie as configurações do sistema de tickets",
+                  t("painel_secao_configurar", interaction.guildId),
                 ),
               )
               .setButtonAccessory(buttonConfig),
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "**Banco de Dados**\nAcesse relatórios e estatísticas dos tickets",
+                  t("painel_secao_banco", interaction.guildId),
                 ),
               )
               .setButtonAccessory(buttonBanco),
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "**Pix**\nConfigurações relacionadas ao sistema de pagamento",
+                  t("painel_secao_pix", interaction.guildId),
                 ),
               )
               .setButtonAccessory(buttonPix),
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "**Enviar Ticket**\nEnvie o painel de tickets configurado em um canal específico",
+                  t("painel_secao_enviar", interaction.guildId),
                 ),
               )
               .setButtonAccessory(enviarTicketBtn),
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "**Setup com IA**\nDeixe a inteligência artificial configurar automaticamente seu sistema de tickets de forma rápida e personalizada",
+                  t("painel_secao_ia", interaction.guildId),
                 ),
               )
               .setButtonAccessory(iaSetupBtn),
@@ -660,10 +674,17 @@ module.exports = {
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "**Suporte**\nPrecisa de ajuda? Entre em contato conosco!",
+                  t("painel_secao_suporte", interaction.guildId),
                 ),
               )
               .setButtonAccessory(buttonSuporte),
+            new SectionBuilder()
+              .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                  t("painel_secao_idioma", interaction.guildId),
+                ),
+              )
+              .setButtonAccessory(buttonIdioma),
           ),
       ];
 
@@ -685,37 +706,37 @@ module.exports = {
 
         const toggleBtn = new ButtonBuilder()
           .setCustomId("toggle_system")
-          .setLabel("Sistema")
+          .setLabel(t("btn_sistema", interaction.guildId))
           .setEmoji(newStatus ? getEmoji(emojis.on) : getEmoji(emojis.off))
           .setStyle(newStatus ? ButtonStyle.Success : ButtonStyle.Secondary);
 
         const sistemaBtn = new ButtonBuilder()
           .setCustomId("sistema_ticket")
-          .setLabel("Painel")
+          .setLabel(t("btn_painel", interaction.guildId))
           .setEmoji(getEmoji(emojis.laptop))
           .setStyle(ButtonStyle.Secondary);
 
         const teamBtn = new ButtonBuilder()
           .setCustomId("team_ticket")
-          .setLabel("Equipe")
+          .setLabel(t("btn_equipe", interaction.guildId))
           .setEmoji(getEmoji(emojis.users))
           .setStyle(ButtonStyle.Secondary);
 
         const horariosBtn = new ButtonBuilder()
           .setCustomId("horarios_ticket")
-          .setLabel("Horários")
+          .setLabel(t("btn_horarios", interaction.guildId))
           .setEmoji(getEmoji(emojis.clock))
           .setStyle(ButtonStyle.Secondary);
 
         const personalizarBtn = new ButtonBuilder()
           .setCustomId("personalizar_ticket")
-          .setLabel("Visual")
+          .setLabel(t("btn_visual", interaction.guildId))
           .setEmoji(getEmoji(emojis.brush))
           .setStyle(ButtonStyle.Secondary);
 
         const estacoesBtn = new ButtonBuilder()
           .setCustomId("gerenciar_estacoes")
-          .setLabel("Estações")
+          .setLabel(t("btn_estacoes", interaction.guildId))
           .setEmoji(getEmoji(emojis.cube))
           .setStyle(ButtonStyle.Secondary);
 
@@ -729,37 +750,37 @@ module.exports = {
 
         const logsBtn = new ButtonBuilder()
           .setCustomId("logs_ticket")
-          .setLabel("Logs")
+          .setLabel(t("btn_logs", interaction.guildId))
           .setEmoji(getEmoji(emojis.logs))
           .setStyle(ButtonStyle.Secondary);
 
         const transcriptBtn = new ButtonBuilder()
           .setCustomId("transcript_ticket")
-          .setLabel("Transcript")
+          .setLabel(t("btn_transcript", interaction.guildId))
           .setEmoji(getEmoji(emojis.yaml))
           .setStyle(ButtonStyle.Secondary);
 
         const avaliacaoBtn = new ButtonBuilder()
           .setCustomId("avaliacao_ticket")
-          .setLabel("Avaliação")
+          .setLabel(t("btn_avaliacao", interaction.guildId))
           .setEmoji(getEmoji(emojis.fav))
           .setStyle(ButtonStyle.Secondary);
 
         const iaBtn = new ButtonBuilder()
           .setCustomId("ia_ticket")
-          .setLabel("IA")
+          .setLabel(t("btn_ia", interaction.guildId))
           .setEmoji(getEmoji(emojis.bot))
           .setStyle(ButtonStyle.Secondary);
 
         const outrosBtn = new ButtonBuilder()
           .setCustomId("outros_ticket")
-          .setLabel("Outros")
+          .setLabel(t("btn_outros", interaction.guildId))
           .setEmoji(getEmoji(emojis.settings))
           .setStyle(ButtonStyle.Secondary);
 
         const blacklistBtn = new ButtonBuilder()
           .setCustomId("blacklist_ticket")
-          .setLabel("Blacklist")
+          .setLabel(t("btn_blacklist", interaction.guildId))
           .setEmoji(getEmoji(emojis.block))
           .setStyle(ButtonStyle.Secondary);
 
@@ -773,7 +794,7 @@ module.exports = {
 
         const voltarBtn = new ButtonBuilder()
           .setCustomId("voltar_inicio")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", interaction.guildId))
           .setEmoji(getEmoji(emojis.home))
           .setStyle(ButtonStyle.Secondary);
 
@@ -793,7 +814,7 @@ module.exports = {
                 `${emojis.L_}${emojis.A_}${emojis.B_}${emojis.Z_} | ${interaction.guild.name}`,
               ),
               new TextDisplayBuilder().setContent(
-                `Personalize seu sistema de tickets clicando nos botões abaixo. Configure categorias, canais, botões e otimize o seu atendimento.\n\n-# Ping do bot: ${client.ws.ping}ms`,
+                `${t("painel_desc", interaction.guildId)}\n\n-# Ping do bot: ${client.ws.ping}ms`,
               ),
             )
             .addSeparatorComponents(
@@ -821,55 +842,53 @@ module.exports = {
 
       const select = new StringSelectMenuBuilder()
         .setCustomId("select_personalizacao_embed")
-        .setPlaceholder("Escolha uma embed para personalizar")
+        .setPlaceholder(t("visual_embed_select_placeholder", guildId))
         .addOptions([
           {
-            label: "Embed Principal",
-            description: "Personalize a embed usada no painel de tickets.",
+            label: t("visual_embed_principal_label", guildId),
+            description: t("visual_embed_principal_desc", guildId),
             value: "embedprincipal",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Ticket",
-            description: "Personalize a embed usada dentro do ticket.",
+            label: t("visual_embed_ticket_label", guildId),
+            description: t("visual_embed_ticket_desc", guildId),
             value: "embedticket",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs",
-            description: "Personalize a embed usada nos logs de fechamento.",
+            label: t("visual_embed_logs_label", guildId),
+            description: t("visual_embed_logs_desc", guildId),
             value: "embedlogs",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs User",
-            description: "Personalize a embed enviada para o autor do ticket.",
+            label: t("visual_embed_logsuser_label", guildId),
+            description: t("visual_embed_logsuser_desc", guildId),
             value: "embedlogsuser",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Notificar",
-            description:
-              "Personalize a embed enviada ao ser feita uma chamada.",
+            label: t("visual_embed_notificar_label", guildId),
+            description: t("visual_embed_notificar_desc", guildId),
             value: "embednotificar",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Avaliação",
-            description: "Personalize a embed de avaliação enviada ao usuário.",
+            label: t("visual_embed_avaliacao_label", guildId),
+            description: t("visual_embed_avaliacao_desc", guildId),
             value: "embedavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Log Avaliação",
-            description: "Personalize a embed de log de avaliações.",
+            label: t("visual_embed_logavaliacao_label", guildId),
+            description: t("visual_embed_logavaliacao_desc", guildId),
             value: "embedlogavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Assumido",
-            description:
-              "Personalize a embed enviada quando o ticket é assumido.",
+            label: t("visual_embed_assumido_label", guildId),
+            description: t("visual_embed_assumido_desc", guildId),
             value: "embedassumido",
             emoji: getEmoji(emojis.embeds),
           },
@@ -879,7 +898,7 @@ module.exports = {
 
       const voltarButton = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", guildId))
         .setStyle(ButtonStyle.Secondary)
         .setEmoji(getEmoji(emojis.home));
 
@@ -888,9 +907,11 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Personalização de Embeds"),
             new TextDisplayBuilder().setContent(
-              "Selecione abaixo qual embed deseja personalizar.",
+              t("visual_personalizar_titulo", guildId),
+            ),
+            new TextDisplayBuilder().setContent(
+              t("visual_personalizar_desc", guildId),
             ),
           )
           .addActionRowComponents(rowSelect, rowButton),
@@ -903,21 +924,23 @@ module.exports = {
     }
 
     if (customId === "sistema_ticket") {
+      const gid = interaction.guildId;
+
       const button1 = new ButtonBuilder()
         .setCustomId("configurar_botao")
-        .setLabel("Configurar Botão")
+        .setLabel(t("sistema_btn_botao", gid))
         .setEmoji(getEmoji(emojis.cardbox))
         .setStyle(ButtonStyle.Secondary);
 
       const button2 = new ButtonBuilder()
         .setCustomId("configurar_select")
-        .setLabel("Configurar Select")
+        .setLabel(t("sistema_btn_select", gid))
         .setEmoji(getEmoji(emojis.cardbox))
         .setStyle(ButtonStyle.Secondary);
 
       const button3 = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", gid))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -930,9 +953,9 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Sistema de Ticket"),
+            new TextDisplayBuilder().setContent(t("sistema_titulo", gid)),
             new TextDisplayBuilder().setContent(
-              "Escolha o tipo de painel que deseja configurar:",
+              t("sistema_desc", gid),
             ),
           )
           .addActionRowComponents(row),
@@ -1039,6 +1062,74 @@ module.exports = {
       });
     }
 
+    if (interaction.isButton() && interaction.customId === "config_idioma") {
+      const atual = getGuildLocale(interaction.guildId);
+
+      const options = SUPPORTED.map((l) =>
+        new StringSelectMenuOptionBuilder()
+          .setLabel(LOCALE_LABELS[l])
+          .setValue(l)
+          .setDefault(l === atual),
+      );
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId("modal_idioma_select")
+        .setPlaceholder("Escolha o idioma")
+        .addOptions(options);
+
+      const label = new LabelBuilder()
+        .setLabel("Idioma do sistema de tickets")
+        .setStringSelectMenuComponent(select);
+
+      const modal = new ModalBuilder()
+        .setCustomId("modal_idioma_submit")
+        .setTitle("Idioma do sistema de tickets")
+        .addLabelComponents(label);
+
+      return interaction.showModal(modal);
+    }
+
+    if (
+      interaction.isModalSubmit() &&
+      interaction.customId === "modal_idioma_submit"
+    ) {
+      const escolhido = interaction.fields.getStringSelectValues(
+        "modal_idioma_select",
+      )[0];
+      if (!escolhido) return interaction.deferUpdate().catch(() => {});
+      setGuildLocale(interaction.guildId, escolhido);
+
+      const container = new ContainerBuilder()
+        .setAccentColor(0xffffff)
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `${emojis.check} Idioma alterado`,
+          ),
+          new TextDisplayBuilder().setContent(
+            `O idioma do sistema de tickets foi alterado para **${LOCALE_LABELS[escolhido]}**.`,
+          ),
+        )
+        .addSeparatorComponents(
+          new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large),
+        )
+        .addActionRowComponents(
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId("voltar_inicio")
+              .setLabel("Voltar")
+              .setEmoji(getEmoji(emojis.home))
+              .setStyle(ButtonStyle.Secondary),
+          ),
+        );
+
+      return interaction.update({
+        components: [container],
+        flags: MessageFlags.IsComponentsV2,
+        embeds: [],
+        content: null,
+      });
+    }
+
     const subHandlers = [
       handlerLogs,
       handlerEquipe,
@@ -1059,10 +1150,6 @@ module.exports = {
     if (handler) {
       interaction._fromPainel = true;
       await handler.execute(client, interaction);
-    } else {
-      console.log(
-        `[PAINEL-DEBUG] Nenhum handler encontrado para customId: "${customId}"`,
-      );
     }
   },
 };

@@ -1,34 +1,13 @@
-const { cyan, green, bold } = require("colorette");
-const path = require("path");
+const { bold } = require("colorette").createColors({ useColor: true });
+const { log } = require("../../utils/logger");
 
 module.exports = {
   name: "clientReady",
   once: true,
   execute: async (client) => {
-    console.log("\n" + cyan("━".repeat(55)));
-    console.log(bold(green("  BOT ONLINE E OPERACIONAL")));
-    console.log(cyan("━".repeat(55)) + "\n");
-
-    console.log(cyan("  ╭─ Informações do Bot"));
-    console.log(cyan("  │"));
-    console.log(cyan("  ├─ ") + "Usuário: " + bold(green(client.user.tag)));
-    console.log(cyan("  ├─ ") + "ID: " + green(client.user.id));
-    console.log(cyan("  ├─ ") + "Servidores: " + bold(green(client.guilds.cache.size)));
-    console.log(cyan("  └─ ") + "Comandos: " + green(client.slashCommands.size));
-
-    console.log("\n" + cyan("  ╭─ Sistema de Emojis"));
-    console.log(cyan("  │"));
-
-    const count = global.emojis ? Object.keys(global.emojis).length : 0;
-    if (count > 0) {
-      console.log(cyan("  └─ ") + bold(green(`${count} emojis carregados`)));
-    } else {
-      console.log(cyan("  └─ ") + green("⚠ Emojis não carregados ainda"));
-    }
-
-    console.log("\n" + cyan("━".repeat(55)));
-    console.log(bold(green("  SISTEMA PRONTO PARA USO")));
-    console.log(cyan("━".repeat(55)) + "\n");
+    const membros = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
+    log("Bot", bold(client.user.tag));
+    log("Bot", `${client.guilds.cache.size} servidores   ${membros} membros   ${client.slashCommands?.size || 0} comandos`);
 
     const updateStatus = () => {
       client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);

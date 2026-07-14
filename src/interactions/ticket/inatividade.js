@@ -14,6 +14,7 @@ const sqlite3 = require("sqlite3").verbose();
 const { promisify } = require("util");
 const { JsonDatabase } = require("wio.db");
 
+const { t } = require("../../utils/i18n");
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 const dbConnections = new Map();
 
@@ -123,7 +124,6 @@ module.exports.iniciarCronInatividade = function (client) {
       console.error("[INATIVIDADE] Erro no cron:", err);
     }
   });
-  console.log("[INATIVIDADE] Cron iniciado — verificação a cada hora.");
 };
 
 async function verificarInatividade(client) {
@@ -163,7 +163,7 @@ async function verificarInatividade(client) {
               components: [
                 new ContainerBuilder().addTextDisplayComponents(
                   new TextDisplayBuilder().setContent(
-                    `⏰ **Ticket encerrado por inatividade.**\nSem atividade há mais de **${horas_fechar}h**. O ticket será fechado automaticamente.`,
+                    t("inatividade_fechado", guildId),
                   ),
                 ),
               ],
@@ -186,7 +186,10 @@ async function verificarInatividade(client) {
             );
             const mensagemInatividade =
               configDB.get("inatividade_mensagem") ||
-              `⏰ <@{user}> Seu ticket está inativo há **{horas}h**. Responda em **${restante}h** ou o ticket será encerrado automaticamente.`;
+              t("inatividade_aviso", guildId, {
+                horas: "{horas}",
+                restante: String(restante),
+              });
 
             const horasSemResp = Math.floor(tempoSemResposta / 3600000);
             const msg = mensagemInatividade
@@ -203,7 +206,7 @@ async function verificarInatividade(client) {
                     new ActionRowBuilder().addComponents(
                       new ButtonBuilder()
                         .setCustomId("_noop_inatividade")
-                        .setLabel("Ticket será fechado por inatividade")
+                        .setLabel(t("inatividade_btn_aviso", guildId))
                         .setStyle(ButtonStyle.Danger)
                         .setDisabled(true),
                     ),

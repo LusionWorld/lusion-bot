@@ -19,6 +19,8 @@ const { getEmoji, getConfigDB } = require("./helpers");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
+const { t } = require("../../utils/i18n");
+
 function safeUpdate(interaction, options) {
   if (interaction.replied || interaction.deferred) return;
   return interaction.update(options).catch((err) => {
@@ -49,21 +51,24 @@ function applyEmoji(button, emojiValue) {
   return button;
 }
 
-const DIAS_SEMANA = {
-  monday: "Segunda-feira",
-  tuesday: "Terça-feira",
-  wednesday: "Quarta-feira",
-  thursday: "Quinta-feira",
-  friday: "Sexta-feira",
-  saturday: "Sábado",
-  sunday: "Domingo",
-};
+function getDiasSemana(guildId) {
+  return {
+    monday:    t("horario_segunda", guildId),
+    tuesday:   t("horario_terca",   guildId),
+    wednesday: t("horario_quarta",  guildId),
+    thursday:  t("horario_quinta",  guildId),
+    friday:    t("horario_sexta",   guildId),
+    saturday:  t("horario_sabado",  guildId),
+    sunday:    t("horario_domingo", guildId),
+  };
+}
 
-function criarPainelHorarios(db) {
+function criarPainelHorarios(db, guildId) {
   const horarioAtivo = db.get("horario_ativo") === true;
   const schedule = db.get("schedule") || {};
+  const diasSemana = getDiasSemana(guildId);
 
-  const sections = Object.entries(DIAS_SEMANA).map(([key, nome]) => {
+  const sections = Object.entries(diasSemana).map(([key, nome]) => {
     const horario = schedule[key];
     return new SectionBuilder()
       .addTextDisplayComponents(
@@ -71,14 +76,14 @@ function criarPainelHorarios(db) {
         new TextDisplayBuilder().setContent(
           horario
             ? `${emojis.clock} ${horario.start} — ${horario.end}`
-            : `${emojis.cancel} Desativado`,
+            : `${emojis.cancel} ${t("horario_desativado_dia", guildId)}`,
         ),
       )
       .setButtonAccessory(
         applyEmoji(
           new ButtonBuilder()
             .setCustomId(`horario_editar_${key}`)
-            .setLabel("Editar")
+            .setLabel(t("horario_btn_editar", guildId))
             .setStyle(ButtonStyle.Secondary),
           emojis.pencil,
         ),
@@ -89,7 +94,7 @@ function criarPainelHorarios(db) {
     applyEmoji(
       new ButtonBuilder()
         .setCustomId("toggle_horario")
-        .setLabel(horarioAtivo ? "Desativar Sistema" : "Ativar Sistema")
+        .setLabel(horarioAtivo ? t("horario_btn_desativar", guildId) : t("horario_btn_ativar", guildId))
         .setStyle(horarioAtivo ? ButtonStyle.Danger : ButtonStyle.Success),
       horarioAtivo ? emojis.off : emojis.on,
     ),
@@ -99,7 +104,7 @@ function criarPainelHorarios(db) {
     applyEmoji(
       new ButtonBuilder()
         .setCustomId("voltar_horario")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", guildId))
         .setStyle(ButtonStyle.Secondary),
       emojis.arrowl,
     ),
@@ -109,12 +114,12 @@ function criarPainelHorarios(db) {
     new ContainerBuilder()
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `${emojis.clock} **Horários de Atendimento**`,
+          `${emojis.clock} **${t("horario_titulo_texto", guildId)}**`,
         ),
         new TextDisplayBuilder().setContent(
           horarioAtivo
-            ? `${emojis.check} Sistema **ativo**`
-            : `${emojis.cancel} Sistema **desativado**`,
+            ? `${emojis.check} ${t("horario_ativo_texto", guildId)}`
+            : `${emojis.cancel} ${t("horario_desativado_texto", guildId)}`,
         ),
       )
       .addSeparatorComponents(new SeparatorBuilder().setDivider(true))
@@ -149,11 +154,13 @@ module.exports = {
       return;
     }
 
+    const guildId = interaction.guildId;
+
     if (customId === "horarios_ticket") {
       const db = getConfigDB(interaction.guildId);
 
       return safeUpdate(interaction, {
-        components: criarPainelHorarios(db),
+        components: criarPainelHorarios(db, guildId),
         flags: MessageFlags.IsComponentsV2,
         embeds: [],
         content: null,
@@ -169,7 +176,7 @@ module.exports = {
       const depois = db.get("horario_ativo");
 
       return safeUpdate(interaction, {
-        components: criarPainelHorarios(db),
+        components: criarPainelHorarios(db, guildId),
         flags: MessageFlags.IsComponentsV2,
         embeds: [],
         content: null,
@@ -181,19 +188,20 @@ module.exports = {
       const db = getConfigDB(interaction.guildId);
       const schedule = db.get("schedule") || {};
       const horario = schedule[dia] || {};
+      const diasSemana = getDiasSemana(guildId);
 
       const startInput = new TextInputBuilder()
         .setCustomId("horario_start")
-        .setLabel("Início (HH:mm)")
+        .setLabel(t("horario_input_inicio_label", guildId))
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("Ex: 09:00")
+        .setPlaceholder(t("horario_input_inicio_placeholder", guildId))
         .setRequired(false);
 
       const endInput = new TextInputBuilder()
         .setCustomId("horario_end")
-        .setLabel("Fim (HH:mm)")
+        .setLabel(t("horario_input_fim_label", guildId))
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("Ex: 18:00")
+        .setPlaceholder(t("horario_input_fim_placeholder", guildId))
         .setRequired(false);
 
       if (horario.start) startInput.setValue(horario.start);
@@ -201,7 +209,7 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_horario_${dia}`)
-        .setTitle(`Editar — ${DIAS_SEMANA[dia] || dia}`)
+        .setTitle(t("horario_modal_titulo", guildId, { dia: diasSemana[dia] || dia }))
         .addComponents(
           new ActionRowBuilder().addComponents(startInput),
           new ActionRowBuilder().addComponents(endInput),
@@ -228,7 +236,7 @@ module.exports = {
             components: [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  `${emojis.cancel} Formato inválido. Use **HH:mm** (ex: 09:00 — 18:00).`,
+                  t("horario_formato_invalido", guildId),
                 ),
               ),
             ],
@@ -243,7 +251,7 @@ module.exports = {
       db.set("schedule", schedule);
 
       return safeUpdate(interaction, {
-        components: criarPainelHorarios(db),
+        components: criarPainelHorarios(db, guildId),
         flags: MessageFlags.IsComponentsV2,
         embeds: [],
         content: null,

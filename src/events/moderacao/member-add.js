@@ -42,7 +42,7 @@ module.exports = {
       const bannerURL = user.bannerURL({ dynamic: true, size: 1024 }) ?? null
       const avatarURL = user.displayAvatarURL({ dynamic: true, size: 256 })
 
-      const container = new ContainerBuilder()
+      const container = new ContainerBuilder().setAccentColor(0x2ECC71) // green — member joined
 
       if (bannerURL) {
         container.addMediaGalleryComponents(

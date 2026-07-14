@@ -57,6 +57,7 @@ const {
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
+const { t } = require("../../utils/i18n");
 
 function parseColor(colorString) {
   if (!colorString || colorString === "" || colorString === " ") return null;
@@ -108,23 +109,23 @@ function buildEditarEstacaoComponents(guildId, estacaoId, msgExtra) {
     estacao.embedprincipal.selects = [];
 
   const enviarMotivo = estacao.embedprincipal.enviar_motivo ?? false;
-  const horarioStatus = estacao.horario_ativo ? "✅ Ativado" : "❌ Desativado";
+  const horarioStatus = estacao.horario_ativo ? t("est_horario_ativado", guildId) : t("est_horario_desativado", guildId);
   const limiteStatus = estacao.limite_tickets
-    ? `${estacao.limite_tickets} ticket(s)`
-    : "Sem limite";
+    ? t("est_limite_tickets", guildId, { count: estacao.limite_tickets })
+    : t("est_limite_sem_limite", guildId);
   const staffStatus =
     estacao.team && estacao.team.length > 0
-      ? `${estacao.team.length} cargo(s)`
-      : "Global";
+      ? t("est_staff_cargos_count", guildId, { count: estacao.team.length })
+      : t("est_staff_global", guildId);
 
   return [
     new ContainerBuilder()
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`# Estação: ${estacao.nome}`),
+        new TextDisplayBuilder().setContent(t("est_config_titulo", guildId, { nome: estacao.nome })),
         new TextDisplayBuilder().setContent(
           msgExtra
-            ? `${msgExtra}\n\nConfigure sua estação de tickets personalizada.`
-            : `Configure sua estação de tickets personalizada.`,
+            ? `${msgExtra}\n\n${t("est_config_desc", guildId)}`
+            : t("est_config_desc", guildId),
         ),
       )
       .addSeparatorComponents(new SeparatorBuilder())
@@ -132,39 +133,39 @@ function buildEditarEstacaoComponents(guildId, estacaoId, msgExtra) {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Botões Configurados**\n${estacao.embedprincipal.botoes.length} botão(ões)`,
+              t("est_config_botoes_secao", guildId, { count: estacao.embedprincipal.botoes.length }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`botoes_estacao_${estacaoId}`)
-              .setLabel("Botões")
+              .setLabel(t("est_btn_botoes_label", guildId))
               .setEmoji(getEmoji(emojis.cube))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Select Menus Configurados**\n${estacao.embedprincipal.selects.length} opção(ões)`,
+              t("est_config_selects_secao", guildId, { count: estacao.embedprincipal.selects.length }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`selects_estacao_${estacaoId}`)
-              .setLabel("Select Menu")
+              .setLabel(t("est_btn_selects_label", guildId))
               .setEmoji(getEmoji(emojis.cube))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Enviar Motivo no Ticket**\n${enviarMotivo ? "Ativado" : "Desativado"}`,
+              t("est_config_motivo_secao", guildId, { status: enviarMotivo ? t("est_config_motivo_ativado", guildId) : t("est_config_motivo_desativado", guildId) }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`toggle_motivo_estacao_${estacaoId}`)
-              .setLabel("Enviar Motivo")
+              .setLabel(t("est_btn_motivo", guildId))
               .setEmoji(getEmoji(enviarMotivo ? emojis.on : emojis.off))
               .setStyle(
                 enviarMotivo ? ButtonStyle.Success : ButtonStyle.Secondary,
@@ -174,7 +175,7 @@ function buildEditarEstacaoComponents(guildId, estacaoId, msgExtra) {
       .addSeparatorComponents(new SeparatorBuilder())
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `${emojis.settings || "⚙️"} **Config. Avançadas**\n` +
+          `${emojis.settings || "⚙️"} **${t("est_config_avancado_label", guildId)}**\n` +
             `${emojis.calendario || "??"} Horário: **${horarioStatus}**  ·  ` +
             `${emojis.cube || "??"} Limite: **${limiteStatus}**  ·  ` +
             `${emojis.user || "??"} Staff: **${staffStatus}**`,
@@ -185,44 +186,44 @@ function buildEditarEstacaoComponents(guildId, estacaoId, msgExtra) {
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`estacao_config_avancado_${estacaoId}`)
-            .setLabel("Avançado")
+            .setLabel(t("est_btn_avancado", guildId))
             .setEmoji(getEmoji(emojis.settings))
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId(`config_formulario_estacao_${estacaoId}`)
-            .setLabel("Formulário")
+            .setLabel(t("est_btn_formulario", guildId))
             .setEmoji(getEmoji(emojis.file))
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId(`personalizar_estacao_${estacaoId}`)
-            .setLabel("Visual")
+            .setLabel(t("est_btn_visual", guildId))
             .setEmoji(getEmoji(emojis.brush))
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId(`renomear_estacao_${estacaoId}`)
-            .setLabel("Renomear")
+            .setLabel(t("est_btn_renomear_label", guildId))
             .setEmoji(getEmoji(emojis.title))
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId(`enviar_estacao_${estacaoId}`)
-            .setLabel("Enviar Painel")
+            .setLabel(t("est_btn_enviar_painel", guildId))
             .setEmoji(getEmoji(emojis.embeds))
             .setStyle(ButtonStyle.Success),
         ),
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`stats_estacao_${estacaoId}`)
-            .setLabel("Estatísticas")
+            .setLabel(t("est_btn_estatisticas", guildId))
             .setEmoji(getEmoji(emojis.graph))
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId(`excluir_estacao_${estacaoId}`)
-            .setLabel("Excluir")
+            .setLabel(t("est_btn_excluir_label", guildId))
             .setEmoji(getEmoji(emojis.lixeira))
             .setStyle(ButtonStyle.Danger),
           new ButtonBuilder()
             .setCustomId("gerenciar_estacoes")
-            .setLabel("Voltar")
+            .setLabel(t("btn_voltar", guildId))
             .setEmoji(getEmoji(emojis.arrowl))
             .setStyle(ButtonStyle.Secondary),
         ),
@@ -247,7 +248,7 @@ function buildAvancadoEstacaoComponents(guildId, estacaoId) {
     "saturday",
     "sunday",
   ];
-  const diasNomes = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const diasNomes = [t("est_horarios_seg", guildId), t("est_horarios_ter", guildId), t("est_horarios_qua", guildId), t("est_horarios_qui", guildId), t("est_horarios_sex", guildId), t("est_horarios_sab", guildId), t("est_horarios_dom", guildId)];
   const horarioTexto =
     horarioAtivo && Object.keys(schedule).length > 0
       ? diasSemana
@@ -257,19 +258,19 @@ function buildAvancadoEstacaoComponents(guildId, estacaoId) {
             return `${diasNomes[i]}: ${s.start}–${s.end}`;
           })
           .filter(Boolean)
-          .join(" | ") || "Nenhum configurado"
-      : "Não configurado";
+          .join(" | ") || t("est_horarios_nenhum", guildId)
+      : t("est_horarios_nao_configurado", guildId);
   const staffTexto =
     teamRoles.length > 0
       ? teamRoles.map((r) => `<@&${r}>`).join(", ")
-      : "Usando staff global";
+      : t("est_horarios_usando_global", guildId);
 
   return [
     new ContainerBuilder()
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`# ⚙️ Avançado: ${estacao.nome}`),
+        new TextDisplayBuilder().setContent(t("est_avancado_titulo", guildId, { nome: estacao.nome })),
         new TextDisplayBuilder().setContent(
-          "Configure horário de atendimento, limite de tickets e staff exclusivo para esta estação.",
+          t("est_avancado_desc", guildId),
         ),
       )
       .addSeparatorComponents(new SeparatorBuilder())
@@ -277,13 +278,16 @@ function buildAvancadoEstacaoComponents(guildId, estacaoId) {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Horário de Atendimento**\nStatus: ${horarioAtivo ? "✅ Ativo" : "❌ Inativo"}\n${horarioAtivo ? `Horários: ${horarioTexto}` : "Ative para definir horários específicos."}`,
+              t("est_avancado_horario_secao", guildId, {
+                status: horarioAtivo ? t("est_avancado_horario_ativo", guildId) : t("est_avancado_horario_inativo", guildId),
+                detalhe: horarioAtivo ? t("est_avancado_horario_detalhe", guildId, { horarios: horarioTexto }) : t("est_avancado_horario_ativar_desc", guildId)
+              }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`estacao_toggle_horario_${estacaoId}`)
-              .setLabel(`Horário: ${horarioAtivo ? "ON" : "OFF"}`)
+              .setLabel(t("est_avancado_btn_horario", guildId, { status: horarioAtivo ? "ON" : "OFF" }))
               .setEmoji(getEmoji(horarioAtivo ? emojis.on : emojis.off))
               .setStyle(
                 horarioAtivo ? ButtonStyle.Success : ButtonStyle.Secondary,
@@ -292,52 +296,56 @@ function buildAvancadoEstacaoComponents(guildId, estacaoId) {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Configurar Horários**\nDefina início e fim por dia da semana.`,
+              t("est_avancado_config_horario_secao", guildId),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`estacao_config_horario_${estacaoId}`)
-              .setLabel("Editar Horários")
+              .setLabel(t("est_avancado_btn_editar_horarios", guildId))
               .setEmoji(getEmoji(emojis.calendario))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Mensagem Fora do Horário**\n${estacao.mensagem_fora_horario || "Usando mensagem padrão"}`,
+              t("est_avancado_mensagem_secao", guildId, {
+                mensagem: estacao.mensagem_fora_horario || t("est_avancado_mensagem_padrao", guildId)
+              }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`modal_estacao_msg_fora_horario_${estacaoId}`)
-              .setLabel("Editar Mensagem")
+              .setLabel(t("est_avancado_btn_editar_mensagem", guildId))
               .setEmoji(getEmoji(emojis.message))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Limite de Tickets Simultâneos**\n${limite > 0 ? `${limite} ticket(s)` : "Sem limite (usa o global)"}`,
+              t("est_avancado_limite_secao", guildId, {
+                limite: limite > 0 ? t("est_limite_tickets", guildId, { count: limite }) : t("est_avancado_limite_sem_limite", guildId)
+              }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`modal_estacao_limite_${estacaoId}`)
-              .setLabel("Limite de Tickets")
+              .setLabel(t("est_avancado_btn_limite", guildId))
               .setEmoji(getEmoji(emojis.cube))
               .setStyle(ButtonStyle.Secondary),
           ),
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**Staff Exclusivo**\n${staffTexto}\n*Se configurado, sobrepõe o staff global para esta estação.*`,
+              t("est_avancado_staff_secao", guildId, { staff: staffTexto }),
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`estacao_config_staff_${estacaoId}`)
-              .setLabel("Staff Exclusivo")
+              .setLabel(t("est_avancado_btn_staff", guildId))
               .setEmoji(getEmoji(emojis.user))
               .setStyle(ButtonStyle.Secondary),
           ),
@@ -347,7 +355,7 @@ function buildAvancadoEstacaoComponents(guildId, estacaoId) {
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`editar_estacao_${estacaoId}`)
-            .setLabel("Voltar")
+            .setLabel(t("btn_voltar", guildId))
             .setEmoji(getEmoji(emojis.arrowl))
             .setStyle(ButtonStyle.Secondary),
         ),
@@ -439,13 +447,13 @@ module.exports = {
 
       const btnCriar = new ButtonBuilder()
         .setCustomId("criar_estacao")
-        .setLabel("Criar Estação")
+        .setLabel(t("est_btn_criar_estacao", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Success);
 
       const btnVoltar = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -460,13 +468,13 @@ module.exports = {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${estacao.nome}**\nBotões: ${estacao.embedprincipal.botoes?.length || 0} | Selects: ${estacao.embedprincipal.selects?.length || 0}`,
+              `**${estacao.nome}**\n${t("est_item_info", interaction.guildId, { botoes: estacao.embedprincipal.botoes?.length || 0, selects: estacao.embedprincipal.selects?.length || 0 })}`,
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`editar_estacao_${estacao.id}`)
-              .setLabel("Editar")
+              .setLabel(t("btn_editar", interaction.guildId))
               .setEmoji(getEmoji(emojis.title))
               .setStyle(ButtonStyle.Secondary),
           ),
@@ -474,14 +482,14 @@ module.exports = {
 
       const btnAnterior = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${paginaAtual - 1}`)
-        .setLabel("Anterior")
+        .setLabel(t("btn_anterior", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(paginaAtual === 0);
 
       const btnProximo = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${paginaAtual + 1}`)
-        .setLabel("Próximo")
+        .setLabel(t("btn_proximo", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowr))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(paginaAtual >= totalPaginas - 1);
@@ -489,9 +497,9 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("# Gerenciar Estações"),
+            new TextDisplayBuilder().setContent(t("est_gerenciar_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Você possui **${estacoes.length}** estação(ões) criada(s).\n\nEstações são painéis de tickets adicionais que você pode criar para organizar diferentes tipos de atendimento.`,
+              t("est_gerenciar_desc", interaction.guildId, { count: estacoes.length }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -533,13 +541,13 @@ module.exports = {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${estacao.nome}**\nBotões: ${estacao.embedprincipal.botoes?.length || 0} | Selects: ${estacao.embedprincipal.selects?.length || 0}`,
+              `**${estacao.nome}**\n${t("est_item_info", interaction.guildId, { botoes: estacao.embedprincipal.botoes?.length || 0, selects: estacao.embedprincipal.selects?.length || 0 })}`,
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`editar_estacao_${estacao.id}`)
-              .setLabel("Editar")
+              .setLabel(t("btn_editar", interaction.guildId))
               .setEmoji(getEmoji(emojis.title))
               .setStyle(ButtonStyle.Secondary),
           ),
@@ -547,26 +555,26 @@ module.exports = {
 
       const btnCriar = new ButtonBuilder()
         .setCustomId("criar_estacao")
-        .setLabel("Criar Estação")
+        .setLabel(t("est_btn_criar_estacao", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Success);
 
       const btnVoltar = new ButtonBuilder()
         .setCustomId("voltar_inicio")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const btnAnterior = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${pagina - 1}`)
-        .setLabel("Anterior")
+        .setLabel(t("btn_anterior", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(pagina === 0);
 
       const btnProximo = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${pagina + 1}`)
-        .setLabel("Próximo")
+        .setLabel(t("btn_proximo", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowr))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(pagina >= totalPaginas - 1);
@@ -574,9 +582,9 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("# Gerenciar Estações"),
+            new TextDisplayBuilder().setContent(t("est_gerenciar_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Você possui **${estacoes.length}** estação(ões) criada(s).\n\nPágina ${pagina + 1} de ${totalPaginas}\n\nEstações são painéis de tickets adicionais que você pode criar para organizar diferentes tipos de atendimento.`,
+              t("est_gerenciar_desc_paginado", interaction.guildId, { count: estacoes.length, pagina: pagina + 1, total: totalPaginas }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -598,15 +606,15 @@ module.exports = {
     if (customId === "criar_estacao") {
       const modal = new ModalBuilder()
         .setCustomId("modal_criar_estacao")
-        .setTitle("Criar Nova Estação");
+        .setTitle(t("est_modal_criar_titulo", interaction.guildId));
 
       const inputNome = new TextInputBuilder()
         .setCustomId("nome_estacao")
-        .setLabel("Nome da Estação")
+        .setLabel(t("est_modal_criar_label", interaction.guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setMaxLength(50)
-        .setPlaceholder("Ex: Suporte VIP, Vendas, etc.");
+        .setPlaceholder(t("est_modal_criar_placeholder", interaction.guildId));
 
       modal.addComponents(new ActionRowBuilder().addComponents(inputNome));
 
@@ -639,15 +647,13 @@ module.exports = {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${estacao.nome}**\nBotões: ${
-                estacao.embedprincipal.botoes?.length || 0
-              } | Selects: ${estacao.embedprincipal.selects?.length || 0}`,
+              `**${estacao.nome}**\n${t("est_item_info", interaction.guildId, { botoes: estacao.embedprincipal.botoes?.length || 0, selects: estacao.embedprincipal.selects?.length || 0 })}`,
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`editar_estacao_${estacao.id}`)
-              .setLabel("Editar")
+              .setLabel(t("btn_editar", interaction.guildId))
               .setEmoji(getEmoji(emojis.title))
               .setStyle(ButtonStyle.Secondary),
           ),
@@ -655,26 +661,26 @@ module.exports = {
 
       const btnCriar = new ButtonBuilder()
         .setCustomId("criar_estacao")
-        .setLabel("Criar Estação")
+        .setLabel(t("est_btn_criar_estacao", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Success);
 
       const btnVoltar = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const btnAnterior = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${ultimaPagina - 1}`)
-        .setLabel("Anterior")
+        .setLabel(t("btn_anterior", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(ultimaPagina === 0);
 
       const btnProximo = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${ultimaPagina + 1}`)
-        .setLabel("Próximo")
+        .setLabel(t("btn_proximo", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowr))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(ultimaPagina >= totalPaginas - 1);
@@ -682,9 +688,9 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("# Gerenciar Estações"),
+            new TextDisplayBuilder().setContent(t("est_gerenciar_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `✅ Estação **${nomeEstacao}** criada com sucesso!\n\nVocê possui **${estacoes.length}** estação(ões) criada(s).\n\nPágina ${ultimaPagina + 1} de ${totalPaginas || 1}`,
+              t("est_criada_sucesso", interaction.guildId, { nome: nomeEstacao, count: estacoes.length, pagina: ultimaPagina + 1, total: totalPaginas || 1 }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -711,7 +717,7 @@ module.exports = {
       );
       if (!comps)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       return interaction.update({
@@ -737,7 +743,7 @@ module.exports = {
       );
       if (!comps)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       return interaction.update({
@@ -756,7 +762,7 @@ module.exports = {
       );
       if (!comps)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       return interaction.update({
@@ -782,7 +788,7 @@ module.exports = {
       const idx = estacoes.findIndex((e) => e.id === estacaoId);
       if (idx === -1)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       estacoes[idx].horario_ativo = !(estacoes[idx].horario_ativo ?? false);
@@ -793,7 +799,7 @@ module.exports = {
       );
       if (!comps)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       return interaction.update({
@@ -809,7 +815,7 @@ module.exports = {
       const estacao = getEstacao(interaction.guildId, estacaoId);
       if (!estacao)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -877,7 +883,7 @@ module.exports = {
       const idx = estacoes.findIndex((e) => e.id === estacaoId);
       if (idx === -1)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -929,7 +935,7 @@ module.exports = {
       const estacao = getEstacao(interaction.guildId, estacaoId);
       if (!estacao)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -973,7 +979,7 @@ module.exports = {
       const idx = estacoes.findIndex((e) => e.id === estacaoId);
       if (idx === -1)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -1006,7 +1012,7 @@ module.exports = {
       const estacao = getEstacao(interaction.guildId, estacaoId);
       if (!estacao)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -1048,7 +1054,7 @@ module.exports = {
       const idx = estacoes.findIndex((e) => e.id === estacaoId);
       if (idx === -1)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -1078,7 +1084,7 @@ module.exports = {
       const estacao = getEstacao(interaction.guildId, estacaoId);
       if (!estacao)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -1098,7 +1104,7 @@ module.exports = {
 
       const btnVoltar3 = new ButtonBuilder()
         .setCustomId(`estacao_config_avancado_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1154,7 +1160,7 @@ module.exports = {
       const idx = estacoes.findIndex((e) => e.id === estacaoId);
       if (idx === -1)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -1200,7 +1206,7 @@ module.exports = {
                     .setStyle(ButtonStyle.Danger),
                   new ButtonBuilder()
                     .setCustomId(`estacao_config_avancado_${estacaoId}`)
-                    .setLabel("Voltar")
+                    .setLabel(t("btn_voltar", interaction.guildId))
                     .setEmoji(getEmoji(emojis.arrowl))
                     .setStyle(ButtonStyle.Secondary),
                 ),
@@ -1226,7 +1232,7 @@ module.exports = {
       const idx = estacoes.findIndex((e) => e.id === estacaoId);
       if (idx === -1)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
 
@@ -1258,7 +1264,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1270,35 +1276,35 @@ module.exports = {
       const data = estacao.embedprincipal;
 
       const previewTexts = [
-        new TextDisplayBuilder().setContent(data.title || "Sem título"),
-        new TextDisplayBuilder().setContent(data.descricao || "Sem descrição"),
+        new TextDisplayBuilder().setContent(data.title || t("est_visual_sem_titulo", interaction.guildId)),
+        new TextDisplayBuilder().setContent(data.descricao || t("est_visual_sem_descricao", interaction.guildId)),
       ];
 
       previewTexts.push(
         new TextDisplayBuilder().setContent(
-          `**Cor**: ${data.color || "Sem cor definida"}`,
+          t("est_visual_cor", interaction.guildId, { cor: data.color || t("est_visual_sem_cor", interaction.guildId) }),
         ),
       );
 
       const editarMenuOptions = [
-        { label: "Título", value: "titulo", emoji: getEmoji(emojis.title) },
+        { label: t("est_visual_opt_titulo", interaction.guildId), value: "titulo", emoji: getEmoji(emojis.title) },
         {
-          label: "Descrição",
+          label: t("est_visual_opt_descricao", interaction.guildId),
           value: "descricao",
           emoji: getEmoji(emojis.embeds),
         },
-        { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
-        { label: "Banner", value: "banner", emoji: getEmoji(emojis.image) },
+        { label: t("est_visual_opt_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
+        { label: t("est_visual_opt_banner", interaction.guildId), value: "banner", emoji: getEmoji(emojis.image) },
       ];
 
       const editarMenu = new StringSelectMenuBuilder()
         .setCustomId(`editar_embed_estacao:${estacaoId}`)
-        .setPlaceholder("Editar conteúdo da embed")
+        .setPlaceholder(t("est_visual_select_placeholder", interaction.guildId))
         .addOptions(editarMenuOptions);
 
       const voltarButton = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1343,7 +1349,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1361,26 +1367,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId(`botao_adicionar_estacao_${estacaoId}`)
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(_botoesLimpos.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId(`botao_remover_estacao_${estacaoId}`)
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId(`botao_editar_estacao_${estacaoId}`)
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1419,7 +1425,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1490,7 +1496,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1631,26 +1637,26 @@ module.exports = {
 
         const adicionar = new ButtonBuilder()
           .setCustomId(`botao_adicionar_estacao_${estacaoId}`)
-          .setLabel("Adicionar")
+          .setLabel(t("btn_adicionar", interaction.guildId))
           .setEmoji(getEmoji(emojis.plus))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled((estacao.embedprincipal.botoes || []).length >= 5);
 
         const remover = new ButtonBuilder()
           .setCustomId(`botao_remover_estacao_${estacaoId}`)
-          .setLabel("Remover")
+          .setLabel(t("btn_remover", interaction.guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Secondary);
 
         const editar = new ButtonBuilder()
           .setCustomId(`botao_editar_estacao_${estacaoId}`)
-          .setLabel("Editar")
+          .setLabel(t("btn_editar", interaction.guildId))
           .setEmoji(getEmoji(emojis.title))
           .setStyle(ButtonStyle.Secondary);
 
         const voltar = new ButtonBuilder()
           .setCustomId(`editar_estacao_${estacaoId}`)
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", interaction.guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -1694,7 +1700,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1714,26 +1720,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId(`botao_adicionar_estacao_${estacaoId}`)
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId(`botao_remover_estacao_${estacaoId}`)
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId(`botao_editar_estacao_${estacaoId}`)
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1770,7 +1776,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1810,7 +1816,7 @@ module.exports = {
 
       const voltar = new ButtonBuilder()
         .setCustomId(`botoes_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1843,7 +1849,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1860,7 +1866,7 @@ module.exports = {
       if (index === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("est_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -1877,26 +1883,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId(`botao_adicionar_estacao_${estacaoId}`)
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId(`botao_remover_estacao_${estacaoId}`)
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId(`botao_editar_estacao_${estacaoId}`)
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1933,7 +1939,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1999,7 +2005,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2015,7 +2021,7 @@ module.exports = {
       if (!botao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("est_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -2046,7 +2052,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2064,26 +2070,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId(`select_adicionar_estacao_${estacaoId}`)
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(_selectsLimpos.length >= 10);
 
       const remover = new ButtonBuilder()
         .setCustomId(`select_remover_estacao_${estacaoId}`)
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId(`select_editar_estacao_${estacaoId}`)
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -2129,7 +2135,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2267,26 +2273,26 @@ module.exports = {
 
         const adicionar = new ButtonBuilder()
           .setCustomId(`select_adicionar_estacao_${estacaoId}`)
-          .setLabel("Adicionar")
+          .setLabel(t("btn_adicionar", interaction.guildId))
           .setEmoji(getEmoji(emojis.plus))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled((estacao.embedprincipal.selects || []).length >= 10);
 
         const remover = new ButtonBuilder()
           .setCustomId(`select_remover_estacao_${estacaoId}`)
-          .setLabel("Remover")
+          .setLabel(t("btn_remover", interaction.guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Secondary);
 
         const editar = new ButtonBuilder()
           .setCustomId(`select_editar_estacao_${estacaoId}`)
-          .setLabel("Editar")
+          .setLabel(t("btn_editar", interaction.guildId))
           .setEmoji(getEmoji(emojis.title))
           .setStyle(ButtonStyle.Secondary);
 
         const voltar = new ButtonBuilder()
           .setCustomId(`editar_estacao_${estacaoId}`)
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", interaction.guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -2330,7 +2336,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2350,26 +2356,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId(`select_adicionar_estacao_${estacaoId}`)
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(selects.length >= 10);
 
       const remover = new ButtonBuilder()
         .setCustomId(`select_remover_estacao_${estacaoId}`)
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId(`select_editar_estacao_${estacaoId}`)
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -2406,7 +2412,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2446,7 +2452,7 @@ module.exports = {
 
       const voltarButton = new ButtonBuilder()
         .setCustomId(`selects_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setStyle(ButtonStyle.Secondary)
         .setEmoji(getEmoji(emojis.arrowl));
 
@@ -2479,7 +2485,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2513,26 +2519,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId(`select_adicionar_estacao_${estacaoId}`)
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(selects.length >= 10);
 
       const remover = new ButtonBuilder()
         .setCustomId(`select_remover_estacao_${estacaoId}`)
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId(`select_editar_estacao_${estacaoId}`)
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -2569,7 +2575,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2637,7 +2643,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2686,7 +2692,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2697,11 +2703,11 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_renomear_estacao_${estacaoId}`)
-        .setTitle("Renomear Estação");
+        .setTitle(t("est_modal_renomear_titulo", interaction.guildId));
 
       const inputNome = new TextInputBuilder()
         .setCustomId("novo_nome")
-        .setLabel("Novo nome da Estação")
+        .setLabel(t("est_modal_renomear_label", interaction.guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setMaxLength(50)
@@ -2723,7 +2729,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2737,52 +2743,52 @@ module.exports = {
 
       const btnPersonalizar = new ButtonBuilder()
         .setCustomId(`personalizar_estacao_${estacaoId}`)
-        .setLabel("Visual")
+        .setLabel(t("est_btn_visual", interaction.guildId))
         .setEmoji(getEmoji(emojis.brush))
         .setStyle(ButtonStyle.Secondary);
 
       const btnBotoes = new ButtonBuilder()
         .setCustomId(`botoes_estacao_${estacaoId}`)
-        .setLabel("Botões")
+        .setLabel(t("est_btn_botoes_label", interaction.guildId))
         .setEmoji(getEmoji(emojis.cube))
         .setStyle(ButtonStyle.Secondary);
 
       const btnSelects = new ButtonBuilder()
         .setCustomId(`selects_estacao_${estacaoId}`)
-        .setLabel("Select Menu")
+        .setLabel(t("est_btn_selects_label", interaction.guildId))
         .setEmoji(getEmoji(emojis.cube))
         .setStyle(ButtonStyle.Secondary);
 
       const btnEnviar = new ButtonBuilder()
         .setCustomId(`enviar_estacao_${estacaoId}`)
-        .setLabel("Enviar Painel")
+        .setLabel(t("est_btn_enviar_painel", interaction.guildId))
         .setEmoji(getEmoji(emojis.embeds))
         .setStyle(ButtonStyle.Success);
 
       const btnRenomear = new ButtonBuilder()
         .setCustomId(`renomear_estacao_${estacaoId}`)
-        .setLabel("Renomear")
+        .setLabel(t("est_btn_renomear_label", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const btnExcluir = new ButtonBuilder()
         .setCustomId(`excluir_estacao_${estacaoId}`)
-        .setLabel("Excluir")
+        .setLabel(t("est_btn_excluir_label", interaction.guildId))
         .setEmoji(getEmoji(emojis.lixeira))
         .setStyle(ButtonStyle.Danger);
 
       const btnVoltar = new ButtonBuilder()
         .setCustomId("gerenciar_estacoes")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(`# Estação: ${estacao.nome}`),
+            new TextDisplayBuilder().setContent(t("est_config_titulo", interaction.guildId, { nome: estacao.nome })),
             new TextDisplayBuilder().setContent(
-              `✅ Estação renomeada com sucesso!\n\nConfigure sua estação de tickets personalizada.`,
+              t("est_renomeada_sucesso", interaction.guildId),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -2790,18 +2796,14 @@ module.exports = {
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  `**Botões Configurados**\n${
-                    estacao.embedprincipal.botoes?.length || 0
-                  } botão(ões)`,
+                  t("est_config_botoes_secao", interaction.guildId, { count: estacao.embedprincipal.botoes?.length || 0 }),
                 ),
               )
               .setButtonAccessory(btnBotoes),
             new SectionBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  `**Select Menus Configurados**\n${
-                    estacao.embedprincipal.selects?.length || 0
-                  } opção(ões)`,
+                  t("est_config_selects_secao", interaction.guildId, { count: estacao.embedprincipal.selects?.length || 0 }),
                 ),
               )
               .setButtonAccessory(btnSelects),
@@ -2833,7 +2835,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -2844,14 +2846,14 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_confirmar_excluir_estacao_${estacaoId}`)
-        .setTitle("Confirmar Exclusão");
+        .setTitle(t("est_modal_excluir_titulo", interaction.guildId));
 
       const inputConfirmacao = new TextInputBuilder()
         .setCustomId("confirmacao")
-        .setLabel("Digite CONFIRMAR para excluir a estação")
+        .setLabel(t("est_modal_excluir_label", interaction.guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
-        .setPlaceholder("CONFIRMAR");
+        .setPlaceholder(t("est_modal_excluir_placeholder", interaction.guildId));
 
       modal.addComponents(
         new ActionRowBuilder().addComponents(inputConfirmacao),
@@ -2874,7 +2876,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Confirmação incorreta. A estação não foi excluída.",
+              t("est_confirmacao_incorreta", interaction.guildId),
             ),
           ),
         ];
@@ -2890,7 +2892,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Erro ao excluir a estação.",
+              t("est_erro_excluir", interaction.guildId),
             ),
           ),
         ];
@@ -2922,15 +2924,13 @@ module.exports = {
         new SectionBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${estacao.nome}**\nBotões: ${
-                estacao.embedprincipal.botoes?.length || 0
-              } | Selects: ${estacao.embedprincipal.selects?.length || 0}`,
+              `**${estacao.nome}**\n${t("est_item_info", interaction.guildId, { botoes: estacao.embedprincipal.botoes?.length || 0, selects: estacao.embedprincipal.selects?.length || 0 })}`,
             ),
           )
           .setButtonAccessory(
             new ButtonBuilder()
               .setCustomId(`editar_estacao_${estacao.id}`)
-              .setLabel("Editar")
+              .setLabel(t("btn_editar", interaction.guildId))
               .setEmoji(getEmoji(emojis.title))
               .setStyle(ButtonStyle.Secondary),
           ),
@@ -2938,26 +2938,26 @@ module.exports = {
 
       const btnCriar = new ButtonBuilder()
         .setCustomId("criar_estacao")
-        .setLabel("Criar Estação")
+        .setLabel(t("est_btn_criar_estacao", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Success);
 
       const btnVoltar = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const btnAnterior = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${paginaAtual - 1}`)
-        .setLabel("Anterior")
+        .setLabel(t("btn_anterior", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(paginaAtual === 0);
 
       const btnProximo = new ButtonBuilder()
         .setCustomId(`estacoes_pagina_${paginaAtual + 1}`)
-        .setLabel("Próximo")
+        .setLabel(t("btn_proximo", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowr))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(paginaAtual >= totalPaginas - 1);
@@ -2965,9 +2965,9 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("# Gerenciar Estações"),
+            new TextDisplayBuilder().setContent(t("est_gerenciar_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `✅ Estação excluída com sucesso!\n\nVocê possui **${estacoes.length}** estação(ões) criada(s).\n\nPágina ${paginaAtual + 1} de ${totalPaginas || 1}`,
+              t("est_excluida_sucesso", interaction.guildId, { count: estacoes.length, pagina: paginaAtual + 1, total: totalPaginas || 1 }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -2996,29 +2996,29 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("botao_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId("botao_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Editar Botões"),
+            new TextDisplayBuilder().setContent(t("est_editar_botoes_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Página ${pagina + 1} de ${totalPaginas}\n\nSelecione um botão para editar:`,
+              t("est_editar_botoes_desc", interaction.guildId, { pagina: pagina + 1, total: totalPaginas }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -3050,7 +3050,7 @@ module.exports = {
       if (!botao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("est_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3073,7 +3073,7 @@ module.exports = {
       const estacao = getEstacao(interaction.guildId, estacaoId);
       if (!estacao)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       estacao.embedprincipal = estacao.embedprincipal || {};
@@ -3087,7 +3087,7 @@ module.exports = {
       );
       if (!comps)
         return interaction.reply({
-          content: "❌ Estação não encontrada.",
+          content: t("est_nao_encontrada", interaction.guildId),
           flags: MessageFlags.Ephemeral,
         });
       return interaction.update({
@@ -3110,7 +3110,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3145,7 +3145,7 @@ module.exports = {
             const components = [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "❌ Cor inválida. Use formato hexadecimal (ex: #2ecc71) ou deixe vazio para sem cor.",
+                  t("est_visual_err_cor", interaction.guildId),
                 ),
               ),
             ];
@@ -3163,35 +3163,35 @@ module.exports = {
       const data = estacao.embedprincipal;
 
       const previewTexts = [
-        new TextDisplayBuilder().setContent(data.title || "Sem título"),
-        new TextDisplayBuilder().setContent(data.descricao || "Sem descrição"),
+        new TextDisplayBuilder().setContent(data.title || t("est_visual_sem_titulo", interaction.guildId)),
+        new TextDisplayBuilder().setContent(data.descricao || t("est_visual_sem_descricao", interaction.guildId)),
       ];
 
       previewTexts.push(
         new TextDisplayBuilder().setContent(
-          `**Cor**: ${data.color || "Sem cor definida"}`,
+          t("est_visual_cor", interaction.guildId, { cor: data.color || t("est_visual_sem_cor", interaction.guildId) }),
         ),
       );
 
       const editarMenuOptions = [
-        { label: "Título", value: "titulo", emoji: getEmoji(emojis.title) },
+        { label: t("est_visual_opt_titulo", interaction.guildId), value: "titulo", emoji: getEmoji(emojis.title) },
         {
-          label: "Descrição",
+          label: t("est_visual_opt_descricao", interaction.guildId),
           value: "descricao",
           emoji: getEmoji(emojis.embeds),
         },
-        { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
-        { label: "Banner", value: "banner", emoji: getEmoji(emojis.image) },
+        { label: t("est_visual_opt_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
+        { label: t("est_visual_opt_banner", interaction.guildId), value: "banner", emoji: getEmoji(emojis.image) },
       ];
 
       const editarMenu = new StringSelectMenuBuilder()
         .setCustomId(`editar_embed_estacao:${estacaoId}`)
-        .setPlaceholder("Editar conteúdo da embed")
+        .setPlaceholder(t("est_visual_select_placeholder", interaction.guildId))
         .addOptions(editarMenuOptions);
 
       const voltarButton = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -3243,7 +3243,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3303,7 +3303,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3372,7 +3372,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3390,7 +3390,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId(`enviar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -3461,7 +3461,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.editReply({
@@ -3673,7 +3673,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3734,7 +3734,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId(`editar_estacao_${estacaoId}`)
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -3771,7 +3771,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3849,7 +3849,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3885,7 +3885,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -3955,7 +3955,7 @@ module.exports = {
       if (!estacao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Estação não encontrada."),
+            new TextDisplayBuilder().setContent(t("est_nao_encontrada", interaction.guildId)),
           ),
         ];
         return interaction.reply({

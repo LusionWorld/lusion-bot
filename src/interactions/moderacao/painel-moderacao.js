@@ -79,16 +79,20 @@ function buildMainPanel(guild) {
 async function buildLogsPanel(guild, msg = null) {
   const config = await db.getConfig(guild.id)
 
-  const canalEntrou = config?.canal_entrou
-  const canalSaiu   = config?.canal_saiu
-  const canalBan    = config?.canal_ban
-  const canalKick   = config?.canal_kick
+  const canalEntrou    = config?.canal_entrou
+  const canalSaiu      = config?.canal_saiu
+  const canalBan       = config?.canal_ban
+  const canalKick      = config?.canal_kick
+  const canalMsgDelete = config?.canal_msg_delete
+  const canalMsgEdit   = config?.canal_msg_edit
 
   const lines = [
     `${emojis.online}    **Member joined:** ${canalEntrou ? `<#${canalEntrou}>` : 'Not configured'}`,
     `${emojis.invisible} **Member left:** ${canalSaiu ? `<#${canalSaiu}>` : 'Not configured'}`,
     `${emojis.hammer}    **Member banned:** ${canalBan ? `<#${canalBan}>` : 'Not configured'}`,
     `${emojis.remove}    **Member kicked:** ${canalKick ? `<#${canalKick}>` : 'Not configured'}`,
+    `${emojis.trashcan}  **Message deleted:** ${canalMsgDelete ? `<#${canalMsgDelete}>` : 'Not configured'}`,
+    `${emojis.brush}     **Message edited:** ${canalMsgEdit ? `<#${canalMsgEdit}>` : 'Not configured'}`,
     ...(msg ? ['', msg] : []),
   ]
 
@@ -141,6 +145,24 @@ async function buildLogsPanel(guild, msg = null) {
           .setMinValues(1).setMaxValues(1)
       )
     )
+    .addActionRowComponents(row =>
+      row.setComponents(
+        new ChannelSelectMenuBuilder()
+          .setCustomId('mod_set_canal_msg_delete')
+          .setPlaceholder('Channel for: Message deleted')
+          .addChannelTypes(ChannelType.GuildText)
+          .setMinValues(1).setMaxValues(1)
+      )
+    )
+    .addActionRowComponents(row =>
+      row.setComponents(
+        new ChannelSelectMenuBuilder()
+          .setCustomId('mod_set_canal_msg_edit')
+          .setPlaceholder('Channel for: Message edited')
+          .addChannelTypes(ChannelType.GuildText)
+          .setMinValues(1).setMaxValues(1)
+      )
+    )
     .addSeparatorComponents(sep =>
       sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small)
     )
@@ -156,7 +178,10 @@ async function buildLogsPanel(guild, msg = null) {
 }
 
 const BUTTON_IDS  = ['mod_logs', 'mod_voltar']
-const SELECT_IDS  = ['mod_set_canal_entrou', 'mod_set_canal_saiu', 'mod_set_canal_ban', 'mod_set_canal_kick']
+const SELECT_IDS  = [
+  'mod_set_canal_entrou', 'mod_set_canal_saiu', 'mod_set_canal_ban', 'mod_set_canal_kick',
+  'mod_set_canal_msg_delete', 'mod_set_canal_msg_edit',
+]
 
 module.exports = {
   async execute(_client, interaction) {
@@ -194,17 +219,21 @@ module.exports = {
       const canalId = interaction.values[0]
 
       const campoMap = {
-        mod_set_canal_entrou: 'canal_entrou',
-        mod_set_canal_saiu:   'canal_saiu',
-        mod_set_canal_ban:    'canal_ban',
-        mod_set_canal_kick:   'canal_kick',
+        mod_set_canal_entrou:     'canal_entrou',
+        mod_set_canal_saiu:       'canal_saiu',
+        mod_set_canal_ban:        'canal_ban',
+        mod_set_canal_kick:       'canal_kick',
+        mod_set_canal_msg_delete: 'canal_msg_delete',
+        mod_set_canal_msg_edit:   'canal_msg_edit',
       }
 
       const nomesMap = {
-        mod_set_canal_entrou: 'Member Joined',
-        mod_set_canal_saiu:   'Member Left',
-        mod_set_canal_ban:    'Member Banned',
-        mod_set_canal_kick:   'Member Kicked',
+        mod_set_canal_entrou:     'Member Joined',
+        mod_set_canal_saiu:       'Member Left',
+        mod_set_canal_ban:        'Member Banned',
+        mod_set_canal_kick:       'Member Kicked',
+        mod_set_canal_msg_delete: 'Message Deleted',
+        mod_set_canal_msg_edit:   'Message Edited',
       }
 
       await db.setCanal(guild.id, campoMap[id], canalId)

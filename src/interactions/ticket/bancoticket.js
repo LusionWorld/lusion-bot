@@ -15,6 +15,7 @@ const fs = require("fs");
 const path = require("path");
 const sqlite3 = require("sqlite3");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
+const { t } = require("../../utils/i18n");
 const emojis = getEmojis();
 
 function getEmoji(raw) {
@@ -144,28 +145,29 @@ module.exports = {
         const formatarData = (d) => d.toLocaleDateString("pt-BR");
 
         containerData = {
-          title: "# 📦 Banco de Tickets — Resumo Semanal",
-          periodo: `**Período da Semana**\n${formatarData(
-            inicioSemana,
-          )} até ${formatarData(fimSemana)}`,
-          abertos: `**Tickets Abertos**\n\`\`\`diff\n+ ${abertos}\n\`\`\``,
-          assumidos: `**Tickets Assumidos**\n\`\`\`diff\n+ ${assumidos}\n\`\`\``,
-          fechados: `**Tickets Fechados**\n\`\`\`diff\n+ ${fechados}\n\`\`\``,
-          tempoResponder: `**Tempo Médio - Primeira Resposta**\n\`\`\`diff\n+ ${formatar(
-            tempoResponder,
-          )}\n\`\`\``,
-          tempoAssumir: `**Tempo Médio - Para Assumir**\n\`\`\`diff\n+ ${formatar(
-            tempoAssumir,
-          )}\n\`\`\``,
-          tempoFechar: `**Tempo Médio - Para Fechar**\n\`\`\`diff\n+ ${formatar(
-            tempoFechar,
-          )}\n\`\`\``,
+          title: t("banco_titulo", guildId),
+          periodo: t("banco_periodo", guildId, {
+            inicio: formatarData(inicioSemana),
+            fim: formatarData(fimSemana),
+          }),
+          abertos: t("banco_abertos", guildId, { n: abertos }),
+          assumidos: t("banco_assumidos", guildId, { n: assumidos }),
+          fechados: t("banco_fechados", guildId, { n: fechados }),
+          tempoResponder: t("banco_tempo_resposta", guildId, {
+            t: formatar(tempoResponder),
+          }),
+          tempoAssumir: t("banco_tempo_assumir", guildId, {
+            t: formatar(tempoAssumir),
+          }),
+          tempoFechar: t("banco_tempo_fechar", guildId, {
+            t: formatar(tempoFechar),
+          }),
         };
       } catch (err) {
         console.error("Erro ao consultar banco:", err);
         containerData = {
-          title: "# 📦 Banco de Tickets — Resumo Semanal",
-          error: "❌ Não foi possível carregar os dados do banco.",
+          title: t("banco_titulo", guildId),
+          error: t("banco_erro_carregar", guildId),
         };
       } finally {
         db.close();
@@ -180,16 +182,16 @@ module.exports = {
 
       const selectOptions = [
         {
-          label: "Semana atual",
+          label: t("banco_semana_atual_label", guildId),
           value: "atual",
-          description: "Banco da semana atual",
+          description: t("banco_semana_atual_desc", guildId),
           default: true,
         },
         ...arquivosSemana.map((file) => {
           const nome = file.replace(".db", "").replace("tickets_", "");
           const [inicio, fim] = nome.split("_a_");
           return {
-            label: `Semana ${inicio} a ${fim}`,
+            label: t("banco_semana_label", guildId, { inicio, fim }),
             value: nome,
           };
         }),
@@ -198,7 +200,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId("select_banco_ticket")
-          .setPlaceholder("Selecione a semana")
+          .setPlaceholder(t("banco_select_placeholder", guildId))
           .addOptions(selectOptions),
       );
 
@@ -206,27 +208,27 @@ module.exports = {
       const rowButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`pesquisar_usuario:${selectedValue}`)
-          .setLabel("Pesquisar usuário")
+          .setLabel(t("banco_btn_pesquisar", guildId))
           .setEmoji(getEmoji(emojis.lupa))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`gerar_lista:${selectedValue}`)
-          .setLabel("Gerar lista")
+          .setLabel(t("banco_btn_lista", guildId))
           .setEmoji(getEmoji(emojis.file))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`todo_mes:${selectedValue}`)
-          .setLabel("Todo mês")
+          .setLabel(t("banco_btn_mes", guildId))
           .setEmoji(getEmoji(emojis.calendario))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`categoria_dado:${selectedValue}`)
-          .setLabel("Categoria")
+          .setLabel(t("banco_btn_categoria", guildId))
           .setEmoji(getEmoji(emojis.textc))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("voltar_inicio")
-          .setLabel("Voltar")
+          .setLabel(t("banco_btn_voltar", guildId))
           .setEmoji(getEmoji(emojis.home))
           .setStyle(ButtonStyle.Secondary),
       );
@@ -366,19 +368,19 @@ module.exports = {
             : selectedSemana.replace(/_/g, " até ");
 
         const txt = [
-          `📚 Relatório de Tickets — Semana ${nomeSemana}`,
+          t("banco_relatorio_titulo", guildId, { semana: nomeSemana }),
           ``,
-          `TICKETS`,
-          `Abertos: ${abertos}`,
-          `Assumidos: ${assumidos}`,
-          `Fechados: ${fechados}`,
+          t("banco_relatorio_secao_tickets", guildId),
+          t("banco_relatorio_abertos", guildId, { n: abertos }),
+          t("banco_relatorio_assumidos", guildId, { n: assumidos }),
+          t("banco_relatorio_fechados", guildId, { n: fechados }),
           ``,
-          `TEMPOS MÉDIOS`,
-          `Primeira Resposta: ${formatar(tempoResponder)}`,
-          `Para Assumir: ${formatar(tempoAssumir)}`,
-          `Para Fechar: ${formatar(tempoFechar)}`,
+          t("banco_relatorio_secao_tempos", guildId),
+          t("banco_relatorio_resp", guildId, { t: formatar(tempoResponder) }),
+          t("banco_relatorio_assumir", guildId, { t: formatar(tempoAssumir) }),
+          t("banco_relatorio_fechar", guildId, { t: formatar(tempoFechar) }),
           ``,
-          `DESEMPENHO DOS STAFFS`,
+          t("banco_desempenho_staff", guildId),
         ];
 
         for (const [userId, dados] of Object.entries(desempenho)) {
@@ -388,7 +390,7 @@ module.exports = {
             member?.user?.username ||
             "Usuário desconhecido";
           txt.push(
-            `- ${nome} (<@${userId}>): Assumidos: ${dados.assumidos}, Fechados: ${dados.fechados}, Respondidos: ${dados.respondidos}`,
+            t("banco_desempenho_linha", guildId, { nome, userId, assumidos: dados.assumidos, fechados: dados.fechados, respondidos: dados.respondidos }),
           );
         }
 
@@ -406,7 +408,7 @@ module.exports = {
       } catch (err) {
         console.error("Erro ao gerar relatório:", err);
         const containerError = new ContainerBuilder().addTextDisplayComponents(
-          new TextDisplayBuilder().setContent("❌ Erro ao gerar o relatório."),
+          new TextDisplayBuilder().setContent(t("banco_relatorio_erro", guildId)),
         );
 
         await interaction.reply({
@@ -538,37 +540,30 @@ module.exports = {
         : 0;
 
       const container = new ContainerBuilder().addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(t("banco_titulo", guildId)),
         new TextDisplayBuilder().setContent(
-          "# 📦 Banco de Tickets — Resumo Semanal",
+          t("banco_periodo", guildId, {
+            inicio: formatarData(inicioSemana),
+            fim: formatarData(fimSemana),
+          }),
         ),
         new TextDisplayBuilder().setContent(
-          `**Período da Semana**\n${formatarData(
-            inicioSemana,
-          )} até ${formatarData(fimSemana)}`,
+          t("banco_abertos", guildId, { n: abertos }),
         ),
         new TextDisplayBuilder().setContent(
-          `**Tickets Abertos**\n\`\`\`diff\n+ ${abertos}\n\`\`\``,
+          t("banco_assumidos", guildId, { n: assumidos }),
         ),
         new TextDisplayBuilder().setContent(
-          `**Tickets Assumidos**\n\`\`\`diff\n+ ${assumidos}\n\`\`\``,
+          t("banco_fechados", guildId, { n: fechados }),
         ),
         new TextDisplayBuilder().setContent(
-          `**Tickets Fechados**\n\`\`\`diff\n+ ${fechados}\n\`\`\``,
+          t("banco_tempo_resposta", guildId, { t: formatar(tempoResponder) }),
         ),
         new TextDisplayBuilder().setContent(
-          `**Tempo Médio - Primeira Resposta**\n\`\`\`diff\n+ ${formatar(
-            tempoResponder,
-          )}\n\`\`\``,
+          t("banco_tempo_assumir", guildId, { t: formatar(tempoAssumir) }),
         ),
         new TextDisplayBuilder().setContent(
-          `**Tempo Médio - Para Assumir**\n\`\`\`diff\n+ ${formatar(
-            tempoAssumir,
-          )}\n\`\`\``,
-        ),
-        new TextDisplayBuilder().setContent(
-          `**Tempo Médio - Para Fechar**\n\`\`\`diff\n+ ${formatar(
-            tempoFechar,
-          )}\n\`\`\``,
+          t("banco_tempo_fechar", guildId, { t: formatar(tempoFechar) }),
         ),
       );
 
@@ -610,7 +605,7 @@ module.exports = {
           const containerError =
             new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "❌ Nenhuma categoria encontrada para esta semana.",
+                t("banco_categoria_nenhuma", guildId),
               ),
             );
 
@@ -634,13 +629,13 @@ module.exports = {
         });
         const selectMenu = new StringSelectMenuBuilder()
           .setCustomId(`select_categoria:${semanaSelecionada}`)
-          .setPlaceholder("Selecione uma categoria")
+          .setPlaceholder(t("banco_categoria_placeholder", guildId))
           .addOptions(options);
 
         const containerSelect = new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Selecione uma categoria abaixo para ver os dados específicos:",
+              t("banco_categoria_desc", guildId),
             ),
           )
           .addActionRowComponents(
@@ -655,7 +650,7 @@ module.exports = {
         console.error("Erro ao buscar categorias:", err);
         const containerError = new ContainerBuilder().addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "❌ Erro ao buscar categorias da semana.",
+            t("banco_categoria_erro_buscar", guildId),
           ),
         );
 
@@ -672,19 +667,20 @@ module.exports = {
       interaction.isButton() &&
       interaction.customId.startsWith("pesquisar_usuario")
     ) {
+      const guildId = interaction.guildId;
       const selectedSemana = interaction.customId.split(":")[1] || "atual";
 
       const containerUser = new ContainerBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "Selecione o usuário para ver quantos tickets ele assumiu, fechou e respondeu.",
+            t("banco_usuario_desc", guildId),
           ),
         )
         .addActionRowComponents(
           new ActionRowBuilder().addComponents(
             new UserSelectMenuBuilder()
               .setCustomId(`select_usuario_ticket:${selectedSemana}`)
-              .setPlaceholder("Selecione um usuário"),
+              .setPlaceholder(t("banco_usuario_placeholder", guildId)),
           ),
         );
 
@@ -716,7 +712,7 @@ module.exports = {
           const containerError =
             new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "❌ Erro ao acessar o banco.",
+                t("banco_usuario_banco_erro", guildId),
               ),
             );
 
@@ -752,13 +748,13 @@ module.exports = {
             `**Usuário:** <@${userId}> | **Semana:** \`${semanaSelecionada}\``,
           ),
           new TextDisplayBuilder().setContent(
-            `🟡 **Assumidos:** \`\`\`diff\n+ ${assumidos}\n\`\`\``,
+            `🟡 **${t("banco_usuario_assumidos_label", guildId)}:** \`\`\`diff\n+ ${assumidos}\n\`\`\``,
           ),
           new TextDisplayBuilder().setContent(
-            `🔴 **Fechados:** \`\`\`diff\n+ ${fechados}\n\`\`\``,
+            `🔴 **${t("banco_usuario_fechados_label", guildId)}:** \`\`\`diff\n+ ${fechados}\n\`\`\``,
           ),
           new TextDisplayBuilder().setContent(
-            `👤 **Respondidos:** \`\`\`diff\n+ ${respondidos}\n\`\`\``,
+            `👤 **${t("banco_usuario_respondidos_label", guildId)}:** \`\`\`diff\n+ ${respondidos}\n\`\`\``,
           ),
         );
 
@@ -770,7 +766,7 @@ module.exports = {
         console.error("Erro ao buscar tickets por usuário:", err);
         const containerError = new ContainerBuilder().addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "❌ Não foi possível buscar os dados.",
+            t("banco_usuario_erro", guildId),
           ),
         );
 
@@ -890,28 +886,29 @@ module.exports = {
         const nomeCategoria = nomesCategorias.join(", ");
 
         containerData = {
-          title: `# Resumo da Categoria — ${nomeCategoria}`,
-          periodo: `**Período da Semana**\n${formatarData(
-            inicioSemana,
-          )} até ${formatarData(fimSemana)}`,
-          abertos: `**Tickets Abertos**\n\`\`\`diff\n+ ${abertos}\n\`\`\``,
-          assumidos: `**Tickets Assumidos**\n\`\`\`diff\n+ ${assumidos}\n\`\`\``,
-          fechados: `**Tickets Fechados**\n\`\`\`diff\n+ ${fechados}\n\`\`\``,
-          tempoResponder: `**Tempo Médio - Primeira Resposta**\n\`\`\`diff\n+ ${formatar(
-            tempoResponder,
-          )}\n\`\`\``,
-          tempoAssumir: `**Tempo Médio - Para Assumir**\n\`\`\`diff\n+ ${formatar(
-            tempoAssumir,
-          )}\n\`\`\``,
-          tempoFechar: `**Tempo Médio - Para Fechar**\n\`\`\`diff\n+ ${formatar(
-            tempoFechar,
-          )}\n\`\`\``,
+          title: `# ${t("banco_categoria_titulo", guildId, { nome: nomeCategoria })}`,
+          periodo: t("banco_periodo", guildId, {
+            inicio: formatarData(inicioSemana),
+            fim: formatarData(fimSemana),
+          }),
+          abertos: t("banco_abertos", guildId, { n: abertos }),
+          assumidos: t("banco_assumidos", guildId, { n: assumidos }),
+          fechados: t("banco_fechados", guildId, { n: fechados }),
+          tempoResponder: t("banco_tempo_resposta", guildId, {
+            t: formatar(tempoResponder),
+          }),
+          tempoAssumir: t("banco_tempo_assumir", guildId, {
+            t: formatar(tempoAssumir),
+          }),
+          tempoFechar: t("banco_tempo_fechar", guildId, {
+            t: formatar(tempoFechar),
+          }),
         };
       } catch (err) {
         console.error("Erro ao buscar dados da categoria:", err);
         containerData = {
           title: "# Resumo da Categoria",
-          error: "❌ Erro ao buscar os dados da categoria.",
+          error: t("banco_categoria_erro_dados", guildId),
         };
       } finally {
         db.close();
@@ -920,7 +917,7 @@ module.exports = {
       const rowVoltar = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("banco_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("banco_btn_voltar", guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary),
       );
@@ -1054,28 +1051,29 @@ module.exports = {
         const formatarData = (d) => d.toLocaleDateString("pt-BR");
 
         containerData = {
-          title: "# 📦 Banco de Tickets — Resumo Semanal",
-          periodo: `**Período da Semana**\n${formatarData(
-            inicioSemana,
-          )} até ${formatarData(fimSemana)}`,
-          abertos: `**Tickets Abertos**\n\`\`\`diff\n+ ${abertos}\n\`\`\``,
-          assumidos: `**Tickets Assumidos**\n\`\`\`diff\n+ ${assumidos}\n\`\`\``,
-          fechados: `**Tickets Fechados**\n\`\`\`diff\n+ ${fechados}\n\`\`\``,
-          tempoResponder: `**Tempo Médio - Primeira Resposta**\n\`\`\`diff\n+ ${formatar(
-            tempoResponder,
-          )}\n\`\`\``,
-          tempoAssumir: `**Tempo Médio - Para Assumir**\n\`\`\`diff\n+ ${formatar(
-            tempoAssumir,
-          )}\n\`\`\``,
-          tempoFechar: `**Tempo Médio - Para Fechar**\n\`\`\`diff\n+ ${formatar(
-            tempoFechar,
-          )}\n\`\`\``,
+          title: t("banco_titulo", guildId),
+          periodo: t("banco_periodo", guildId, {
+            inicio: formatarData(inicioSemana),
+            fim: formatarData(fimSemana),
+          }),
+          abertos: t("banco_abertos", guildId, { n: abertos }),
+          assumidos: t("banco_assumidos", guildId, { n: assumidos }),
+          fechados: t("banco_fechados", guildId, { n: fechados }),
+          tempoResponder: t("banco_tempo_resposta", guildId, {
+            t: formatar(tempoResponder),
+          }),
+          tempoAssumir: t("banco_tempo_assumir", guildId, {
+            t: formatar(tempoAssumir),
+          }),
+          tempoFechar: t("banco_tempo_fechar", guildId, {
+            t: formatar(tempoFechar),
+          }),
         };
       } catch (err) {
         console.error("Erro ao consultar semana:", err);
         containerData = {
-          title: "# 📦 Banco de Tickets — Resumo Semanal",
-          error: "❌ Erro ao carregar os dados da semana selecionada.",
+          title: t("banco_titulo", guildId),
+          error: t("banco_erro_semana", guildId),
         };
       } finally {
         db.close();
@@ -1090,16 +1088,16 @@ module.exports = {
 
       const selectOptions = [
         {
-          label: "Semana atual",
+          label: t("banco_semana_atual_label", guildId),
           value: "atual",
-          description: "Banco da semana atual",
+          description: t("banco_semana_atual_desc", guildId),
           default: selectedValue === "atual",
         },
         ...arquivosSemana.map((file) => {
           const nome = file.replace(".db", "").replace("tickets_", "");
           const [inicio, fim] = nome.split("_a_");
           return {
-            label: `Semana ${inicio} a ${fim}`,
+            label: t("banco_semana_label", guildId, { inicio, fim }),
             value: nome,
             default: nome === selectedValue,
           };
@@ -1109,34 +1107,34 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId("select_banco_ticket")
-          .setPlaceholder("Selecione a semana")
+          .setPlaceholder(t("banco_select_placeholder", guildId))
           .addOptions(selectOptions),
       );
 
       const rowButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`pesquisar_usuario:${selectedValue}`)
-          .setLabel("Pesquisar usuário")
+          .setLabel(t("banco_btn_pesquisar", guildId))
           .setEmoji(getEmoji(emojis.lupa))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`gerar_lista:${selectedValue}`)
-          .setLabel("Gerar lista")
+          .setLabel(t("banco_btn_lista", guildId))
           .setEmoji(getEmoji(emojis.file))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`todo_mes:${selectedValue}`)
-          .setLabel("Todo mês")
+          .setLabel(t("banco_btn_mes", guildId))
           .setEmoji(getEmoji(emojis.calendario))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`categoria_dado:${selectedValue}`)
-          .setLabel("Categoria")
+          .setLabel(t("banco_btn_categoria", guildId))
           .setEmoji(getEmoji(emojis.textc))
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId("voltar_inicio")
-          .setLabel("Voltar")
+          .setLabel(t("banco_btn_voltar", guildId))
           .setEmoji(getEmoji(emojis.home))
           .setStyle(ButtonStyle.Secondary),
       );

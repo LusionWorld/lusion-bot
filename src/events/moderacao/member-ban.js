@@ -37,6 +37,7 @@ module.exports = {
       } catch {}
 
       const container = new ContainerBuilder()
+        .setAccentColor(0xE74C3C) // red — member banned
         .addTextDisplayComponents(td =>
           td.setContent(`${emojis.block} **Membro banido,** ${user}`)
         )

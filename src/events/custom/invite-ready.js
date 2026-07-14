@@ -14,7 +14,5 @@ module.exports = {
         client.inviteCache.set(guild.id, cache)
       } catch { }
     }
-
-    console.log(`✅ Cache de convites carregado para ${client.inviteCache.size} servidor(es)`)
   },
 }

@@ -4,75 +4,105 @@ const {
   Collection,
   Options,
   Partials,
+  REST,
 } = require("discord.js");
-require("dotenv").config();
-const { token } = require("./config.json");
+const path = require("path");
+const NODE_ENV = process.env.NODE_ENV === "production" ? "production" : "dev";
+require("dotenv").config({ path: path.join(__dirname, `.env.${NODE_ENV}`), quiet: true });
 
-const client = new Client({
-  intents: [
+const token = process.env.DISCORD_TOKEN;
+
+const APP_FLAGS = {
+  presence: (1 << 12) | (1 << 13),
+  members: (1 << 14) | (1 << 15),
+  messageContent: (1 << 18) | (1 << 19),
+};
+
+async function detectPrivilegedIntents(botToken) {
+  try {
+    const rest = new REST({ version: "10" }).setToken(botToken);
+    const app = await rest.get("/applications/@me");
+    const flags = app.flags || 0;
+    return {
+      presence: (flags & APP_FLAGS.presence) !== 0,
+      members: (flags & APP_FLAGS.members) !== 0,
+      messageContent: (flags & APP_FLAGS.messageContent) !== 0,
+    };
+  } catch (err) {
+    logError(
+      "Intents",
+      `Falha ao detectar intents privilegiados (${err.message}). Assumindo apenas os essenciais.`,
+    );
+    return { presence: false, members: true, messageContent: true };
+  }
+}
+
+function buildIntents(detected) {
+  const intents = [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.MessageContent,
-  ],
-  partials: [
-    Partials.User,
-    Partials.Channel,
-    Partials.GuildMember,
-    Partials.Message,
-    Partials.Reaction,
-  ],
-  sweepers: {
-    messages: {
-      interval: 3600,
-      lifetime: 3600,
-    },
-    users: {
-      interval: 7200,
-      filter: () => (user) => user.bot && user.id !== client.user.id,
-    },
-    guildMembers: {
-      interval: 7200,
-      filter: () => (member) =>
-        member.id !== client.user.id && !member.user.bot,
-    },
-    presences: {
-      interval: 1800,
-      filter: () => () => true,
-    },
-    voiceStates: {
-      interval: 3600,
-      filter: () => (state) => !state.channelId,
-    },
-  },
-  makeCache: Options.cacheWithLimits({
-    MessageManager: 100,
-    GuildMemberManager: 500,
-    PresenceManager: 0,
-    ReactionManager: 0,
-    ReactionUserManager: 0,
-    StageInstanceManager: 0,
-    ThreadManager: 400,
-    ThreadMemberManager: 0,
-    VoiceStateManager: 0,
-  }),
-});
+    GatewayIntentBits.GuildExpressions ?? GatewayIntentBits.GuildEmojisAndStickers,
+  ];
 
-client.commands = new Collection();
-client.aliases = new Collection();
-client.slashCommands = new Collection();
-client.config = require("./config");
+  if (detected.members) intents.push(GatewayIntentBits.GuildMembers);
+  if (detected.messageContent) intents.push(GatewayIntentBits.MessageContent);
+  if (detected.presence) intents.push(GatewayIntentBits.GuildPresences);
 
-client.stats = {
-  commandsExecuted: 0,
-  errorsCount: 0,
-  startTime: Date.now(),
-  memoryLeaks: 0,
-};
+  return intents;
+}
+
+function createClient(intents) {
+  return new Client({
+    intents,
+    partials: [
+      Partials.User,
+      Partials.Channel,
+      Partials.GuildMember,
+      Partials.Message,
+      Partials.Reaction,
+    ],
+    sweepers: {
+      messages: {
+        interval: 3600,
+        lifetime: 3600,
+      },
+      users: {
+        interval: 7200,
+        filter: () => (user) => user.bot && user.id !== client.user.id,
+      },
+      guildMembers: {
+        interval: 7200,
+        filter: () => (member) =>
+          member.id !== client.user.id && !member.user.bot,
+      },
+      presences: {
+        interval: 1800,
+        filter: () => () => true,
+      },
+      voiceStates: {
+        interval: 3600,
+        filter: () => (state) => !state.channelId,
+      },
+    },
+    makeCache: Options.cacheWithLimits({
+      MessageManager: 100,
+      GuildMemberManager: 500,
+      PresenceManager: 0,
+      ReactionManager: 0,
+      ReactionUserManager: 0,
+      StageInstanceManager: 0,
+      ThreadManager: 400,
+      ThreadMemberManager: 0,
+      VoiceStateManager: 0,
+    }),
+  });
+}
+
+let client;
 
 function formatBytes(bytes) {
   return (bytes / 1024 / 1024).toFixed(2);
@@ -88,24 +118,10 @@ function formatUptime(ms) {
 }
 
 function logStats() {
-  const uptime = formatUptime(Date.now() - client.stats.startTime);
   const processMemory = process.memoryUsage();
-
-  let totalMessages = 0;
-  let totalMembers = 0;
-  client.guilds.cache.forEach((guild) => {
-    guild.channels.cache.forEach((channel) => {
-      if (channel.messages) {
-        totalMessages += channel.messages.cache.size;
-      }
-    });
-    totalMembers += guild.members.cache.size;
-  });
-
   const heapUsedMB = parseFloat(formatBytes(processMemory.heapUsed));
   if (heapUsedMB > 200) {
     client.stats.memoryLeaks++;
-    console.warn(`⚠️  ALERTA: Uso de memória alto (${heapUsedMB} MB)!\n`);
   }
 }
 
@@ -140,73 +156,38 @@ function startMemoryMonitoring() {
 
       if (global.gc) {
         global.gc();
-        const after = process.memoryUsage().heapUsed;
-        const freed = ((before - after) / 1024 / 1024).toFixed(2);
       }
     }
   }, 300000);
 }
 
 process.setMaxListeners(15);
-process.removeAllListeners();
+
+const { log, error: logError } = require("./src/utils/logger");
 
 process.on("uncaughtException", (err) => {
-  client.stats.errorsCount++;
-  console.error("\n❌ ════════ UNCAUGHT EXCEPTION ════════");
-  console.error(`🕐 Timestamp: ${new Date().toISOString()}`);
-  console.error(`📛 Tipo: ${err.name}`);
-  console.error(`📝 Mensagem: ${err.message}`);
-  console.error(`📍 Stack:\n${err.stack}`);
-  console.error("═══════════════════════════════════════\n");
+  if (client?.stats) client.stats.errorsCount++;
+  logError("Exception", `${err.name}: ${err.message}\n${err.stack}`);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  client.stats.errorsCount++;
-  console.error("\n❌ ════════ UNHANDLED REJECTION ════════");
-  console.error(`🕐 Timestamp: ${new Date().toISOString()}`);
-  console.error(`📛 Tipo: Promise Rejection`);
-  console.error(`📝 Reason:`, reason);
-  if (reason?.stack) {
-    console.error(`📍 Stack:\n${reason.stack}`);
-  }
-  console.error("════════════════════════════════════════\n");
-});
-
-process.on("uncaughtExceptionMonitor", (error, origin) => {
-  console.error("\n⚠️  ════════ EXCEPTION MONITOR ════════");
-  console.error(`🕐 Timestamp: ${new Date().toISOString()}`);
-  console.error(`📛 Origin: ${origin}`);
-  console.error(`📝 Error:`, error);
-  console.error("═══════════════════════════════════════\n");
+process.on("unhandledRejection", (reason) => {
+  if (client?.stats) client.stats.errorsCount++;
+  logError("Rejection", reason?.message || String(reason));
 });
 
 process.on("warning", (warning) => {
-  if (warning.name === "MaxListenersExceededWarning") {
-    console.warn("\n⚠️  ALERTA: Muitos event listeners detectados!");
-    console.warn(`   Isso pode indicar memory leak!\n`);
+  if (warning.name === "MaxListenersExceededWarning" && client?.stats) {
     client.stats.memoryLeaks++;
-    return;
   }
-
-  console.warn("\n⚠️  ════════ NODE WARNING ════════");
-  console.warn(`🕐 Timestamp: ${new Date().toISOString()}`);
-  console.warn(`📛 Name: ${warning.name}`);
-  console.warn(`📝 Message: ${warning.message}`);
-  if (warning.stack) {
-    console.warn(`📍 Stack:\n${warning.stack}`);
-  }
-  console.warn("═════════════════════════════════════\n");
 });
 
 process.on("SIGINT", () => {
-  console.log("\n🛑 Encerrando bot gracefully...");
   clearInterval(memoryCheckInterval);
   client.destroy();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  console.log("\n🛑 Encerrando bot gracefully...");
   clearInterval(memoryCheckInterval);
   client.destroy();
   process.exit(0);
@@ -214,18 +195,51 @@ process.on("SIGTERM", () => {
 
 (async () => {
   try {
+    if (!token) {
+      throw new Error("DISCORD_TOKEN não definido — configure .env.dev / .env.production");
+    }
+
+    const detected = await detectPrivilegedIntents(token);
+    const intents = buildIntents(detected);
+
+    const statusIntent = (ok) => (ok ? "ativo" : "desligado");
+    log(
+      "Intents",
+      `Privilegiados detectados -> MessageContent: ${statusIntent(
+        detected.messageContent,
+      )} | Members: ${statusIntent(detected.members)} | Presence: ${statusIntent(
+        detected.presence,
+      )}`,
+    );
+
+    client = createClient(intents);
+    client.setMaxListeners(0);
+    client.commands = new Collection();
+    client.aliases = new Collection();
+    client.slashCommands = new Collection();
+    client.config = require("./config.json");
+    client.stats = {
+      commandsExecuted: 0,
+      errorsCount: 0,
+      startTime: Date.now(),
+      memoryLeaks: 0,
+    };
+
+    const readyPromise = new Promise((resolve) => client.once("clientReady", resolve));
     await client.login(token);
+    await readyPromise;
 
-    await new Promise((resolve) => client.once("clientReady", resolve));
-
+    // ╔══════════════════════════════════════════════════════════╗
+    // ║              SISTEMA DE EMOJI                            ║
+    // ╚══════════════════════════════════════════════════════════╝
     const ApplicationEmojiManager = require("./src/utils/emojis/emojiManager");
-    const path = require("path");
+    const emojisPath = path.join(__dirname, "src/utils/emojis/emojis.json");
     const emojiManager = new ApplicationEmojiManager(client);
     await emojiManager.uploadAndUpdateEmojis();
-    const emojisPath = path.join(__dirname, "src/utils/emojis/emojis.json");
     delete require.cache[require.resolve(emojisPath)];
     global.emojis = require(emojisPath);
-    console.log(`   ╰─ Emojis carregados globalmente (${Object.keys(global.emojis).length})`);
+    require("./src/utils/emojis/emojiHelper").installSafeEmoji();
+    // ══════════════════════════════════════════════════════════
 
     require("./src/handlers/eventsHandler")(client);
     require("./src/handlers/descriptionHandler")(client);

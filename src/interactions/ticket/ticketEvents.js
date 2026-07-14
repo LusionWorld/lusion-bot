@@ -14,15 +14,16 @@ const path = require("path");
 const { JsonDatabase } = require("wio.db");
 const sqlite3 = require("sqlite3").verbose();
 const discordTranscripts = require("discord-html-transcripts");
-const fetch = require("node-fetch");
-const FormData = require("form-data");
-const { PassThrough } = require("stream");
 const Groq = require("groq-sdk");
 
 const iaCooldowns = new Map();
 let currentKeyIndex = 0;
 
+const _dbConnectionPool = new Map();
+
 function getDBConnection(guildId) {
+  if (_dbConnectionPool.has(guildId)) return _dbConnectionPool.get(guildId);
+
   const folderPath = path.resolve(
     __dirname,
     "../../../banco/ticket",
@@ -35,17 +36,56 @@ function getDBConnection(guildId) {
   }
 
   const dbPath = path.join(folderPath, "tickets.db");
-  return new sqlite3.Database(dbPath);
+  const db = new sqlite3.Database(dbPath);
+
+  db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      ticket_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      staff_id TEXT DEFAULT NULL,
+      categoria TEXT,
+      criado_em INTEGER NOT NULL,
+      assumido_em INTEGER DEFAULT NULL,
+      fechado_em INTEGER DEFAULT NULL,
+      ia_pausada_por_staff INTEGER DEFAULT 0,
+      chat_historico TEXT DEFAULT '[]',
+      primeira_resposta_em INTEGER DEFAULT NULL,
+      respondido_id TEXT DEFAULT NULL,
+      fechado_id TEXT DEFAULT NULL,
+      message_id TEXT DEFAULT NULL,
+      motivo_abertura TEXT DEFAULT NULL,
+      nome_categoria TEXT DEFAULT NULL
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS contadores (
+      guild_id TEXT PRIMARY KEY,
+      abertos INTEGER DEFAULT 0,
+      assumidos INTEGER DEFAULT 0,
+      fechados INTEGER DEFAULT 0
+    )`);
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON tickets(guild_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_fechado ON tickets(guild_id, fechado_em)`);
+    db.run(`PRAGMA journal_mode=WAL`);
+    db.run(`ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]'`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN fechado_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN message_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN motivo_abertura TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN nome_categoria TEXT DEFAULT NULL`, () => {});
+  });
+
+  _dbConnectionPool.set(guildId, db);
+  return db;
 }
 
-function closeDB(db) {
-  if (db) {
-    db.close((err) => {
-      if (err) {
-        console.error("Erro ao fechar banco:", err);
-      }
-    });
-  }
+function closeDB(_db) {
+  // conexões são mantidas no pool — não fechar
 }
 
 function getConfigDB(guildId) {
@@ -150,69 +190,6 @@ async function chamarGroqAPI(
       throw erro;
     }
   }
-}
-
-async function enviarTranscriptParaAPI(buffer, filename, client) {
-  const form = new FormData();
-  const stream = new PassThrough();
-  stream.end(buffer);
-
-  form.append("file", stream, {
-    filename,
-    contentType: "text/html",
-  });
-
-  const botId = client?.user?.id;
-
-  try {
-    const response = await fetch(
-      "https://labzapi.squareweb.app/transcript/upload",
-      {
-        method: "POST",
-        body: form,
-        headers: {
-          ...form.getHeaders(),
-          "x-bot-id": botId || "desconhecido",
-        },
-      },
-    );
-
-    const data = await response.json();
-
-    if (response.ok && data.fileName) {
-      const match = data.fileName.match(/transcript-(labz\d{10})\.html/);
-      const cleanId = match ? match[1] : data.fileName.replace(".html", "");
-
-      const url = `https://labzapi.squareweb.app/transcript/viewer/${cleanId}`;
-      return url;
-    } else {
-      console.error("❌ Erro ao enviar transcript:", data);
-      return null;
-    }
-  } catch (error) {
-    console.error("❌ Erro de conexão com a API:", error);
-    return null;
-  }
-}
-
-function gerarBotoesContainer(configBotoes = [], transcriptURL) {
-  if (!Array.isArray(configBotoes) || configBotoes.length === 0) return null;
-  const row = new ActionRowBuilder();
-  for (const botao of configBotoes) {
-    const button = new ButtonBuilder()
-      .setStyle(ButtonStyle.Link)
-      .setURL(transcriptURL || "");
-    if (botao.label) {
-      button.setLabel(
-        botao.label.replaceAll("{transcript}", transcriptURL || ""),
-      );
-    }
-    if (botao.emoji) {
-      button.setEmoji(botao.emoji);
-    }
-    row.addComponents(button);
-  }
-  return row.components.length > 0 ? row : null;
 }
 
 async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
@@ -370,13 +347,6 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
             poweredBy: false,
           });
 
-          const transcriptBuffer = attachment.attachment;
-          const transcriptURL = await enviarTranscriptParaAPI(
-            transcriptBuffer,
-            fileName,
-            client,
-          );
-
           const containerUserComponents = [
             new TextDisplayBuilder().setContent(
               `# ${embedLogsUserData.title || "📄 Registro do Ticket Encerrado"}`,
@@ -401,37 +371,6 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
             ...containerUserComponents,
           );
 
-          let rowLog = null;
-          let rowUser = null;
-
-          if (transcriptURL) {
-            if (
-              transcriptCfg.staff === true &&
-              Array.isArray(embedLogsData.botoes)
-            ) {
-              rowLog = gerarBotoesContainer(
-                embedLogsData.botoes,
-                transcriptURL,
-              );
-              if (rowLog) {
-                containerLog = containerLog.addActionRowComponents(rowLog);
-              }
-            }
-
-            if (
-              transcriptCfg.user === true &&
-              Array.isArray(embedLogsUserData.botoes)
-            ) {
-              rowUser = gerarBotoesContainer(
-                embedLogsUserData.botoes,
-                transcriptURL,
-              );
-              if (rowUser) {
-                containerUser = containerUser.addActionRowComponents(rowUser);
-              }
-            }
-          }
-
           if (logCfg.ativo === true && logCfg.canal) {
             const canalLog = guild.channels.cache.get(logCfg.canal);
             if (canalLog) {
@@ -439,6 +378,7 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
                 .send({
                   flags: MessageFlags.IsComponentsV2,
                   components: [containerLog],
+                  files: transcriptCfg.staff === true ? [attachment] : [],
                 })
                 .catch(console.error);
             }
@@ -454,6 +394,7 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
                   .send({
                     flags: MessageFlags.IsComponentsV2,
                     components: [containerUser],
+                    files: transcriptCfg.user === true ? [attachment] : [],
                   })
                   .catch(() => {});
               }

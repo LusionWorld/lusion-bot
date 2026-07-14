@@ -39,18 +39,15 @@ const emojis = getEmojis()
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function isStaff(interaction) {
-  return !!interaction.member?.permissions?.has('ManageMessages')
-}
 
 function ok(text) {
   return new ContainerBuilder()
-    .addTextDisplayComponents(td => td.setContent(`${emojis.check ?? '✅'} ${text}`))
+    .addTextDisplayComponents(td => td.setContent(`${emojis.success} ${text}`))
 }
 
 function errBox(text) {
   return new ContainerBuilder()
-    .addTextDisplayComponents(td => td.setContent(`${emojis.danger ?? '❌'} ${text}`))
+    .addTextDisplayComponents(td => td.setContent(`${emojis.danger} ${text}`))
 }
 
 async function loadGuildFeatures(conn) {
@@ -206,7 +203,6 @@ module.exports = {
 
     // ── Back to hub ───────────────────────────────────────────────────────
     if (interaction.isButton() && id === 'aaq_cfg_back') {
-      if (!isStaff(interaction)) return
       const cfg = await loadFullConfig(conn)
       return interaction.update({
         components: [buildConfigHub(cfg)],
@@ -216,7 +212,6 @@ module.exports = {
 
     // ── Navigate to sub-panel ─────────────────────────────────────────────
     if (interaction.isButton() && id.startsWith('aaq_nav:')) {
-      if (!isStaff(interaction)) return
       const panel = id.split(':')[1]
 
       if (panel === 'channels') {
@@ -274,8 +269,7 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
 
     if (interaction.isChannelSelectMenu() && id === 'aaq_cfg_ask_channel') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      if (!client.aaqConfigData) client.aaqConfigData = {}
+if (!client.aaqConfigData) client.aaqConfigData = {}
       if (!client.aaqConfigData[guildId]) client.aaqConfigData[guildId] = {}
       client.aaqConfigData[guildId].askChannelId = interaction.values[0]
       return interaction.update({
@@ -285,8 +279,7 @@ module.exports = {
     }
 
     if (interaction.isChannelSelectMenu() && id === 'aaq_cfg_review_channel') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      if (!client.aaqConfigData) client.aaqConfigData = {}
+if (!client.aaqConfigData) client.aaqConfigData = {}
       if (!client.aaqConfigData[guildId]) client.aaqConfigData[guildId] = {}
       client.aaqConfigData[guildId].reviewChannelId = interaction.values[0]
       return interaction.update({
@@ -296,8 +289,7 @@ module.exports = {
     }
 
     if (interaction.isChannelSelectMenu() && id === 'aaq_cfg_questions_channel') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      if (!client.aaqConfigData) client.aaqConfigData = {}
+if (!client.aaqConfigData) client.aaqConfigData = {}
       if (!client.aaqConfigData[guildId]) client.aaqConfigData[guildId] = {}
       client.aaqConfigData[guildId].questionsChannelId = interaction.values[0]
       return interaction.update({
@@ -307,8 +299,7 @@ module.exports = {
     }
 
     if (interaction.isButton() && id === 'aaq_cfg_save') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      const data = client.aaqConfigData?.[guildId]
+const data = client.aaqConfigData?.[guildId]
       if (!data?.askChannelId || !data?.reviewChannelId || !data?.questionsChannelId) {
         return interaction.reply({ content: `${emojis.warning} Select all 3 channels before saving.`, flags: MessageFlags.Ephemeral })
       }
@@ -333,8 +324,7 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
 
     if (interaction.isButton() && id.startsWith('aaq_toggle:')) {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      const key      = id.split(':')[1]
+const key      = id.split(':')[1]
       const features = await loadGuildFeatures(conn)
       if (key in features) features[key] = !features[key]
       await saveFeatures(conn, features)
@@ -346,8 +336,7 @@ module.exports = {
     }
 
     if (interaction.isButton() && id === 'aaq_cfg_threshold') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      return interaction.showModal(
+return interaction.showModal(
         new ModalBuilder()
           .setCustomId('modal_aaq_cfg_threshold')
           .setTitle('Auto FAQ Threshold')
@@ -384,8 +373,7 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
 
     if (interaction.isButton() && id.startsWith('aaq_access_mode:')) {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      const mode = id.split(':')[1]
+const mode = id.split(':')[1]
       await conn.setConfig('access_mode', mode)
       const accessRoles = JSON.parse(await conn.getConfig('access_roles', '[]') || '[]')
       return interaction.update({
@@ -395,8 +383,7 @@ module.exports = {
     }
 
     if (interaction.isRoleSelectMenu() && id === 'aaq_cfg_access_roles') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      const roleIds = interaction.values
+const roleIds = interaction.values
       await conn.setConfig('access_roles', JSON.stringify(roleIds))
       const accessMode = await conn.getConfig('access_mode', 'open')
       return interaction.update({
@@ -410,8 +397,7 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
 
     if (interaction.isButton() && id === 'aaq_cat_add') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      return interaction.showModal(
+return interaction.showModal(
         new ModalBuilder()
           .setCustomId('modal_aaq_cat_add')
           .setTitle('Add Category')
@@ -451,8 +437,7 @@ module.exports = {
     }
 
     if (interaction.isStringSelectMenu() && id === 'aaq_cat_remove_select') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      const toRemove = interaction.values[0]
+const toRemove = interaction.values[0]
       let categories = await loadGuildCategories(conn)
       categories = categories.filter(c => c.value !== toRemove)
       await conn.setConfig('categories', JSON.stringify(categories))
@@ -463,8 +448,7 @@ module.exports = {
     }
 
     if (interaction.isButton() && id === 'aaq_cat_reset') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      await conn.setConfig('categories', JSON.stringify(DEFAULT_CATEGORIES))
+await conn.setConfig('categories', JSON.stringify(DEFAULT_CATEGORIES))
       return interaction.update({
         components: [buildCategoriesPanel(DEFAULT_CATEGORIES)],
         flags: [MessageFlags.IsComponentsV2],
@@ -476,8 +460,7 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
 
     if (interaction.isButton() && id === 'aaq_kw_add') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      return interaction.showModal(
+return interaction.showModal(
         new ModalBuilder()
           .setCustomId('modal_aaq_kw_add')
           .setTitle('Add Keyword')
@@ -508,8 +491,7 @@ module.exports = {
     }
 
     if (interaction.isStringSelectMenu() && id === 'aaq_kw_remove_select') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      const index = parseInt(interaction.values[0])
+const index = parseInt(interaction.values[0])
       const keywords = await loadGuildKeywords(conn)
       keywords.splice(index, 1)
       await conn.setConfig('support_keywords', JSON.stringify(keywords))
@@ -520,8 +502,7 @@ module.exports = {
     }
 
     if (interaction.isButton() && id === 'aaq_kw_reset') {
-      if (!isStaff(interaction)) return interaction.reply({ content: `${emojis.danger} No permission.`, flags: MessageFlags.Ephemeral })
-      await conn.setConfig('support_keywords', JSON.stringify(DEFAULT_SUPPORT_KEYWORDS))
+await conn.setConfig('support_keywords', JSON.stringify(DEFAULT_SUPPORT_KEYWORDS))
       return interaction.update({
         components: [buildKeywordsPanel(DEFAULT_SUPPORT_KEYWORDS)],
         flags: [MessageFlags.IsComponentsV2],
@@ -693,7 +674,7 @@ module.exports = {
 
       return interaction.reply({
         content: isNowFollowing
-          ? `${emojis.check ?? '✅'} You are now following this question. You'll be notified when it's answered.`
+          ? `${emojis.success} You are now following this question. You'll be notified when it's answered.`
           : `You have unfollowed this question.`,
         flags: MessageFlags.Ephemeral,
       })
@@ -726,19 +707,6 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
     // STAFF ACTIONS
     // ═════════════════════════════════════════════════════════════════════
-
-    const isStaffAction = [
-      'aaq_answer:', 'aaq_assign:', 'aaq_reject:', 'aaq_delete:',
-      'aaq_edit:', 'aaq_status:', 'aaq_setstatus:', 'aaq_faq_add:', 'aaq_faq_ignore:',
-      'modal_aaq_answer:', 'modal_aaq_assign:', 'modal_aaq_edit:',
-    ].some(p => id.startsWith(p))
-
-    if (isStaffAction && !isStaff(interaction)) {
-      return interaction.reply({
-        content: `${emojis.danger ?? '❌'} You don't have permission to do this.`,
-        flags: MessageFlags.Ephemeral,
-      })
-    }
 
     // ── Answer button ─────────────────────────────────────────────────────
     if (interaction.isButton() && id.startsWith('aaq_answer:')) {
@@ -788,7 +756,7 @@ module.exports = {
         })
       }
 
-      return interaction.editReply({ content: `${emojis.check ?? '✅'} Answer posted. Notifications sent.` })
+      return interaction.editReply({ content: `${emojis.success} Answer posted. Notifications sent.` })
     }
 
     // ── Assign button ─────────────────────────────────────────────────────
@@ -809,7 +777,7 @@ module.exports = {
       await refreshReview(interaction.guild, conn, updated)
 
       return interaction.reply({
-        content: `${emojis.check ?? '✅'} Assigned to <@${userId}> · status: 🔵 In Progress.`,
+        content: `${emojis.success} Assigned to <@${userId}> · status: 🔵 In Progress.`,
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -825,9 +793,6 @@ module.exports = {
 
     // ── Status select ─────────────────────────────────────────────────────
     if (interaction.isStringSelectMenu() && id.startsWith('aaq_setstatus:')) {
-      if (!isStaff(interaction)) {
-        return interaction.reply({ content: `${emojis.danger ?? '❌'} No permission.`, flags: MessageFlags.Ephemeral })
-      }
       const questionId = parseInt(id.split(':')[1])
       const status     = interaction.values[0]
       await conn.updateQuestion(questionId, { status })
@@ -852,7 +817,7 @@ module.exports = {
       await refreshReview(interaction.guild, conn, updated)
 
       return interaction.reply({
-        content: `${emojis.check ?? '✅'} Question #${questionId} rejected.`,
+        content: `${emojis.success} Question #${questionId} rejected.`,
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -916,7 +881,7 @@ module.exports = {
       await refreshReview(interaction.guild, conn, updated)
 
       return interaction.reply({
-        content: `${emojis.check ?? '✅'} Answer updated.`,
+        content: `${emojis.success} Answer updated.`,
         flags: MessageFlags.Ephemeral,
       })
     }

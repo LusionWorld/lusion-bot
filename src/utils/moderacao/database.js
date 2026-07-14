@@ -28,13 +28,19 @@ function get(sql, params = []) {
 const ready = (async () => {
   await run(`
     CREATE TABLE IF NOT EXISTS mod_config (
-      guild_id     TEXT PRIMARY KEY,
-      canal_entrou TEXT,
-      canal_saiu   TEXT,
-      canal_ban    TEXT,
-      canal_kick   TEXT
+      guild_id         TEXT PRIMARY KEY,
+      canal_entrou     TEXT,
+      canal_saiu       TEXT,
+      canal_ban        TEXT,
+      canal_kick       TEXT,
+      canal_msg_delete TEXT,
+      canal_msg_edit   TEXT
     )
   `)
+
+  // Migrations for existing DBs
+  await run(`ALTER TABLE mod_config ADD COLUMN canal_msg_delete TEXT`).catch(() => {})
+  await run(`ALTER TABLE mod_config ADD COLUMN canal_msg_edit   TEXT`).catch(() => {})
 })()
 
 ready.catch(err => console.error('❌ Erro ao inicializar banco de moderação:', err))

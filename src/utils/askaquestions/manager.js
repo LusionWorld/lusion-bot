@@ -155,7 +155,6 @@ function buildReviewContainer(question, categories = DEFAULT_CATEGORIES) {
       row.setComponents(
         new ButtonBuilder().setCustomId(`aaq_answer:${question.id}`).setLabel('Answer').setEmoji(getEmoji(emojis.message)).setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`aaq_assign:${question.id}`).setLabel('Assign').setEmoji(getEmoji(emojis.user)).setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`aaq_status:${question.id}`).setLabel('Status').setEmoji(getEmoji(emojis.status)).setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId(`aaq_reject:${question.id}`).setLabel('Reject').setEmoji(getEmoji(emojis.cancel)).setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId(`aaq_delete:${question.id}`).setLabel('Delete').setEmoji(getEmoji(emojis.trashcan)).setStyle(ButtonStyle.Danger),
       ),
@@ -808,21 +807,20 @@ function buildAnswerModal(questionId) {
 }
 
 function buildEditModal(questionId, currentAnswer) {
+  const input = new TextInputBuilder()
+    .setCustomId('answer_content')
+    .setLabel('Answer')
+    .setStyle(TextInputStyle.Paragraph)
+    .setMinLength(5)
+    .setMaxLength(2000)
+    .setRequired(true)
+
+  if (currentAnswer && currentAnswer.length >= 5) input.setValue(currentAnswer)
+
   return new ModalBuilder()
     .setCustomId(`modal_aaq_edit:${questionId}`)
     .setTitle('Edit Answer')
-    .addComponents(
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId('answer_content')
-          .setLabel('Answer')
-          .setStyle(TextInputStyle.Paragraph)
-          .setValue(currentAnswer ?? '')
-          .setMinLength(5)
-          .setMaxLength(2000)
-          .setRequired(true),
-      ),
-    )
+    .addComponents(new ActionRowBuilder().addComponents(input))
 }
 
 function buildSearchModal() {

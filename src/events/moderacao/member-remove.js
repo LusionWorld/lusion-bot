@@ -56,6 +56,7 @@ module.exports = {
         if (!channel?.isTextBased()) return
 
         const container = new ContainerBuilder()
+          .setAccentColor(0xE67E22) // orange — member kicked
           .addTextDisplayComponents(td =>
             td.setContent(`${emojis.hammer} **Membro expulso,** ${member}`)
           )
@@ -81,7 +82,7 @@ module.exports = {
         const avatarURL = user.displayAvatarURL({ dynamic: true, size: 256 })
         const joinedAgo = member.joinedTimestamp ? timeAgo(member.joinedTimestamp) : null
 
-        const container = new ContainerBuilder()
+        const container = new ContainerBuilder().setAccentColor(0x95A5A6) // gray — member left
 
         if (bannerURL) {
           container.addMediaGalleryComponents(

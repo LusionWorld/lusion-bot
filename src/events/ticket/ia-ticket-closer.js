@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
 const { promisify } = require("util");
+const { t } = require("../../utils/i18n");
 const {
   ContainerBuilder,
   TextDisplayBuilder,
@@ -24,6 +25,17 @@ function getDBConnection(guildId) {
   db.getAsync = promisify(db.get.bind(db));
   db.allAsync = promisify(db.all.bind(db));
   db.run("PRAGMA journal_mode = WAL;");
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON tickets(guild_id)`, () => {});
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)`, () => {});
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_fechado ON tickets(guild_id, fechado_em)`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]'`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN fechado_id TEXT DEFAULT NULL`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN message_id TEXT DEFAULT NULL`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN motivo_abertura TEXT DEFAULT NULL`, () => {});
+  db.run(`ALTER TABLE tickets ADD COLUMN nome_categoria TEXT DEFAULT NULL`, () => {});
   return db;
 }
 
@@ -51,22 +63,6 @@ function getPersonalizacaoDB(guildId) {
   });
 }
 
-async function enviarTranscriptParaAPI(buffer, filename, client) {
-  try {
-    const ticketModule = require("../../interactions/ticket/ticket");
-    if (ticketModule.enviarTranscriptParaAPI) {
-      return await ticketModule.enviarTranscriptParaAPI(
-        buffer,
-        filename,
-        client,
-      );
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  *
  * @param {Client} client
@@ -81,7 +77,7 @@ async function fecharTicketPorIA(client, guildId, channelId) {
   if (!canal) return;
 
   const dbsql = getDBConnection(guildId);
-  const motivo = "Encerrado automaticamente pela IA";
+  const motivo = t("ia_motivo_encerrado", guildId);
 
   try {
     await dbsql.runAsync(
@@ -122,7 +118,7 @@ async function fecharTicketPorIA(client, guildId, channelId) {
 
     const canalTexto = `<#${canal.id}> (${canal.name})`;
     const staffTexto = `${client.user} (\`${client.user.id}\`)`;
-    const autorTexto = autorId ? `<@${autorId}>` : "Não identificado";
+    const autorTexto = autorId ? `<@${autorId}>` : t("ticket_nao_identificado", guildId);
     const abertoTimestamp = Math.floor(canal.createdTimestamp / 1000);
     const fechadoTimestamp = Math.floor(Date.now() / 1000);
     const abertura = `<t:${abertoTimestamp}:f>`;
@@ -143,14 +139,14 @@ async function fecharTicketPorIA(client, guildId, channelId) {
         .replaceAll("{fechamento}", fechamento)
         .replaceAll("{horatotal}", horatotal);
 
-    let transcriptURL = null;
+    let transcriptAttachment = null;
     try {
       const ticketId = Math.floor(
         1000000000 + Math.random() * 9000000000,
       ).toString();
       const fileName = `transcript-labz${ticketId}.html`;
 
-      const attachment = await discordTranscripts.createTranscript(canal, {
+      transcriptAttachment = await discordTranscripts.createTranscript(canal, {
         limit: 1000,
         returnBuffer: false,
         filename: fileName,
@@ -158,17 +154,6 @@ async function fecharTicketPorIA(client, guildId, channelId) {
         saveImages: false,
         poweredBy: false,
       });
-
-      try {
-        const { enviarTranscriptParaAPI: enviarFn } = require("../../interactions/ticket/ticket");
-        if (typeof enviarFn === "function") {
-          transcriptURL = await enviarFn(
-            attachment.attachment,
-            fileName,
-            client,
-          );
-        }
-      } catch {}
     } catch {}
 
     if (logCfg.ativo === true && logCfg.canal) {
@@ -198,37 +183,14 @@ async function fecharTicketPorIA(client, guildId, channelId) {
           ...components,
         );
 
-        if (
-          transcriptURL &&
-          transcriptCfg.staff === true &&
-          Array.isArray(embedLogsData.botoes) &&
-          embedLogsData.botoes.length > 0
-        ) {
-          const {
-            ButtonBuilder,
-            ButtonStyle,
-            ActionRowBuilder,
-          } = require("discord.js");
-          const btns = embedLogsData.botoes
-            .filter((b) => b.label && b.url_type !== "custom")
-            .map((b) =>
-              new ButtonBuilder()
-                .setLabel(b.label)
-                .setURL(transcriptURL)
-                .setStyle(ButtonStyle.Link),
-            )
-            .slice(0, 5);
-          if (btns.length > 0) {
-            containerLog = containerLog.addActionRowComponents(
-              new ActionRowBuilder().addComponents(...btns),
-            );
-          }
-        }
-
         await canalLog
           .send({
             flags: MessageFlags.IsComponentsV2,
             components: [containerLog],
+            files:
+              transcriptCfg.staff === true && transcriptAttachment
+                ? [transcriptAttachment]
+                : [],
           })
           .catch(() => {});
       }
@@ -262,37 +224,14 @@ async function fecharTicketPorIA(client, guildId, channelId) {
             ...userComponents,
           );
 
-          if (
-            transcriptURL &&
-            transcriptCfg.user === true &&
-            Array.isArray(embedLogsUserData.botoes) &&
-            embedLogsUserData.botoes.length > 0
-          ) {
-            const {
-              ButtonBuilder,
-              ButtonStyle,
-              ActionRowBuilder,
-            } = require("discord.js");
-            const btns = embedLogsUserData.botoes
-              .filter((b) => b.label)
-              .map((b) =>
-                new ButtonBuilder()
-                  .setLabel(b.label)
-                  .setURL(transcriptURL)
-                  .setStyle(ButtonStyle.Link),
-              )
-              .slice(0, 5);
-            if (btns.length > 0) {
-              containerUser = containerUser.addActionRowComponents(
-                new ActionRowBuilder().addComponents(...btns),
-              );
-            }
-          }
-
           await membro
             .send({
               flags: MessageFlags.IsComponentsV2,
               components: [containerUser],
+              files:
+                transcriptCfg.user === true && transcriptAttachment
+                  ? [transcriptAttachment]
+                  : [],
             })
             .catch(() => {});
         }

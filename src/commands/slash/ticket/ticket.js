@@ -23,6 +23,7 @@ const { JsonDatabase } = require('wio.db')
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../')
 
 const { getEmojis } = require("../../../utils/emojis/emojiHelper");
+const { t } = require("../../../utils/i18n");
 const emojis = getEmojis();
 
 function getEmoji(raw) {
@@ -76,6 +77,14 @@ async function garantirConfigsExistem(guildId) {
 module.exports = {
   name: 'ticket',
   description: 'Enviar painel de tickets com botão ou select',
+  name_localizations: {
+    'en-US': 'ticket',
+    'es-ES': 'ticket',
+  },
+  description_localizations: {
+    'en-US': 'Send a ticket panel with button or select menu',
+    'es-ES': 'Enviar un panel de tickets con botón o select',
+  },
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 
@@ -83,11 +92,24 @@ module.exports = {
     {
       name: 'tipo',
       description: 'Tipo de painel para abrir ticket',
+      nameLocalizations: { 'en-US': 'type', 'es-ES': 'tipo' },
+      descriptionLocalizations: {
+        'en-US': 'Panel type to open ticket',
+        'es-ES': 'Tipo de panel para abrir ticket',
+      },
       type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
-        { name: 'Botão', value: 'botao' },
-        { name: 'Select', value: 'select' },
+        {
+          name: 'Botão',
+          value: 'botao',
+          nameLocalizations: { 'en-US': 'Button', 'es-ES': 'Botón' },
+        },
+        {
+          name: 'Select',
+          value: 'select',
+          nameLocalizations: { 'en-US': 'Select', 'es-ES': 'Select' },
+        },
       ],
     },
   ],
@@ -101,7 +123,7 @@ module.exports = {
 
     if (!criou) {
       return interaction.editReply({
-        content: '❌ Erro ao verificar/criar configurações. Tente novamente.',
+        content: t('ticket_cmd_erro_config', guildId),
       })
     }
 
@@ -122,8 +144,7 @@ module.exports = {
         config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
       } else {
         return interaction.editReply({
-          content:
-            '❌ Erro ao criar configurações. Tente novamente em alguns segundos.',
+          content: t('ticket_cmd_erro_config2', guildId),
         })
       }
     }
@@ -137,7 +158,7 @@ module.exports = {
 
     if (!isAdmin && !hasConfigPerm) {
       return interaction.editReply({
-        content: '❌ Você não tem permissão para usar este comando.',
+        content: t('ticket_cmd_sem_permissao', guildId),
       })
     }
 
@@ -147,8 +168,7 @@ module.exports = {
 
     if (!embedData) {
       return interaction.editReply({
-        content:
-          '❌ Nenhum dado de personalização encontrado para este servidor.',
+        content: t('ticket_cmd_sem_personalizacao', guildId),
       })
     }
 
@@ -187,12 +207,12 @@ module.exports = {
           .setAccentColor(parseColor(embedData.color))
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              '**⚙️ Configuração do Painel: Botão**',
+              t('ticket_cmd_painel_botao_titulo', guildId),
             ),
           )
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              '❌ Nenhuma configuração de botão encontrada. Você precisa adicionar uma antes.\nEscolha uma das ações abaixo.',
+              t('ticket_cmd_painel_botao_vazio', guildId),
             ),
           )
           .addSeparatorComponents(
@@ -204,22 +224,22 @@ module.exports = {
             new ActionRowBuilder().addComponents(
               new ButtonBuilder()
                 .setCustomId('botao_adicionar')
-                .setLabel('Adicionar')
+                .setLabel(t('ticket_cmd_btn_adicionar', guildId))
                 .setEmoji(getEmoji(emojis.plus))
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
                 .setCustomId('botao_remover')
-                .setLabel('Remover')
+                .setLabel(t('ticket_cmd_btn_remover', guildId))
                 .setEmoji(getEmoji(emojis.minus))
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
                 .setCustomId('botao_editar')
-                .setLabel('Editar')
+                .setLabel(t('ticket_cmd_btn_editar', guildId))
                 .setEmoji(getEmoji(emojis.title))
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
                 .setCustomId('sistema_ticket')
-                .setLabel('Voltar')
+                .setLabel(t('ticket_cmd_btn_voltar', guildId))
                 .setEmoji(getEmoji(emojis.arrowl))
                 .setStyle(ButtonStyle.Secondary),
             ),
@@ -306,7 +326,7 @@ module.exports = {
       }
 
       await interaction.editReply({
-        content: '✅ Painel enviado no canal!',
+        content: t('ticket_cmd_enviado', guildId),
       })
 
       const mensagemEnviada = await interaction.channel.send({
@@ -325,12 +345,12 @@ module.exports = {
           .setAccentColor(parseColor(embedData.color))
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              '**⚙️ Configuração do Painel: Select**',
+              t('ticket_cmd_painel_select_titulo', guildId),
             ),
           )
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              '❌ Nenhuma configuração de select encontrada. Você precisa adicionar uma antes.\nEscolha uma das ações abaixo.',
+              t('ticket_cmd_painel_select_vazio', guildId),
             ),
           )
           .addSeparatorComponents(
@@ -342,22 +362,22 @@ module.exports = {
             new ActionRowBuilder().addComponents(
               new ButtonBuilder()
                 .setCustomId('select_adicionar')
-                .setLabel('Adicionar')
+                .setLabel(t('ticket_cmd_btn_adicionar', guildId))
                 .setEmoji(getEmoji(emojis.plus))
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
                 .setCustomId('select_remover')
-                .setLabel('Remover')
+                .setLabel(t('ticket_cmd_btn_remover', guildId))
                 .setEmoji(getEmoji(emojis.minus))
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
                 .setCustomId('select_editar')
-                .setLabel('Editar')
+                .setLabel(t('ticket_cmd_btn_editar', guildId))
                 .setEmoji(getEmoji(emojis.title))
                 .setStyle(ButtonStyle.Secondary),
               new ButtonBuilder()
                 .setCustomId('sistema_ticket')
-                .setLabel('Voltar')
+                .setLabel(t('ticket_cmd_btn_voltar', guildId))
                 .setEmoji(getEmoji(emojis.arrowl))
                 .setStyle(ButtonStyle.Secondary),
             ),
@@ -401,7 +421,7 @@ module.exports = {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('ticket_select')
-        .setPlaceholder('Escolha uma opção')
+        .setPlaceholder(t('ticket_cmd_select_placeholder', guildId))
         .addOptions(options)
 
       const containerTicket = new ContainerBuilder()
@@ -448,7 +468,7 @@ module.exports = {
       )
 
       await interaction.editReply({
-        content: '✅ Painel enviado no canal!',
+        content: t('ticket_cmd_enviado', guildId),
       })
 
       const mensagemEnviada = await interaction.channel.send({

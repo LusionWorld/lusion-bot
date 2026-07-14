@@ -49,6 +49,8 @@ const {
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
+const { t } = require("../../utils/i18n");
+
 module.exports = {
   customIds: [
     "logs_ticket",
@@ -76,14 +78,15 @@ module.exports = {
     if (!interaction._fromPainel) return;
 
     if (interaction.isButton() && interaction.customId === "logs_ticket") {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const config = db.get("logs") || {};
       const canalAtual = config.log_fechamento?.canal || null;
 
       const rowButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("toggle_log_fechamento")
-          .setLabel("Log Fechamento")
+          .setLabel(t("logs_btn_fechamento", guildId))
           .setStyle(
             config.log_fechamento?.ativo
               ? ButtonStyle.Success
@@ -94,7 +97,7 @@ module.exports = {
           ),
         new ButtonBuilder()
           .setCustomId("toggle_log_user")
-          .setLabel("Log Usuário")
+          .setLabel(t("logs_btn_usuario", guildId))
           .setStyle(
             config.log_user?.ativo
               ? ButtonStyle.Success
@@ -103,7 +106,7 @@ module.exports = {
           .setEmoji(getEmoji(config.log_user?.ativo ? emojis.on : emojis.off)),
         new ButtonBuilder()
           .setCustomId("configurar_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", guildId))
           .setEmoji(getEmoji(emojis.home))
           .setStyle(ButtonStyle.Secondary),
       );
@@ -111,7 +114,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
           .setCustomId("set_log_fechamento_canal")
-          .setPlaceholder("Selecione o canal de log de fechamento")
+          .setPlaceholder(t("logs_fechamento_canal_placeholder", guildId))
           .addChannelTypes(ChannelType.GuildText)
           .setDefaultChannels(canalAtual ? [canalAtual] : []),
       );
@@ -119,27 +122,18 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Logs"),
+            new TextDisplayBuilder().setContent(t("logs_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Ative ou desative os logs abaixo:",
+              t("logs_log_fechamento_status", guildId, {
+                status: config.log_fechamento?.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                canal: config.log_fechamento?.canal ? `<#${config.log_fechamento.canal}>` : t("logs_canal_nenhum", guildId),
+              }),
             ),
             new TextDisplayBuilder().setContent(
-              `**Log de Fechamento**\n${
-                config.log_fechamento?.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }\nCanal: ${
-                config.log_fechamento?.canal
-                  ? `<#${config.log_fechamento.canal}>`
-                  : "Nenhum"
-              }`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Log de Usuário**\n${
-                config.log_user?.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }`,
+              t("logs_log_usuario_status", guildId, {
+                status: config.log_user?.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+              }),
             ),
           )
           .addActionRowComponents(rowButtons, rowSelect),
@@ -158,7 +152,8 @@ module.exports = {
       (interaction.customId === "toggle_log_fechamento" ||
         interaction.customId === "toggle_log_user")
     ) {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       if (interaction.customId === "toggle_log_fechamento") {
         db.set(
           "logs.log_fechamento.ativo",
@@ -176,7 +171,7 @@ module.exports = {
       const rowButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("toggle_log_fechamento")
-          .setLabel("Log Fechamento")
+          .setLabel(t("logs_btn_fechamento", guildId))
           .setStyle(
             config.log_fechamento?.ativo
               ? ButtonStyle.Success
@@ -187,7 +182,7 @@ module.exports = {
           ),
         new ButtonBuilder()
           .setCustomId("toggle_log_user")
-          .setLabel("Log Usuário")
+          .setLabel(t("logs_btn_usuario", guildId))
           .setStyle(
             config.log_user?.ativo
               ? ButtonStyle.Success
@@ -196,7 +191,7 @@ module.exports = {
           .setEmoji(getEmoji(config.log_user?.ativo ? emojis.on : emojis.off)),
         new ButtonBuilder()
           .setCustomId("configurar_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", guildId))
           .setEmoji(getEmoji(emojis.home))
           .setStyle(ButtonStyle.Secondary),
       );
@@ -204,7 +199,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
           .setCustomId("set_log_fechamento_canal")
-          .setPlaceholder("Selecione o canal de log de fechamento")
+          .setPlaceholder(t("logs_fechamento_canal_placeholder", guildId))
           .addChannelTypes(ChannelType.GuildText)
           .setDefaultChannels(canalAtual ? [canalAtual] : []),
       );
@@ -212,27 +207,18 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Logs"),
+            new TextDisplayBuilder().setContent(t("logs_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Ative ou desative os logs abaixo:",
+              t("logs_log_fechamento_status", guildId, {
+                status: config.log_fechamento?.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                canal: config.log_fechamento?.canal ? `<#${config.log_fechamento.canal}>` : t("logs_canal_nenhum", guildId),
+              }),
             ),
             new TextDisplayBuilder().setContent(
-              `**Log de Fechamento**\n${
-                config.log_fechamento?.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }\nCanal: ${
-                config.log_fechamento?.canal
-                  ? `<#${config.log_fechamento.canal}>`
-                  : "Nenhum"
-              }`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Log de Usuário**\n${
-                config.log_user?.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }`,
+              t("logs_log_usuario_status", guildId, {
+                status: config.log_user?.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+              }),
             ),
           )
           .addActionRowComponents(rowButtons, rowSelect),
@@ -247,19 +233,20 @@ module.exports = {
     }
 
     if (interaction.isButton() && interaction.customId === "limite_ticket") {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const valorAtual = db.get("limit") ?? "1";
 
       const modal = new ModalBuilder()
         .setCustomId("modal_limite_ticket")
-        .setTitle("Configurar limite de tickets");
+        .setTitle(t("logs_modal_limite_titulo", guildId));
 
       const input = new TextInputBuilder()
         .setCustomId("input_limite")
-        .setLabel("Quantidade máxima de por usuário (mínimo 1)")
+        .setLabel(t("logs_modal_limite_label", guildId))
         .setStyle(TextInputStyle.Short)
         .setMinLength(1)
-        .setPlaceholder("Digite um número inteiro maior ou igual a 1")
+        .setPlaceholder(t("logs_modal_limite_placeholder", guildId))
         .setRequired(true)
         .setValue(String(valorAtual));
 
@@ -273,7 +260,8 @@ module.exports = {
       interaction.isButton() &&
       interaction.customId === "transcript_ticket"
     ) {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const transcriptConfig = db.get("transcript") ?? {
         system: false,
         staff: true,
@@ -282,7 +270,7 @@ module.exports = {
 
       const systemBtn = new ButtonBuilder()
         .setCustomId("toggle_transcript_system")
-        .setLabel("Sistema")
+        .setLabel(t("logs_transcript_btn_sistema", guildId))
         .setStyle(
           transcriptConfig.system ? ButtonStyle.Success : ButtonStyle.Danger,
         )
@@ -290,7 +278,7 @@ module.exports = {
 
       const staffBtn = new ButtonBuilder()
         .setCustomId("toggle_transcript_staff")
-        .setLabel("Staff")
+        .setLabel(t("logs_transcript_btn_staff", guildId))
         .setStyle(
           transcriptConfig.staff ? ButtonStyle.Success : ButtonStyle.Danger,
         )
@@ -298,7 +286,7 @@ module.exports = {
 
       const userBtn = new ButtonBuilder()
         .setCustomId("toggle_transcript_user")
-        .setLabel("Usuário")
+        .setLabel(t("logs_transcript_btn_usuario", guildId))
         .setStyle(
           transcriptConfig.user ? ButtonStyle.Success : ButtonStyle.Danger,
         )
@@ -306,7 +294,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", guildId))
         .setStyle(ButtonStyle.Secondary)
         .setEmoji(getEmoji(emojis.home));
 
@@ -320,34 +308,22 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Transcript"),
+            new TextDisplayBuilder().setContent(t("logs_transcript_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_transcript_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Use os botões abaixo para ativar ou desativar as opções de transcript conforme sua preferência.\n\n" +
-                "**Sistema:** Desativa o transcript para *staff* e *usuário* ao mesmo tempo.\n" +
-                "**Staff:** Desativa apenas o envio do transcript no canal de fechamento.\n" +
-                "**Usuário:** Desativa o envio do transcript via mensagem privada ao autor.\n\n" +
-                "_Obs: Essa configuração desativa apenas os botões, **não** a geração das mensagens em si._",
+              t("logs_transcript_sistema_status", guildId, {
+                status: transcriptConfig.system ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+              }),
             ),
             new TextDisplayBuilder().setContent(
-              `**Sistema**: ${
-                transcriptConfig.system
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }`,
+              t("logs_transcript_staff_status", guildId, {
+                status: transcriptConfig.staff ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+              }),
             ),
             new TextDisplayBuilder().setContent(
-              `**Staff**: ${
-                transcriptConfig.staff
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Usuário**: ${
-                transcriptConfig.user
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }`,
+              t("logs_transcript_usuario_status", guildId, {
+                status: transcriptConfig.user ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+              }),
             ),
           )
           .addActionRowComponents(row1),
@@ -362,7 +338,8 @@ module.exports = {
     }
 
     if (interaction.isButton()) {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
 
       if (
         interaction.customId === "toggle_transcript_system" ||
@@ -389,7 +366,7 @@ module.exports = {
 
         const systemBtn = new ButtonBuilder()
           .setCustomId("toggle_transcript_system")
-          .setLabel("Sistema")
+          .setLabel(t("logs_transcript_btn_sistema", guildId))
           .setStyle(
             transcriptConfig.system ? ButtonStyle.Success : ButtonStyle.Danger,
           )
@@ -397,7 +374,7 @@ module.exports = {
 
         const staffBtn = new ButtonBuilder()
           .setCustomId("toggle_transcript_staff")
-          .setLabel("Staff")
+          .setLabel(t("logs_transcript_btn_staff", guildId))
           .setStyle(
             transcriptConfig.staff ? ButtonStyle.Success : ButtonStyle.Danger,
           )
@@ -405,7 +382,7 @@ module.exports = {
 
         const userBtn = new ButtonBuilder()
           .setCustomId("toggle_transcript_user")
-          .setLabel("Usuário")
+          .setLabel(t("logs_transcript_btn_usuario", guildId))
           .setStyle(
             transcriptConfig.user ? ButtonStyle.Success : ButtonStyle.Danger,
           )
@@ -413,7 +390,7 @@ module.exports = {
 
         const voltarBtn = new ButtonBuilder()
           .setCustomId("configurar_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", guildId))
           .setStyle(ButtonStyle.Secondary)
           .setEmoji(getEmoji(emojis.home));
 
@@ -427,34 +404,22 @@ module.exports = {
         const components = [
           new ContainerBuilder()
             .addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("Configuração de Transcript"),
+              new TextDisplayBuilder().setContent(t("logs_transcript_titulo", guildId)),
+              new TextDisplayBuilder().setContent(t("logs_transcript_desc", guildId)),
               new TextDisplayBuilder().setContent(
-                "Use os botões abaixo para ativar ou desativar as opções de transcript conforme sua preferência.\n\n" +
-                  "**Sistema:** Desativa o transcript para *staff* e *usuário* ao mesmo tempo.\n" +
-                  "**Staff:** Desativa apenas o envio do transcript no canal de fechamento.\n" +
-                  "**Usuário:** Desativa o envio do transcript via mensagem privada ao autor.\n\n" +
-                  "_Obs: Essa configuração desativa apenas os botões, **não** a geração das mensagens em si._",
+                t("logs_transcript_sistema_status", guildId, {
+                  status: transcriptConfig.system ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                }),
               ),
               new TextDisplayBuilder().setContent(
-                `**Sistema**: ${
-                  transcriptConfig.system
-                    ? "```diff\n+ Ativado```"
-                    : "```diff\n- Desativado```"
-                }`,
+                t("logs_transcript_staff_status", guildId, {
+                  status: transcriptConfig.staff ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                }),
               ),
               new TextDisplayBuilder().setContent(
-                `**Staff**: ${
-                  transcriptConfig.staff
-                    ? "```diff\n+ Ativado```"
-                    : "```diff\n- Desativado```"
-                }`,
-              ),
-              new TextDisplayBuilder().setContent(
-                `**Usuário**: ${
-                  transcriptConfig.user
-                    ? "```diff\n+ Ativado```"
-                    : "```diff\n- Desativado```"
-                }`,
+                t("logs_transcript_usuario_status", guildId, {
+                  status: transcriptConfig.user ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                }),
               ),
             )
             .addActionRowComponents(row1),
@@ -470,7 +435,8 @@ module.exports = {
     }
 
     if (interaction.isButton() && interaction.customId === "avaliacao_ticket") {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const avaliacaoConfig = db.get("logs.log_avaliacao") || {
         ativo: false,
         canal: null,
@@ -478,7 +444,7 @@ module.exports = {
 
       const toggleBtn = new ButtonBuilder()
         .setCustomId("toggle_log_avaliacao")
-        .setLabel("Sistema de Avaliação")
+        .setLabel(t("logs_avaliacao_btn_sistema", guildId))
         .setStyle(
           avaliacaoConfig.ativo ? ButtonStyle.Success : ButtonStyle.Secondary,
         )
@@ -486,7 +452,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
@@ -498,7 +464,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
           .setCustomId("set_log_avaliacao_canal")
-          .setPlaceholder("Selecione o canal de avaliações")
+          .setPlaceholder(t("logs_avaliacao_canal_placeholder", guildId))
           .addChannelTypes(ChannelType.GuildText)
           .setDefaultChannels(
             avaliacaoConfig.canal ? [avaliacaoConfig.canal] : [],
@@ -508,20 +474,13 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Avaliação"),
+            new TextDisplayBuilder().setContent(t("logs_avaliacao_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_avaliacao_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Configure o sistema de avaliações dos tickets:",
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Sistema de Avaliação**\n${
-                avaliacaoConfig.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }\nCanal: ${
-                avaliacaoConfig.canal
-                  ? `<#${avaliacaoConfig.canal}>`
-                  : "Nenhum canal definido"
-              }`,
+              t("logs_avaliacao_status", guildId, {
+                status: avaliacaoConfig.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                canal: avaliacaoConfig.canal ? `<#${avaliacaoConfig.canal}>` : t("logs_canal_nenhum_definido", guildId),
+              }),
             ),
           )
           .addActionRowComponents(rowButtons, rowSelect),
@@ -539,7 +498,8 @@ module.exports = {
       interaction.isButton() &&
       interaction.customId === "toggle_log_avaliacao"
     ) {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const avaliacaoConfig = db.get("logs.log_avaliacao") || {
         ativo: false,
         canal: null,
@@ -550,7 +510,7 @@ module.exports = {
 
       const toggleBtn = new ButtonBuilder()
         .setCustomId("toggle_log_avaliacao")
-        .setLabel("Sistema de Avaliação")
+        .setLabel(t("logs_avaliacao_btn_sistema", guildId))
         .setStyle(
           avaliacaoConfig.ativo ? ButtonStyle.Success : ButtonStyle.Secondary,
         )
@@ -558,7 +518,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
@@ -570,7 +530,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
           .setCustomId("set_log_avaliacao_canal")
-          .setPlaceholder("Selecione o canal de avaliações")
+          .setPlaceholder(t("logs_avaliacao_canal_placeholder", guildId))
           .addChannelTypes(ChannelType.GuildText)
           .setDefaultChannels(
             avaliacaoConfig.canal ? [avaliacaoConfig.canal] : [],
@@ -580,20 +540,13 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Avaliação"),
+            new TextDisplayBuilder().setContent(t("logs_avaliacao_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_avaliacao_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Configure o sistema de avaliações dos tickets:",
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Sistema de Avaliação**\n${
-                avaliacaoConfig.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }\nCanal: ${
-                avaliacaoConfig.canal
-                  ? `<#${avaliacaoConfig.canal}>`
-                  : "Nenhum canal definido"
-              }`,
+              t("logs_avaliacao_status", guildId, {
+                status: avaliacaoConfig.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                canal: avaliacaoConfig.canal ? `<#${avaliacaoConfig.canal}>` : t("logs_canal_nenhum_definido", guildId),
+              }),
             ),
           )
           .addActionRowComponents(rowButtons, rowSelect),
@@ -611,7 +564,8 @@ module.exports = {
       interaction.isChannelSelectMenu() &&
       interaction.customId === "set_log_fechamento_canal"
     ) {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const canalSelecionado = interaction.values[0];
       db.set("logs.log_fechamento.canal", canalSelecionado);
 
@@ -621,7 +575,7 @@ module.exports = {
       const rowButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("toggle_log_fechamento")
-          .setLabel("Log Fechamento")
+          .setLabel(t("logs_btn_fechamento", guildId))
           .setStyle(
             config.log_fechamento?.ativo
               ? ButtonStyle.Success
@@ -632,7 +586,7 @@ module.exports = {
           ),
         new ButtonBuilder()
           .setCustomId("toggle_log_user")
-          .setLabel("Log Usuário")
+          .setLabel(t("logs_btn_usuario", guildId))
           .setStyle(
             config.log_user?.ativo
               ? ButtonStyle.Success
@@ -641,7 +595,7 @@ module.exports = {
           .setEmoji(getEmoji(config.log_user?.ativo ? emojis.on : emojis.off)),
         new ButtonBuilder()
           .setCustomId("configurar_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", guildId))
           .setEmoji(getEmoji(emojis.home))
           .setStyle(ButtonStyle.Secondary),
       );
@@ -649,7 +603,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
           .setCustomId("set_log_fechamento_canal")
-          .setPlaceholder("Selecione o canal de log de fechamento")
+          .setPlaceholder(t("logs_fechamento_canal_placeholder", guildId))
           .addChannelTypes(ChannelType.GuildText)
           .setDefaultChannels(canalAtual ? [canalAtual] : []),
       );
@@ -657,27 +611,18 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Logs"),
+            new TextDisplayBuilder().setContent(t("logs_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Ative ou desative os logs abaixo:",
+              t("logs_log_fechamento_status", guildId, {
+                status: config.log_fechamento?.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                canal: config.log_fechamento?.canal ? `<#${config.log_fechamento.canal}>` : t("logs_canal_nenhum", guildId),
+              }),
             ),
             new TextDisplayBuilder().setContent(
-              `**Log de Fechamento**\n${
-                config.log_fechamento?.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }\nCanal: ${
-                config.log_fechamento?.canal
-                  ? `<#${config.log_fechamento.canal}>`
-                  : "Nenhum"
-              }`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Log de Usuário**\n${
-                config.log_user?.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }`,
+              t("logs_log_usuario_status", guildId, {
+                status: config.log_user?.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+              }),
             ),
           )
           .addActionRowComponents(rowButtons, rowSelect),
@@ -695,6 +640,7 @@ module.exports = {
       interaction.isStringSelectMenu() &&
       interaction.customId.startsWith("editar_campo_select_")
     ) {
+      const guildId = interaction.guildId;
       const campo = interaction.values[0];
       const selectId = interaction.customId.replace("editar_campo_select_", "");
 
@@ -704,7 +650,7 @@ module.exports = {
       if (!selectObj) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Select não encontrado."),
+            new TextDisplayBuilder().setContent(t("logs_select_nao_encontrado", guildId)),
           ),
         ];
 
@@ -717,16 +663,16 @@ module.exports = {
       if (campo === "inicio") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_editar_inicio_select_${selectId}`)
-          .setTitle("Editar Início do Ticket");
+          .setTitle(t("logs_editar_inicio_titulo", guildId));
 
         const valorAtual = selectObj.inicio || "";
 
         const inputInicio = new TextInputBuilder()
           .setCustomId("novo_inicio")
-          .setLabel("Digite até 20 caracteres.")
+          .setLabel(t("logs_editar_inicio_label", guildId))
           .setStyle(TextInputStyle.Short)
           .setMaxLength(20)
-          .setPlaceholder("Digite o novo valor")
+          .setPlaceholder(t("logs_editar_inicio_placeholder", guildId))
           .setRequired(true)
           .setValue(valorAtual);
 
@@ -741,7 +687,8 @@ module.exports = {
       interaction.isChannelSelectMenu() &&
       interaction.customId === "set_log_avaliacao_canal"
     ) {
-      const db = getConfigDB(interaction.guildId);
+      const guildId = interaction.guildId;
+      const db = getConfigDB(guildId);
       const canalSelecionado = interaction.values[0];
 
       const avaliacaoConfig = db.get("logs.log_avaliacao") || {
@@ -753,7 +700,7 @@ module.exports = {
 
       const toggleBtn = new ButtonBuilder()
         .setCustomId("toggle_log_avaliacao")
-        .setLabel("Sistema de Avaliação")
+        .setLabel(t("logs_avaliacao_btn_sistema", guildId))
         .setStyle(
           avaliacaoConfig.ativo ? ButtonStyle.Success : ButtonStyle.Secondary,
         )
@@ -761,7 +708,7 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
@@ -773,7 +720,7 @@ module.exports = {
       const rowSelect = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
           .setCustomId("set_log_avaliacao_canal")
-          .setPlaceholder("Selecione o canal de avaliações")
+          .setPlaceholder(t("logs_avaliacao_canal_placeholder", guildId))
           .addChannelTypes(ChannelType.GuildText)
           .setDefaultChannels(
             avaliacaoConfig.canal ? [avaliacaoConfig.canal] : [],
@@ -783,20 +730,13 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Configuração de Avaliação"),
+            new TextDisplayBuilder().setContent(t("logs_avaliacao_titulo", guildId)),
+            new TextDisplayBuilder().setContent(t("logs_avaliacao_desc", guildId)),
             new TextDisplayBuilder().setContent(
-              "Configure o sistema de avaliações dos tickets:",
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Sistema de Avaliação**\n${
-                avaliacaoConfig.ativo
-                  ? "```diff\n+ Ativado```"
-                  : "```diff\n- Desativado```"
-              }\nCanal: ${
-                avaliacaoConfig.canal
-                  ? `<#${avaliacaoConfig.canal}>`
-                  : "Nenhum canal definido"
-              }`,
+              t("logs_avaliacao_status", guildId, {
+                status: avaliacaoConfig.ativo ? t("logs_ativado", guildId) : t("logs_desativado", guildId),
+                canal: avaliacaoConfig.canal ? `<#${avaliacaoConfig.canal}>` : t("logs_canal_nenhum_definido", guildId),
+              }),
             ),
           )
           .addActionRowComponents(rowButtons, rowSelect),

@@ -50,6 +50,8 @@ const {
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
+const { t } = require("../../utils/i18n");
+
 module.exports = {
   customIds: [
     "configurar_botao",
@@ -125,26 +127,26 @@ module.exports = {
       }
       const adicionar = new ButtonBuilder()
         .setCustomId("botao_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(_botoesAtual.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId("botao_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId("botao_editar")
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -159,10 +161,10 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Configuração do Painel: Botão",
+              t("visual_config_botao_titulo", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              "Escolha uma das ações abaixo.",
+              t("visual_config_botao_desc", interaction.guildId),
             ),
           )
           .addActionRowComponents(row),
@@ -183,26 +185,26 @@ module.exports = {
       }
       const adicionar = new ButtonBuilder()
         .setCustomId("select_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(_selectsAtual.length >= 10);
 
       const remover = new ButtonBuilder()
         .setCustomId("select_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId("select_editar")
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -217,10 +219,10 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Configuração do Painel: Select",
+              t("visual_config_select_titulo", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              "Escolha uma das ações abaixo.",
+              t("visual_config_select_desc", interaction.guildId),
             ),
           )
           .addActionRowComponents(row),
@@ -240,7 +242,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Nenhum botão encontrado para remover.",
+              t("visual_nenhum_botao_remover", interaction.guildId),
             ),
           ),
         ];
@@ -253,10 +255,10 @@ module.exports = {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId("remover_botao_select")
-        .setPlaceholder("Selecione o botão que deseja remover")
+        .setPlaceholder(t("visual_placeholder_botao_remover", interaction.guildId))
         .addOptions(
           botoes.map((botao) => ({
-            label: botao.nome || "Sem nome",
+            label: botao.nome || t("visual_sem_nome", interaction.guildId),
             value: botao.id,
             description: `ID: ${botao.id}`,
             emoji: botao.emoji || undefined,
@@ -265,7 +267,7 @@ module.exports = {
 
       const voltar = new ButtonBuilder()
         .setCustomId("configurar_botao")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -276,7 +278,7 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Selecione o botão que deseja remover:",
+              t("visual_selecione_botao_remover", interaction.guildId),
             ),
           )
           .addActionRowComponents(rowSelect, rowVoltar),
@@ -301,7 +303,7 @@ module.exports = {
       if (index === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -317,26 +319,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("botao_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId("botao_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId("botao_editar")
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -351,10 +353,10 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Configuração do Painel: Botão",
+              t("visual_config_botao_titulo", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              `✅ Botão **${botaoRemovido.nome}** removido com sucesso!`,
+              t("visual_botao_removido", interaction.guildId, { nome: botaoRemovido.nome }),
             ),
           )
           .addActionRowComponents(row),
@@ -374,7 +376,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Nenhuma opção de select encontrada para remover.",
+              t("visual_nenhum_select_remover", interaction.guildId),
             ),
           ),
         ];
@@ -387,10 +389,10 @@ module.exports = {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId("remover_select_select")
-        .setPlaceholder("Selecione a opção que deseja remover")
+        .setPlaceholder(t("visual_placeholder_select_remover", interaction.guildId))
         .addOptions(
           selects.map((select) => ({
-            label: select.nome || "Sem nome",
+            label: select.nome || t("visual_sem_nome", interaction.guildId),
             value: select.id,
             description: `ID: ${select.id}`,
             emoji: select.selectoptions || undefined,
@@ -399,7 +401,7 @@ module.exports = {
 
       const voltarButton = new ButtonBuilder()
         .setCustomId("configurar_select")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setStyle(ButtonStyle.Secondary)
         .setEmoji(getEmoji(emojis.arrowl));
 
@@ -410,7 +412,7 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Selecione a opção que deseja remover do select:",
+              t("visual_selecione_select_remover", interaction.guildId),
             ),
           )
           .addActionRowComponents(row1, row2),
@@ -432,7 +434,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Opção de select não encontrada.",
+              t("visual_nenhum_select_encontrado", interaction.guildId),
             ),
           ),
         ];
@@ -448,26 +450,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("select_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(selects.length >= 10);
 
       const remover = new ButtonBuilder()
         .setCustomId("select_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId("select_editar")
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -482,10 +484,10 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Configuração do Painel: Select",
+              t("visual_config_select_titulo", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              "Escolha uma das ações abaixo.",
+              t("visual_config_select_desc", interaction.guildId),
             ),
           )
           .addActionRowComponents(row),
@@ -505,7 +507,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Nenhum botão encontrado para editar.",
+              t("visual_nenhum_botao_editar", interaction.guildId),
             ),
           ),
         ];
@@ -520,29 +522,29 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("botao_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId("botao_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Editar Botões"),
+            new TextDisplayBuilder().setContent(t("visual_editar_botoes_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Página 1 de ${totalPaginas}\n\nSelecione um botão para editar:`,
+              t("visual_editar_botoes_pagina", interaction.guildId, { pagina: 1, total: totalPaginas }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -565,26 +567,26 @@ module.exports = {
     const criarEmbedESelectDeBotao = (botao, emojis, getEmoji) => {
       const editarCamposSelect = new StringSelectMenuBuilder()
         .setCustomId(`editar_campo_botao_${botao.id}`)
-        .setPlaceholder("Selecione o campo que deseja editar")
+        .setPlaceholder(t("visual_editar_botao_placeholder", interaction.guildId))
         .addOptions([
           {
-            label: "Voltar",
+            label: t("btn_voltar", interaction.guildId),
             value: "voltar_botao",
             emoji: getEmoji(emojis.arrowl),
           },
-          { label: "Nome", value: "nome", emoji: getEmoji(emojis.title) },
+          { label: t("visual_campo_nome", interaction.guildId), value: "nome", emoji: getEmoji(emojis.title) },
           {
-            label: "Categoria",
+            label: t("visual_campo_categoria", interaction.guildId),
             value: "categoria",
             emoji: getEmoji(emojis.folder),
           },
-          { label: "Emoji", value: "emoji", emoji: getEmoji(emojis.boost1) },
+          { label: t("visual_campo_emoji", interaction.guildId), value: "emoji", emoji: getEmoji(emojis.boost1) },
           {
-            label: "Início do Ticket",
+            label: t("visual_campo_inicio", interaction.guildId),
             value: "inicio",
             emoji: getEmoji(emojis.home),
           },
-          { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
+          { label: t("visual_campo_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
         ]);
 
       const row = new ActionRowBuilder().addComponents(editarCamposSelect);
@@ -592,31 +594,31 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Edição de Botão"),
+            new TextDisplayBuilder().setContent(t("visual_editar_botao_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Configure abaixo as propriedades do botão:\n\n**ID:** \`${botao.id}\``,
+              `${t("visual_editar_botao_desc", interaction.guildId)}\n\n**ID:** \`${botao.id}\``,
             ),
             new TextDisplayBuilder().setContent(
-              `**Nome:** ${botao.nome || "Não definido"}`,
+              `**${t("visual_campo_nome", interaction.guildId)}:** ${botao.nome || t("visual_nao_definido", interaction.guildId)}`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Categoria:** ${
+              `**${t("visual_campo_categoria", interaction.guildId)}:** ${
                 botao.categoria
                   ? botao.categoria
                       .split(",")
                       .map((id) => `<#${id}>`)
                       .join(" ")
-                  : "Não definida"
+                  : t("visual_nao_definida", interaction.guildId)
               }`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Emoji:** ${botao.emoji || "Não definido"}`,
+              `**${t("visual_campo_emoji", interaction.guildId)}:** ${botao.emoji || t("visual_nao_definido", interaction.guildId)}`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Início do Ticket:** ${botao.inicio || "Não definido"}`,
+              `**${t("visual_campo_inicio", interaction.guildId)}:** ${botao.inicio || t("visual_nao_definido", interaction.guildId)}`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Cor:** ${botao.cor || "Não definida"}`,
+              `**${t("visual_campo_cor", interaction.guildId)}:** ${botao.cor || t("visual_nao_definida", interaction.guildId)}`,
             ),
           )
           .addActionRowComponents(row),
@@ -634,7 +636,7 @@ module.exports = {
       if (!botao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -668,7 +670,7 @@ module.exports = {
       if (!botao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -681,26 +683,26 @@ module.exports = {
       if (campoSelecionado === "voltar_botao") {
         const adicionar = new ButtonBuilder()
           .setCustomId("botao_adicionar")
-          .setLabel("Adicionar")
+          .setLabel(t("btn_adicionar", interaction.guildId))
           .setEmoji(getEmoji(emojis.plus))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(botoes.length >= 5);
 
         const remover = new ButtonBuilder()
           .setCustomId("botao_remover")
-          .setLabel("Remover")
+          .setLabel(t("btn_remover", interaction.guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Secondary);
 
         const editar = new ButtonBuilder()
           .setCustomId("botao_editar")
-          .setLabel("Editar")
+          .setLabel(t("btn_editar", interaction.guildId))
           .setEmoji(getEmoji(emojis.title))
           .setStyle(ButtonStyle.Secondary);
 
         const voltar = new ButtonBuilder()
           .setCustomId("sistema_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", interaction.guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -715,10 +717,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "Configuração do Painel: Botão",
+                t("visual_config_botao_titulo", interaction.guildId),
               ),
               new TextDisplayBuilder().setContent(
-                "Escolha uma das ações abaixo.",
+                t("visual_config_botao_desc", interaction.guildId),
               ),
             )
             .addActionRowComponents(row),
@@ -735,11 +737,11 @@ module.exports = {
       if (campoSelecionado === "nome") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_editar_nome_botao_${botaoId}`)
-          .setTitle("Editar Nome do Botão");
+          .setTitle(t("visual_modal_nome_botao_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("novo_nome")
-          .setLabel("Digite o novo nome do botão")
+          .setLabel(t("visual_modal_nome_botao_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setValue(botao.nome || "");
@@ -756,7 +758,7 @@ module.exports = {
         const row = new ActionRowBuilder().addComponents(
           new ChannelSelectMenuBuilder()
             .setCustomId(`select_categoria_botao_${botao.id}`)
-            .setPlaceholder("Selecione uma ou mais categorias")
+            .setPlaceholder(t("visual_cat_placeholder", interaction.guildId))
             .setMinValues(1)
             .setMaxValues(5)
             .addChannelTypes(ChannelType.GuildCategory),
@@ -765,16 +767,16 @@ module.exports = {
         const categoriasTexto =
           categoriasSalvas.length > 0
             ? categoriasSalvas.map((id) => `<#${id}>`).join(", ")
-            : "Nenhuma categoria vinculada ainda.";
+            : t("visual_cat_nenhuma", interaction.guildId);
 
         const components = [
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "📂 Selecione as categorias que deseja vincular ao botão.",
+                `${getEmoji(emojis.folder)} ${t("visual_cat_titulo", interaction.guildId)}`,
               ),
               new TextDisplayBuilder().setContent(
-                `**Categorias atuais:** ${categoriasTexto}`,
+                t("visual_cat_atuais", interaction.guildId, { cats: categoriasTexto }),
               ),
             )
             .addActionRowComponents(row),
@@ -789,11 +791,11 @@ module.exports = {
       } else if (campoSelecionado === "emoji") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_editar_emoji_botao_${botao.id}`)
-          .setTitle("Editar Emoji do Botão");
+          .setTitle(t("visual_modal_emoji_botao_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("novo_emoji")
-          .setLabel("Utilize emojis padrões ou do discord.")
+          .setLabel(t("visual_modal_emoji_botao_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setValue(botao.emoji || "");
@@ -805,11 +807,11 @@ module.exports = {
       } else if (campoSelecionado === "inicio") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_editar_inicio_botao_${botao.id}`)
-          .setTitle("Editar Início do Ticket");
+          .setTitle(t("visual_modal_inicio_botao_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("novo_inicio")
-          .setLabel("Digite até 20 caracteres.")
+          .setLabel(t("visual_modal_inicio_botao_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setMaxLength(20)
           .setRequired(false)
@@ -823,22 +825,22 @@ module.exports = {
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`cor_azul_${botao.id}`)
-            .setLabel("Azul")
+            .setLabel(t("visual_cor_azul", interaction.guildId))
             .setStyle(ButtonStyle.Primary),
 
           new ButtonBuilder()
             .setCustomId(`cor_cinza_${botao.id}`)
-            .setLabel("Cinza")
+            .setLabel(t("visual_cor_cinza", interaction.guildId))
             .setStyle(ButtonStyle.Secondary),
 
           new ButtonBuilder()
             .setCustomId(`cor_vermelho_${botao.id}`)
-            .setLabel("Vermelho")
+            .setLabel(t("visual_cor_vermelho", interaction.guildId))
             .setStyle(ButtonStyle.Danger),
 
           new ButtonBuilder()
             .setCustomId(`cor_verde_${botao.id}`)
-            .setLabel("Verde")
+            .setLabel(t("visual_cor_verde", interaction.guildId))
             .setStyle(ButtonStyle.Success),
         );
 
@@ -846,7 +848,7 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "🎨 Selecione a cor do botão:",
+                `${getEmoji(emojis.colorpicker)} ${t("visual_cor_titulo", interaction.guildId)}`,
               ),
             )
             .addActionRowComponents(row),
@@ -872,7 +874,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Nenhum dado de personalização encontrado. Configure o sistema primeiro.",
+              t("visual_err_nenhum_dado", interaction.guildId),
             ),
           ),
         ];
@@ -890,7 +892,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Você precisa configurar pelo menos um botão ou select antes de enviar o painel.",
+              t("visual_err_precisa_config", interaction.guildId),
             ),
           ),
         ];
@@ -903,24 +905,24 @@ module.exports = {
 
       const selectTipo = new StringSelectMenuBuilder()
         .setCustomId("enviar_ticket_tipo")
-        .setPlaceholder("Escolha o tipo de painel");
+        .setPlaceholder(t("enviar_escolha_tipo", interaction.guildId));
 
       const opcoes = [];
 
       if (botoes.length > 0) {
         opcoes.push({
-          label: "Painel com Botões",
+          label: t("enviar_tipo_botoes", interaction.guildId),
           value: "botao",
-          description: `${botoes.length} botão(ões) configurado(s)`,
+          description: t("enviar_tipo_botoes_desc", interaction.guildId, { count: botoes.length }),
           emoji: getEmoji(emojis.cube),
         });
       }
 
       if (selects.length > 0) {
         opcoes.push({
-          label: "Painel com Select Menu",
+          label: t("enviar_tipo_select", interaction.guildId),
           value: "select",
-          description: `${selects.length} opção(ões) configurada(s)`,
+          description: t("enviar_tipo_select_desc", interaction.guildId, { count: selects.length }),
           emoji: getEmoji(emojis.cube),
         });
       }
@@ -929,17 +931,15 @@ module.exports = {
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("voltar_inicio")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("# Enviar Painel de Tickets"),
-            new TextDisplayBuilder().setContent(
-              "Selecione o tipo de painel que deseja enviar:",
-            ),
+            new TextDisplayBuilder().setContent(t("enviar_titulo", interaction.guildId)),
+            new TextDisplayBuilder().setContent(t("enviar_desc", interaction.guildId)),
           )
           .addActionRowComponents(
             new ActionRowBuilder().addComponents(selectTipo),
@@ -965,11 +965,11 @@ module.exports = {
       if (campo === "nome") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_config_botao_nome_${botaoId}`)
-          .setTitle("Nome do Botão");
+          .setTitle(t("visual_modal_nome_btn_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("nome")
-          .setLabel("Digite o nome do botão")
+          .setLabel(t("visual_modal_nome_btn_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(80);
@@ -981,7 +981,7 @@ module.exports = {
       if (campo === "categoria") {
         const selectCategoria = new ChannelSelectMenuBuilder()
           .setCustomId(`select_config_botao_categoria_${botaoId}`)
-          .setPlaceholder("Selecione uma ou mais categorias")
+          .setPlaceholder(t("visual_cat_placeholder", interaction.guildId))
           .setMinValues(1)
           .setMaxValues(5)
           .addChannelTypes(ChannelType.GuildCategory);
@@ -989,9 +989,9 @@ module.exports = {
         const components = [
           new ContainerBuilder()
             .addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("Selecione as Categorias"),
+              new TextDisplayBuilder().setContent(t("visual_cat_tickets_titulo", interaction.guildId)),
               new TextDisplayBuilder().setContent(
-                "Escolha as categorias onde os tickets serão criados.",
+                t("visual_cat_tickets_desc", interaction.guildId),
               ),
             )
             .addActionRowComponents(
@@ -1021,15 +1021,15 @@ module.exports = {
       if (campo === "inicio") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_config_botao_inicio_${botaoId}`)
-          .setTitle("Tag Inicial do Ticket");
+          .setTitle(t("visual_modal_inicio_btn_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("inicio")
-          .setLabel("Digite a tag inicial (máx 5 caracteres)")
+          .setLabel(t("visual_modal_inicio_btn_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(5)
-          .setPlaceholder("Ex: sup-");
+          .setPlaceholder(t("visual_inicio_placeholder", interaction.guildId));
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
         return interaction.showModal(modal);
@@ -1060,7 +1060,7 @@ module.exports = {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "Preencha pelo menos o nome e a categoria antes de salvar.",
+                t("visual_salvar_preencha", interaction.guildId),
               ),
             ),
           ];
@@ -1078,26 +1078,26 @@ module.exports = {
 
         const adicionar = new ButtonBuilder()
           .setCustomId("botao_adicionar")
-          .setLabel("Adicionar")
+          .setLabel(t("btn_adicionar", interaction.guildId))
           .setEmoji(getEmoji(emojis.plus))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(botoes.length >= 5);
 
         const remover = new ButtonBuilder()
           .setCustomId("botao_remover")
-          .setLabel("Remover")
+          .setLabel(t("btn_remover", interaction.guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Secondary);
 
         const editar = new ButtonBuilder()
           .setCustomId("botao_editar")
-          .setLabel("Editar")
+          .setLabel(t("btn_editar", interaction.guildId))
           .setEmoji(getEmoji(emojis.title))
           .setStyle(ButtonStyle.Secondary);
 
         const voltar = new ButtonBuilder()
           .setCustomId("sistema_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", interaction.guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -1105,10 +1105,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "Configuração do Painel: Botão",
+                t("visual_config_botao_titulo", interaction.guildId),
               ),
               new TextDisplayBuilder().setContent(
-                `Botão **${botao.nome}** salvo com sucesso!`,
+                t("visual_botao_salvo", interaction.guildId, { nome: botao.nome }),
               ),
             )
             .addActionRowComponents(
@@ -1143,7 +1143,7 @@ module.exports = {
       if (!emoji) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Emoji não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1230,14 +1230,14 @@ module.exports = {
       if (acao === "manual") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_emoji_manual_${tipo}_${itemId}`)
-          .setTitle("Inserir Emoji Manualmente");
+          .setTitle(t("visual_modal_emoji_manual_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("emoji")
-          .setLabel("Cole o emoji ou ID do emoji")
+          .setLabel(t("visual_modal_emoji_manual_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
-          .setPlaceholder("Ex: 🎫 ou :nome_emoji: ou ID");
+          .setPlaceholder(t("visual_modal_emoji_manual_placeholder", interaction.guildId));
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
         return interaction.showModal(modal);
@@ -1286,11 +1286,11 @@ module.exports = {
       if (campo === "nome") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_config_select_nome_${selectId}`)
-          .setTitle("Nome da Opção");
+          .setTitle(t("visual_modal_nome_select_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("nome")
-          .setLabel("Digite o nome da opção")
+          .setLabel(t("visual_modal_nome_select_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(100);
@@ -1302,7 +1302,7 @@ module.exports = {
       if (campo === "categoria") {
         const selectCategoria = new ChannelSelectMenuBuilder()
           .setCustomId(`select_config_select_categoria_${selectId}`)
-          .setPlaceholder("Selecione uma ou mais categorias")
+          .setPlaceholder(t("visual_cat_placeholder", interaction.guildId))
           .setMinValues(1)
           .setMaxValues(5)
           .addChannelTypes(ChannelType.GuildCategory);
@@ -1310,9 +1310,9 @@ module.exports = {
         const components = [
           new ContainerBuilder()
             .addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("Selecione as Categorias"),
+              new TextDisplayBuilder().setContent(t("visual_cat_tickets_titulo", interaction.guildId)),
               new TextDisplayBuilder().setContent(
-                "Escolha as categorias onde os tickets serão criados.",
+                t("visual_cat_tickets_desc", interaction.guildId),
               ),
             )
             .addActionRowComponents(
@@ -1342,15 +1342,15 @@ module.exports = {
       if (campo === "inicio") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_config_select_inicio_${selectId}`)
-          .setTitle("Tag Inicial do Ticket");
+          .setTitle(t("visual_modal_inicio_btn_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("inicio")
-          .setLabel("Digite a tag inicial (máx 5 caracteres)")
+          .setLabel(t("visual_modal_inicio_btn_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(5)
-          .setPlaceholder("Ex: sup-");
+          .setPlaceholder(t("visual_inicio_placeholder", interaction.guildId));
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
         return interaction.showModal(modal);
@@ -1364,7 +1364,7 @@ module.exports = {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "Preencha pelo menos o nome e a categoria antes de salvar.",
+                t("visual_salvar_preencha", interaction.guildId),
               ),
             ),
           ];
@@ -1382,26 +1382,26 @@ module.exports = {
 
         const adicionar = new ButtonBuilder()
           .setCustomId("select_adicionar")
-          .setLabel("Adicionar")
+          .setLabel(t("btn_adicionar", interaction.guildId))
           .setEmoji(getEmoji(emojis.plus))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(selects.length >= 10);
 
         const remover = new ButtonBuilder()
           .setCustomId("select_remover")
-          .setLabel("Remover")
+          .setLabel(t("btn_remover", interaction.guildId))
           .setEmoji(getEmoji(emojis.minus))
           .setStyle(ButtonStyle.Secondary);
 
         const editar = new ButtonBuilder()
           .setCustomId("select_editar")
-          .setLabel("Editar")
+          .setLabel(t("btn_editar", interaction.guildId))
           .setEmoji(getEmoji(emojis.title))
           .setStyle(ButtonStyle.Secondary);
 
         const voltar = new ButtonBuilder()
           .setCustomId("sistema_ticket")
-          .setLabel("Voltar")
+          .setLabel(t("btn_voltar", interaction.guildId))
           .setEmoji(getEmoji(emojis.arrowl))
           .setStyle(ButtonStyle.Secondary);
 
@@ -1409,10 +1409,10 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "Configuração do Painel: Select",
+                t("visual_config_select_titulo", interaction.guildId),
               ),
               new TextDisplayBuilder().setContent(
-                `Opção **${select.nome}** salva com sucesso!`,
+                t("visual_select_salvo", interaction.guildId, { nome: select.nome }),
               ),
             )
             .addActionRowComponents(
@@ -1452,15 +1452,15 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_config_select_descricao_${selectId}`)
-        .setTitle("Descrição da Opção");
+        .setTitle(t("visual_modal_descricao_titulo", interaction.guildId));
 
       const input = new TextInputBuilder()
         .setCustomId("descricao")
-        .setLabel("Digite a descrição (opcional)")
+        .setLabel(t("visual_modal_descricao_label", interaction.guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(100)
-        .setPlaceholder("Aparece abaixo do nome no select menu")
+        .setPlaceholder(t("visual_modal_descricao_placeholder", interaction.guildId))
         .setValue(select?.descricao || "");
 
       modal.addComponents(new ActionRowBuilder().addComponents(input));
@@ -1482,7 +1482,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Nenhum painel foi enviado ainda. Use /ticket para enviar o painel primeiro.",
+              t("visual_err_nenhum_painel", interaction.guildId),
             ),
           ),
         ];
@@ -1496,7 +1496,7 @@ module.exports = {
       if (!canal) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Canal não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_canal_painel", interaction.guildId)),
           ),
         ];
         return interaction.editReply({
@@ -1557,17 +1557,17 @@ module.exports = {
 
         if (tinhaSelectMenu && temSelects) {
           const options = selects.map((sel) => ({
-            label: sel.nome || "Ticket",
+            label: sel.nome || t("painel_default_select_nome", interaction.guildId),
             value: `select_${sel.id}`,
             description:
               sel.descricao ||
-              `Abrir ticket para: ${sel.nome || "Atendimento"}`,
+              t("painel_default_select_desc", interaction.guildId, { nome: sel.nome || t("painel_default_select_nome", interaction.guildId) }),
             emoji: parseEmoji(sel.emoji, interaction.guild) || undefined,
           }));
 
           const selectMenu = new StringSelectMenuBuilder()
             .setCustomId("ticket_select")
-            .setPlaceholder("Escolha uma opção")
+            .setPlaceholder(t("painel_select_placeholder", interaction.guildId))
             .addOptions(options);
 
           containerTicket.addActionRowComponents(
@@ -1577,7 +1577,7 @@ module.exports = {
           const botoesFormatados = botoes.map((botao) => {
             const button = new ButtonBuilder()
               .setCustomId(`ticket_botoes_${botao.id}`)
-              .setLabel(botao.nome || "Abrir")
+              .setLabel(botao.nome || t("painel_default_botao", interaction.guildId))
               .setStyle(getButtonStyle(botao.cor));
             if (botao.emoji) {
               const parsedEmoji = parseEmoji(botao.emoji, interaction.guild);
@@ -1606,7 +1606,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Erro ao atualizar o painel. A mensagem pode ter sido deletada.",
+              t("visual_err_atualizar_painel", interaction.guildId),
             ),
           ),
         ];
@@ -1631,7 +1631,7 @@ module.exports = {
 
     function parseColor(colorString) {
       if (!colorString || colorString === "" || colorString === " ")
-        return null;
+        return undefined;
       if (typeof colorString === "number") return colorString;
       const cleanColor = colorString.replace("#", "");
       const colorInt = parseInt(cleanColor, 16);
@@ -1639,7 +1639,7 @@ module.exports = {
     }
 
     function parseEmoji(emojiString, guild) {
-      if (!emojiString) return null;
+      if (!emojiString) return undefined;
       if (/^[\u{1F000}-\u{1FFFF}]+$/u.test(emojiString)) return emojiString;
       const match = emojiString.match(/^<a?:([a-zA-Z0-9_]+):(\d+)>$/);
       if (match) return match[0];
@@ -1650,7 +1650,7 @@ module.exports = {
           foundEmoji.id
         }>`;
       }
-      return null;
+      return undefined;
     }
 
     if (
@@ -1672,26 +1672,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("botao_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId("botao_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId("botao_editar")
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1699,10 +1699,10 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Configuração do Painel: Botão",
+              t("visual_config_botao_titulo", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              "Escolha uma das ações abaixo.",
+              t("visual_config_botao_desc", interaction.guildId),
             ),
           )
           .addActionRowComponents(
@@ -1740,26 +1740,26 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("select_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(selects.length >= 10);
 
       const remover = new ButtonBuilder()
         .setCustomId("select_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const editar = new ButtonBuilder()
         .setCustomId("select_editar")
-        .setLabel("Editar")
+        .setLabel(t("btn_editar", interaction.guildId))
         .setEmoji(getEmoji(emojis.title))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
@@ -1767,10 +1767,10 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Configuração do Painel: Select",
+              t("visual_config_select_titulo", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              "Escolha uma das ações abaixo.",
+              t("visual_config_select_desc", interaction.guildId),
             ),
           )
           .addActionRowComponents(
@@ -1819,32 +1819,32 @@ module.exports = {
       const horarioAtual = schedule[dia];
 
       const diasSemana = {
-        monday: "Segunda-feira",
-        tuesday: "Terça-feira",
-        wednesday: "Quarta-feira",
-        thursday: "Quinta-feira",
-        friday: "Sexta-feira",
-        saturday: "Sábado",
-        sunday: "Domingo",
+        monday: t("horario_segunda", interaction.guildId),
+        tuesday: t("horario_terca", interaction.guildId),
+        wednesday: t("horario_quarta", interaction.guildId),
+        thursday: t("horario_quinta", interaction.guildId),
+        friday: t("horario_sexta", interaction.guildId),
+        saturday: t("horario_sabado", interaction.guildId),
+        sunday: t("horario_domingo", interaction.guildId),
       };
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_horario_${dia}`)
-        .setTitle(`Editar ${diasSemana[dia]}`);
+        .setTitle(t("horario_modal_titulo", interaction.guildId, { dia: diasSemana[dia] }));
 
       const startInput = new TextInputBuilder()
         .setCustomId("horario_start")
-        .setLabel("Horário de Início (HH:MM)")
+        .setLabel(t("horario_input_inicio_label", interaction.guildId))
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("08:00")
+        .setPlaceholder(t("horario_input_inicio_placeholder", interaction.guildId))
         .setRequired(false)
         .setValue(horarioAtual?.start || "");
 
       const endInput = new TextInputBuilder()
         .setCustomId("horario_end")
-        .setLabel("Horário de Término (HH:MM)")
+        .setLabel(t("horario_input_fim_label", interaction.guildId))
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("18:00")
+        .setPlaceholder(t("horario_input_fim_placeholder", interaction.guildId))
         .setRequired(false)
         .setValue(horarioAtual?.end || "");
 
@@ -1867,29 +1867,29 @@ module.exports = {
 
       const adicionar = new ButtonBuilder()
         .setCustomId("botao_adicionar")
-        .setLabel("Adicionar")
+        .setLabel(t("btn_adicionar", interaction.guildId))
         .setEmoji(getEmoji(emojis.plus))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(botoes.length >= 5);
 
       const remover = new ButtonBuilder()
         .setCustomId("botao_remover")
-        .setLabel("Remover")
+        .setLabel(t("btn_remover", interaction.guildId))
         .setEmoji(getEmoji(emojis.minus))
         .setStyle(ButtonStyle.Secondary);
 
       const voltar = new ButtonBuilder()
         .setCustomId("sistema_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Editar Botões"),
+            new TextDisplayBuilder().setContent(t("visual_editar_botoes_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Página ${pagina + 1} de ${totalPaginas}\n\nSelecione um botão para editar:`,
+              t("visual_editar_botoes_pagina", interaction.guildId, { pagina: pagina + 1, total: totalPaginas }),
             ),
           )
           .addSeparatorComponents(new SeparatorBuilder())
@@ -1921,7 +1921,7 @@ module.exports = {
       if (!botao) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
         return interaction.reply({
@@ -1957,7 +1957,7 @@ module.exports = {
       if (index === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -1978,7 +1978,7 @@ module.exports = {
             const components = [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "❌ Emoji inválido. Use um emoji padrão ou personalizado válido.",
+                  t("visual_err_emoji_invalido", interaction.guildId),
                 ),
               ),
             ];
@@ -2017,7 +2017,7 @@ module.exports = {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "❌ Cor inválida. Use apenas: vermelho, azul, cinza ou verde.",
+                t("visual_err_cor_invalida_digitar", interaction.guildId),
               ),
             ),
           ];
@@ -2055,7 +2055,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Botão não encontrado para atualizar.",
+              t("visual_err_botao_nao_encontrado_update", interaction.guildId),
             ),
           ),
         ];
@@ -2096,7 +2096,7 @@ module.exports = {
       if (botaoIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -2119,7 +2119,7 @@ module.exports = {
             const components = [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "❌ Emoji inválido. Use um emoji padrão ou personalizado válido.",
+                  t("visual_err_emoji_invalido", interaction.guildId),
                 ),
               ),
             ];
@@ -2167,7 +2167,7 @@ module.exports = {
       if (botaoIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -2181,7 +2181,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Máximo de 5 caracteres permitido.",
+              t("visual_err_max_caracteres", interaction.guildId),
             ),
           ),
         ];
@@ -2210,27 +2210,27 @@ module.exports = {
     const criarEdicaoSelectComponentes = (selectObj, selectId) => {
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`editar_campo_select_${selectId}`)
-        .setPlaceholder("Escolha o campo para editar")
+        .setPlaceholder(t("visual_editar_select_placeholder", interaction.guildId))
         .addOptions([
           {
-            label: "Voltar",
+            label: t("btn_voltar", interaction.guildId),
             value: "voltar",
             emoji: getEmoji(emojis.arrowl),
           },
-          { label: "Nome", value: "nome", emoji: getEmoji(emojis.title) },
+          { label: t("visual_campo_nome", interaction.guildId), value: "nome", emoji: getEmoji(emojis.title) },
           {
-            label: "Descrição",
+            label: t("visual_campo_descricao", interaction.guildId),
             value: "descricao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Categoria",
+            label: t("visual_campo_categoria", interaction.guildId),
             value: "categoria",
             emoji: getEmoji(emojis.folder),
           },
-          { label: "Emoji", value: "emoji", emoji: getEmoji(emojis.boost1) },
+          { label: t("visual_campo_emoji", interaction.guildId), value: "emoji", emoji: getEmoji(emojis.boost1) },
           {
-            label: "Início do Ticket",
+            label: t("visual_campo_inicio", interaction.guildId),
             value: "inicio",
             emoji: getEmoji(emojis.home),
           },
@@ -2241,31 +2241,31 @@ module.exports = {
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Edição de Select"),
+            new TextDisplayBuilder().setContent(t("visual_editar_select_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              "Configure abaixo as propriedades do select:",
+              t("visual_editar_select_desc", interaction.guildId),
             ),
             new TextDisplayBuilder().setContent(
-              `**Nome**: ${selectObj.nome || "Não definido"}`,
+              `**${t("visual_campo_nome", interaction.guildId)}**: ${selectObj.nome || t("visual_nao_definido", interaction.guildId)}`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Descrição**: ${selectObj.descricao || "Não definida"}`,
+              `**${t("visual_campo_descricao", interaction.guildId)}**: ${selectObj.descricao || t("visual_nao_definida", interaction.guildId)}`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Categoria**: ${
+              `**${t("visual_campo_categoria", interaction.guildId)}**: ${
                 selectObj.categoria
                   ? selectObj.categoria
                       .split(",")
                       .map((id) => `<#${id}>`)
                       .join(", ")
-                  : "Não definido"
+                  : t("visual_nao_definido", interaction.guildId)
               }`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Emoji**: ${selectObj.emoji || "Não definido"}`,
+              `**${t("visual_campo_emoji", interaction.guildId)}**: ${selectObj.emoji || t("visual_nao_definido", interaction.guildId)}`,
             ),
             new TextDisplayBuilder().setContent(
-              `**Início do Ticket**: ${selectObj.inicio || "Não definido"}`,
+              `**${t("visual_campo_inicio", interaction.guildId)}**: ${selectObj.inicio || t("visual_nao_definido", interaction.guildId)}`,
             ),
           )
           .addActionRowComponents(row),
@@ -2292,7 +2292,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Select não encontrado para atualizar.",
+              t("visual_err_select_nao_encontrado_update", interaction.guildId),
             ),
           ),
         ];
@@ -2338,7 +2338,7 @@ module.exports = {
       if (selectIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Select não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_select_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -2361,7 +2361,7 @@ module.exports = {
             const components = [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "❌ Emoji inválido. Use um emoji padrão ou personalizado válido.",
+                  t("visual_err_emoji_invalido", interaction.guildId),
                 ),
               ),
             ];
@@ -2424,7 +2424,7 @@ module.exports = {
         if (isNaN(fieldIndex)) {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("❌ Field inválido."),
+              new TextDisplayBuilder().setContent(t("visual_err_field_invalido", guildId)),
             ),
           ];
 
@@ -2438,7 +2438,7 @@ module.exports = {
         if (!Array.isArray(dados.fields) || !dados.fields[fieldIndex]) {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("❌ Field não encontrado."),
+              new TextDisplayBuilder().setContent(t("visual_err_field_nao_encontrado", interaction.guildId)),
             ),
           ];
 
@@ -2456,7 +2456,7 @@ module.exports = {
           if (!Array.isArray(parsed)) {
             const components = [
               new ContainerBuilder().addTextDisplayComponents(
-                new TextDisplayBuilder().setContent("❌ JSON inválido."),
+                new TextDisplayBuilder().setContent(t("visual_err_json_invalido", interaction.guildId)),
               ),
             ];
 
@@ -2469,7 +2469,7 @@ module.exports = {
         } catch (err) {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("❌ Erro ao processar JSON."),
+              new TextDisplayBuilder().setContent(t("visual_err_json_processo", interaction.guildId)),
             ),
           ];
 
@@ -2489,7 +2489,7 @@ module.exports = {
             const components = [
               new ContainerBuilder().addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "❌ Cor inválida. Use formato hexadecimal (ex: #2ecc71) ou deixe vazio para sem cor.",
+                  t("visual_err_cor_hex", interaction.guildId),
                 ),
               ),
             ];
@@ -2513,7 +2513,7 @@ module.exports = {
 
     function parseColor(colorString) {
       if (!colorString || colorString === "" || colorString === " ")
-        return null;
+        return undefined;
 
       if (typeof colorString === "number") return colorString;
 
@@ -2533,7 +2533,7 @@ module.exports = {
       if (!data) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("Dados não encontrados."),
+            new TextDisplayBuilder().setContent(t("visual_dados_nao_encontrados", interaction.guildId)),
           ),
         ];
 
@@ -2585,7 +2585,7 @@ module.exports = {
 
               if (data.descricao) {
                 containerTicket.addTextDisplayComponents(
-                  new TextDisplayBuilder().setContent(data.descricao),
+                  new TextDisplayBuilder().setContent(data.descricao?.trim() || t("visual_sem_descricao", interaction.guildId)),
                 );
               }
 
@@ -2610,7 +2610,7 @@ module.exports = {
               if (tinhaSelectMenu && temSelects) {
                 const options = selects.map((sel) => {
                   const option = {
-                    label: sel.nome || "Ticket",
+                    label: sel.nome || t("painel_default_select_nome", interaction.guildId),
                     value: `select_${sel.id}`,
                   };
 
@@ -2635,7 +2635,7 @@ module.exports = {
 
                 const selectMenu = new StringSelectMenuBuilder()
                   .setCustomId("ticket_select")
-                  .setPlaceholder("Escolha uma opção")
+                  .setPlaceholder(t("painel_select_placeholder", interaction.guildId))
                   .addOptions(options);
 
                 containerTicket.addActionRowComponents(
@@ -2645,7 +2645,7 @@ module.exports = {
                 const botoesFormatados = botoes.map((botao) => {
                   const button = new ButtonBuilder()
                     .setCustomId(`ticket_botoes_${botao.id}`)
-                    .setLabel(botao.nome || "Abrir")
+                    .setLabel(botao.nome || t("painel_default_botao", interaction.guildId))
                     .setStyle(getButtonStyle(botao.cor));
                   if (botao.emoji) {
                     const parsedEmoji = parseEmoji(
@@ -2678,17 +2678,15 @@ module.exports = {
       }
 
       const previewTexts = [
-        new TextDisplayBuilder().setContent(data.title || "Sem título"),
-        new TextDisplayBuilder().setContent(data.descricao || "Sem descrição"),
+        new TextDisplayBuilder().setContent(data.title?.trim() || t("visual_sem_titulo", interaction.guildId)),
+        new TextDisplayBuilder().setContent(data.descricao?.trim() || t("visual_sem_descricao", interaction.guildId)),
       ];
 
       if (Array.isArray(data.fields)) {
         data.fields.forEach((field) => {
           previewTexts.push(
             new TextDisplayBuilder().setContent(
-              `**${field.name || "Campo sem nome"}**: ${
-                field.value || "Sem valor"
-              }`,
+              `**${field.name?.trim() || t("visual_campo_sem_nome", interaction.guildId)}**: ${field.value?.trim() || t("visual_sem_valor", interaction.guildId)}`,
             ),
           );
         });
@@ -2696,7 +2694,7 @@ module.exports = {
 
       previewTexts.push(
         new TextDisplayBuilder().setContent(
-          `**Cor**: ${data.color || "Sem cor definida"}`,
+          t("visual_preview_cor", interaction.guildId, { cor: data.color || t("visual_sem_cor", interaction.guildId) }),
         ),
       );
 
@@ -2706,7 +2704,7 @@ module.exports = {
         const btns = data.botoes.map((botao) => {
           const btn = new ButtonBuilder()
             .setCustomId(`editar_botao:${botao.id}`)
-            .setLabel(botao.nome || "Sem nome")
+            .setLabel(botao.nome || t("visual_sem_nome", interaction.guildId))
             .setStyle(ButtonStyle.Secondary);
 
           if (botao.emoji) btn.setEmoji(botao.emoji);
@@ -2718,55 +2716,53 @@ module.exports = {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId("select_personalizacao_embed")
-        .setPlaceholder("Escolha uma embed para personalizar")
+        .setPlaceholder(t("visual_embed_select_placeholder", interaction.guildId))
         .addOptions([
           {
-            label: "Embed Principal",
-            description: "Personalize a embed usada no painel de tickets.",
+            label: t("visual_embed_principal_label", interaction.guildId),
+            description: t("visual_embed_principal_desc", interaction.guildId),
             value: "embedprincipal",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Ticket",
-            description: "Personalize a embed usada dentro do ticket.",
+            label: t("visual_embed_ticket_label", interaction.guildId),
+            description: t("visual_embed_ticket_desc", interaction.guildId),
             value: "embedticket",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs",
-            description: "Personalize a embed usada nos logs de fechamento.",
+            label: t("visual_embed_logs_label", interaction.guildId),
+            description: t("visual_embed_logs_desc", interaction.guildId),
             value: "embedlogs",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs User",
-            description: "Personalize a embed enviada para o autor do ticket.",
+            label: t("visual_embed_logsuser_label", interaction.guildId),
+            description: t("visual_embed_logsuser_desc", interaction.guildId),
             value: "embedlogsuser",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Notificar",
-            description:
-              "Personalize a embed enviada ao ser feita uma chamada.",
+            label: t("visual_embed_notificar_label", interaction.guildId),
+            description: t("visual_embed_notificar_desc", interaction.guildId),
             value: "embednotificar",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Avaliação",
-            description: "Personalize a embed de avaliação enviada ao usuário.",
+            label: t("visual_embed_avaliacao_label", interaction.guildId),
+            description: t("visual_embed_avaliacao_desc", interaction.guildId),
             value: "embedavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Log Avaliação",
-            description: "Personalize a embed de log de avaliações.",
+            label: t("visual_embed_logavaliacao_label", interaction.guildId),
+            description: t("visual_embed_logavaliacao_desc", interaction.guildId),
             value: "embedlogavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Assumido",
-            description:
-              "Personalize a embed enviada quando o ticket é assumido.",
+            label: t("visual_embed_assumido_label", interaction.guildId),
+            description: t("visual_embed_assumido_desc", interaction.guildId),
             value: "embedassumido",
             emoji: getEmoji(emojis.embeds),
           },
@@ -2775,16 +2771,16 @@ module.exports = {
       rows.push(new ActionRowBuilder().addComponents(selectMenu));
 
       const editarMenuOptions = [
-        { label: "Título", value: "titulo", emoji: getEmoji(emojis.title) },
+        { label: t("visual_opt_titulo", interaction.guildId), value: "titulo", emoji: getEmoji(emojis.title) },
         {
-          label: "Descrição",
+          label: t("visual_opt_descricao", interaction.guildId),
           value: "descricao",
           emoji: getEmoji(emojis.embeds),
         },
-        { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
-        { label: "Banner", value: "banner", emoji: getEmoji(emojis.image) },
+        { label: t("visual_opt_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
+        { label: t("visual_opt_banner", interaction.guildId), value: "banner", emoji: getEmoji(emojis.image) },
         {
-          label: "Placeholders disponíveis",
+          label: t("visual_opt_placeholders", interaction.guildId),
           value: "placeholders",
           emoji: getEmoji(emojis.cube),
         },
@@ -2793,7 +2789,7 @@ module.exports = {
       if (Array.isArray(data.fields)) {
         data.fields.forEach((field, i) => {
           editarMenuOptions.push({
-            label: `Field ${i + 1} - ${field.name || "Sem nome"}`,
+            label: t("visual_field_sem_nome", interaction.guildId, { n: i + 1, nome: field.name || t("visual_sem_nome", interaction.guildId) }),
             value: `field_${i}`,
             emoji: getEmoji(emojis.fields),
           });
@@ -2802,19 +2798,19 @@ module.exports = {
 
       const editarMenu = new StringSelectMenuBuilder()
         .setCustomId(`editar_info_embed:${embedSelecionada}`)
-        .setPlaceholder("Editar conteúdo da embed")
+        .setPlaceholder(t("visual_editar_embed_placeholder", interaction.guildId))
         .addOptions(editarMenuOptions);
       rows.push(new ActionRowBuilder().addComponents(editarMenu));
 
       const btnAtualizar = new ButtonBuilder()
         .setCustomId("atualizar_painel_embed_principal")
-        .setLabel("Atualizar Painel")
+        .setLabel(t("visual_btn_atualizar_painel", interaction.guildId))
         .setEmoji(getEmoji(emojis.settings))
         .setStyle(ButtonStyle.Success);
 
       const voltarButton = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
@@ -2876,7 +2872,7 @@ module.exports = {
           components: [
             new ContainerBuilder().addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                "❌ Valor inválido! Digite um número inteiro maior ou igual a 1.",
+                t("visual_err_limite_invalido", interaction.guildId),
               ),
             ),
           ],
@@ -2911,7 +2907,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Máximo de 5 caracteres permitido.",
+              t("visual_err_max_caracteres", interaction.guildId),
             ),
           ),
         ];
@@ -2929,7 +2925,7 @@ module.exports = {
       if (selectIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Select não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_select_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -2972,7 +2968,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Dados dos fields não encontrados.",
+              t("visual_err_dados_fields_nao", interaction.guildId),
             ),
           ),
         ];
@@ -3004,7 +3000,7 @@ module.exports = {
         const btns = data.botoes.map((botao) => {
           const btn = new ButtonBuilder()
             .setCustomId(`editar_botao:${botao.id}`)
-            .setLabel(botao.nome || "Sem nome")
+            .setLabel(botao.nome || t("visual_sem_nome", interaction.guildId))
             .setStyle(ButtonStyle.Secondary);
 
           if (botao.emoji) btn.setEmoji(botao.emoji);
@@ -3017,55 +3013,53 @@ module.exports = {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId("select_personalizacao_embed")
-        .setPlaceholder("Escolha uma embed para personalizar")
+        .setPlaceholder(t("visual_embed_select_placeholder", interaction.guildId))
         .addOptions([
           {
-            label: "Embed Principal",
-            description: "Personalize a embed usada no painel de tickets.",
+            label: t("visual_embed_principal_label", interaction.guildId),
+            description: t("visual_embed_principal_desc", interaction.guildId),
             value: "embedprincipal",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Ticket",
-            description: "Personalize a embed usada dentro do ticket.",
+            label: t("visual_embed_ticket_label", interaction.guildId),
+            description: t("visual_embed_ticket_desc", interaction.guildId),
             value: "embedticket",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs",
-            description: "Personalize a embed usada nos logs de fechamento.",
+            label: t("visual_embed_logs_label", interaction.guildId),
+            description: t("visual_embed_logs_desc", interaction.guildId),
             value: "embedlogs",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs User",
-            description: "Personalize a embed enviada para o autor do ticket.",
+            label: t("visual_embed_logsuser_label", interaction.guildId),
+            description: t("visual_embed_logsuser_desc", interaction.guildId),
             value: "embedlogsuser",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Notificar",
-            description:
-              "Personalize a embed enviada ao ser feita uma chamada.",
+            label: t("visual_embed_notificar_label", interaction.guildId),
+            description: t("visual_embed_notificar_desc", interaction.guildId),
             value: "embednotificar",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Avaliação",
-            description: "Personalize a embed de avaliação enviada ao usuário.",
+            label: t("visual_embed_avaliacao_label", interaction.guildId),
+            description: t("visual_embed_avaliacao_desc", interaction.guildId),
             value: "embedavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Log Avaliação",
-            description: "Personalize a embed de log de avaliações.",
+            label: t("visual_embed_logavaliacao_label", interaction.guildId),
+            description: t("visual_embed_logavaliacao_desc", interaction.guildId),
             value: "embedlogavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Assumido",
-            description:
-              "Personalize a embed enviada quando o ticket é assumido.",
+            label: t("visual_embed_assumido_label", interaction.guildId),
+            description: t("visual_embed_assumido_desc", interaction.guildId),
             value: "embedassumido",
             emoji: getEmoji(emojis.embeds),
           },
@@ -3074,16 +3068,16 @@ module.exports = {
       rows.push(new ActionRowBuilder().addComponents(selectMenu));
 
       const editarMenuOptions = [
-        { label: "Título", value: "titulo", emoji: getEmoji(emojis.title) },
+        { label: t("visual_opt_titulo", interaction.guildId), value: "titulo", emoji: getEmoji(emojis.title) },
         {
-          label: "Descrição",
+          label: t("visual_opt_descricao", interaction.guildId),
           value: "descricao",
           emoji: getEmoji(emojis.embeds),
         },
-        { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
-        { label: "Banner", value: "banner", emoji: getEmoji(emojis.image) },
+        { label: t("visual_opt_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
+        { label: t("visual_opt_banner", interaction.guildId), value: "banner", emoji: getEmoji(emojis.image) },
         {
-          label: "Placeholders disponíveis",
+          label: t("visual_opt_placeholders", interaction.guildId),
           value: "placeholders",
           emoji: getEmoji(emojis.cube),
         },
@@ -3092,7 +3086,7 @@ module.exports = {
       if (Array.isArray(data.fields)) {
         data.fields.forEach((field, i) => {
           editarMenuOptions.push({
-            label: `Field ${i + 1} - ${field.name || "Sem nome"}`,
+            label: t("visual_field_sem_nome", interaction.guildId, { n: i + 1, nome: field.name || t("visual_sem_nome", interaction.guildId) }),
             value: `field_${i}`,
             emoji: getEmoji(emojis.fields),
           });
@@ -3101,36 +3095,36 @@ module.exports = {
 
       const editarMenu = new StringSelectMenuBuilder()
         .setCustomId(`editar_info_embed:${embedSelecionada}`)
-        .setPlaceholder("Editar conteúdo da embed")
+        .setPlaceholder(t("visual_editar_embed_placeholder", interaction.guildId))
         .addOptions(editarMenuOptions);
 
       rows.push(new ActionRowBuilder().addComponents(editarMenu));
 
       const voltarButton = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
       rows.push(new ActionRowBuilder().addComponents(voltarButton));
 
       const previewTexts = [
-        new TextDisplayBuilder().setContent(dados.titulo || "Sem título"),
-        new TextDisplayBuilder().setContent(dados.descricao || "Sem descrição"),
+        new TextDisplayBuilder().setContent(dados.titulo || t("visual_sem_titulo", interaction.guildId)),
+        new TextDisplayBuilder().setContent(dados.descricao || t("visual_sem_descricao", interaction.guildId)),
       ];
 
       if (Array.isArray(dados.fields)) {
         dados.fields.forEach((f) => {
           previewTexts.push(
             new TextDisplayBuilder().setContent(
-              `**${f.name || "Campo sem nome"}**: ${f.value || "Sem valor"}`,
+              `**${f.name || t("visual_campo_sem_nome", interaction.guildId)}**: ${f.value || t("visual_sem_valor", interaction.guildId)}`,
             ),
           );
         });
       }
 
       previewTexts.push(
-        new TextDisplayBuilder().setContent(`**Cor**: ${dados.cor || "White"}`),
+        new TextDisplayBuilder().setContent(t("visual_preview_cor", interaction.guildId, { cor: dados.cor || t("visual_cor_white", interaction.guildId) })),
       );
 
       const components = [
@@ -3256,7 +3250,7 @@ module.exports = {
       if (selectIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Select não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_select_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -3384,7 +3378,7 @@ module.exports = {
       if (botaoIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Botão não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_botao_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -3430,7 +3424,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Opção de select não encontrada.",
+              t("visual_nenhum_select_encontrado", interaction.guildId),
             ),
           ),
         ];
@@ -3465,26 +3459,26 @@ module.exports = {
         if (interaction.guild) {
           const adicionar = new ButtonBuilder()
             .setCustomId("select_adicionar")
-            .setLabel("Adicionar")
+            .setLabel(t("btn_adicionar", interaction.guildId))
             .setEmoji(getEmoji(emojis.plus))
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(selects.length >= 10);
 
           const remover = new ButtonBuilder()
             .setCustomId("select_remover")
-            .setLabel("Remover")
+            .setLabel(t("btn_remover", interaction.guildId))
             .setEmoji(getEmoji(emojis.minus))
             .setStyle(ButtonStyle.Secondary);
 
           const editar = new ButtonBuilder()
             .setCustomId("select_editar")
-            .setLabel("Editar")
+            .setLabel(t("btn_editar", interaction.guildId))
             .setEmoji(getEmoji(emojis.title))
             .setStyle(ButtonStyle.Secondary);
 
           const voltar = new ButtonBuilder()
             .setCustomId("sistema_ticket")
-            .setLabel("Voltar")
+            .setLabel(t("btn_voltar", interaction.guildId))
             .setEmoji(getEmoji(emojis.arrowl))
             .setStyle(ButtonStyle.Secondary);
 
@@ -3499,10 +3493,10 @@ module.exports = {
             new ContainerBuilder()
               .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                  "Configuração do Painel: Select",
+                  t("visual_config_select_titulo", interaction.guildId),
                 ),
                 new TextDisplayBuilder().setContent(
-                  "Escolha uma das ações abaixo.",
+                  t("visual_config_botao_desc", interaction.guildId),
                 ),
               )
               .addActionRowComponents(row),
@@ -3520,7 +3514,7 @@ module.exports = {
       if (selectObjIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Select não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_select_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -3535,11 +3529,11 @@ module.exports = {
 
         const modal = new ModalBuilder()
           .setCustomId(`modal_editar_nome_select_${selectId}`)
-          .setTitle("Editar Nome do Select");
+          .setTitle(t("visual_modal_nome_select_editar_titulo", interaction.guildId));
 
         const inputNome = new TextInputBuilder()
           .setCustomId("novo_nome")
-          .setLabel("Digite o novo nome")
+          .setLabel(t("visual_modal_nome_select_editar_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setMinLength(1)
           .setMaxLength(100)
@@ -3554,15 +3548,15 @@ module.exports = {
       if (campo === "descricao") {
         const modal = new ModalBuilder()
           .setCustomId(`modal_config_select_descricao_${selectId}`)
-          .setTitle("Descrição da Opção");
+          .setTitle(t("visual_modal_descricao_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("descricao")
-          .setLabel("Digite a descrição (opcional)")
+          .setLabel(t("visual_modal_descricao_label", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(100)
-          .setPlaceholder("Aparece abaixo do nome no select menu");
+          .setPlaceholder(t("visual_modal_descricao_placeholder", interaction.guildId));
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
         return interaction.showModal(modal);
@@ -3573,7 +3567,7 @@ module.exports = {
 
         const selectChannel = new ChannelSelectMenuBuilder()
           .setCustomId(`select_categoria_select_${selectId}`)
-          .setPlaceholder("Escolha as categorias permitidas")
+          .setPlaceholder(t("visual_cat_select_placeholder", interaction.guildId))
           .setMinValues(1)
           .setMaxValues(25)
           .addChannelTypes(ChannelType.GuildCategory);
@@ -3584,7 +3578,7 @@ module.exports = {
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `📂 Selecione as categorias para o select: **${selectObj.nome}**`,
+                `${getEmoji(emojis.folder)} ${t("visual_cat_select_titulo", interaction.guildId, { nome: selectObj.nome })}`,
               ),
             )
             .addActionRowComponents(row),
@@ -3603,12 +3597,12 @@ module.exports = {
 
         const modal = new ModalBuilder()
           .setCustomId(`modal_editar_emoji_select_${selectId}`)
-          .setTitle("Editar Emoji do Select");
+          .setTitle(t("visual_modal_emoji_select_titulo", interaction.guildId));
 
         const input = new TextInputBuilder()
           .setCustomId("novo_emoji")
-          .setLabel("Emoji (padrão ou personalizado)")
-          .setPlaceholder("Utilize emojis padrões ou do discord.")
+          .setLabel(t("visual_modal_emoji_select_label", interaction.guildId))
+          .setPlaceholder(t("visual_modal_emoji_select_placeholder", interaction.guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setValue(selectObj.emoji || "");
@@ -3632,7 +3626,7 @@ module.exports = {
       if (selectIndex === -1) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Select não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_select_nao_encontrado", interaction.guildId)),
           ),
         ];
 
@@ -3674,7 +3668,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Não foi possível encontrar os dados dessa embed.",
+              t("visual_err_embed_nao_encontrada", interaction.guildId),
             ),
           ),
         ];
@@ -3686,17 +3680,15 @@ module.exports = {
       }
 
       const previewTexts = [
-        new TextDisplayBuilder().setContent(data.title || "Sem título"),
-        new TextDisplayBuilder().setContent(data.descricao || "Sem descrição"),
+        new TextDisplayBuilder().setContent(data.title?.trim() || t("visual_sem_titulo", interaction.guildId)),
+        new TextDisplayBuilder().setContent(data.descricao?.trim() || t("visual_sem_descricao", interaction.guildId)),
       ];
 
       if (Array.isArray(data.fields)) {
         data.fields.forEach((field) => {
           previewTexts.push(
             new TextDisplayBuilder().setContent(
-              `**${field.name || "Campo sem nome"}**: ${
-                field.value || "Sem valor"
-              }`,
+              `**${field.name?.trim() || t("visual_campo_sem_nome", interaction.guildId)}**: ${field.value?.trim() || t("visual_sem_valor", interaction.guildId)}`,
             ),
           );
         });
@@ -3704,7 +3696,7 @@ module.exports = {
 
       previewTexts.push(
         new TextDisplayBuilder().setContent(
-          `**Cor**: ${data.color || "White"}`,
+          t("visual_preview_cor", interaction.guildId, { cor: data.color || t("visual_cor_white", interaction.guildId) }),
         ),
       );
 
@@ -3714,7 +3706,7 @@ module.exports = {
         const btns = data.botoes.map((botao) => {
           const btn = new ButtonBuilder()
             .setCustomId(`editar_botao:${botao.id}`)
-            .setLabel(botao.nome || "Sem nome")
+            .setLabel(botao.nome || t("visual_sem_nome", interaction.guildId))
             .setStyle(ButtonStyle.Secondary);
 
           if (botao.emoji) btn.setEmoji(botao.emoji);
@@ -3727,55 +3719,53 @@ module.exports = {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId("select_personalizacao_embed")
-        .setPlaceholder("Escolha uma embed para personalizar")
+        .setPlaceholder(t("visual_embed_select_placeholder", interaction.guildId))
         .addOptions([
           {
-            label: "Embed Principal",
-            description: "Personalize a embed usada no painel de tickets.",
+            label: t("visual_embed_principal_label", interaction.guildId),
+            description: t("visual_embed_principal_desc", interaction.guildId),
             value: "embedprincipal",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Ticket",
-            description: "Personalize a embed usada dentro do ticket.",
+            label: t("visual_embed_ticket_label", interaction.guildId),
+            description: t("visual_embed_ticket_desc", interaction.guildId),
             value: "embedticket",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs",
-            description: "Personalize a embed usada nos logs de fechamento.",
+            label: t("visual_embed_logs_label", interaction.guildId),
+            description: t("visual_embed_logs_desc", interaction.guildId),
             value: "embedlogs",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Logs User",
-            description: "Personalize a embed enviada para o autor do ticket.",
+            label: t("visual_embed_logsuser_label", interaction.guildId),
+            description: t("visual_embed_logsuser_desc", interaction.guildId),
             value: "embedlogsuser",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Notificar",
-            description:
-              "Personalize a embed enviada ao ser feita uma chamada.",
+            label: t("visual_embed_notificar_label", interaction.guildId),
+            description: t("visual_embed_notificar_desc", interaction.guildId),
             value: "embednotificar",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Avaliação",
-            description: "Personalize a embed de avaliação enviada ao usuário.",
+            label: t("visual_embed_avaliacao_label", interaction.guildId),
+            description: t("visual_embed_avaliacao_desc", interaction.guildId),
             value: "embedavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Log Avaliação",
-            description: "Personalize a embed de log de avaliações.",
+            label: t("visual_embed_logavaliacao_label", interaction.guildId),
+            description: t("visual_embed_logavaliacao_desc", interaction.guildId),
             value: "embedlogavaliacao",
             emoji: getEmoji(emojis.embeds),
           },
           {
-            label: "Embed Assumido",
-            description:
-              "Personalize a embed enviada quando o ticket é assumido.",
+            label: t("visual_embed_assumido_label", interaction.guildId),
+            description: t("visual_embed_assumido_desc", interaction.guildId),
             value: "embedassumido",
             emoji: getEmoji(emojis.embeds),
           },
@@ -3784,16 +3774,16 @@ module.exports = {
       rows.push(new ActionRowBuilder().addComponents(selectMenu));
 
       const editarMenuOptions = [
-        { label: "Título", value: "titulo", emoji: getEmoji(emojis.title) },
+        { label: t("visual_opt_titulo", interaction.guildId), value: "titulo", emoji: getEmoji(emojis.title) },
         {
-          label: "Descrição",
+          label: t("visual_opt_descricao", interaction.guildId),
           value: "descricao",
           emoji: getEmoji(emojis.embeds),
         },
-        { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
-        { label: "Banner", value: "banner", emoji: getEmoji(emojis.image) },
+        { label: t("visual_opt_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
+        { label: t("visual_opt_banner", interaction.guildId), value: "banner", emoji: getEmoji(emojis.image) },
         {
-          label: "Placeholders disponíveis",
+          label: t("visual_opt_placeholders", interaction.guildId),
           value: "placeholders",
           emoji: getEmoji(emojis.cube),
         },
@@ -3802,7 +3792,7 @@ module.exports = {
       if (Array.isArray(data.fields)) {
         data.fields.forEach((field, i) => {
           editarMenuOptions.push({
-            label: `Field ${i + 1} - ${field.name || "Sem nome"}`,
+            label: t("visual_field_sem_nome", interaction.guildId, { n: i + 1, nome: field.name || t("visual_sem_nome", interaction.guildId) }),
             value: `field_${i}`,
             emoji: getEmoji(emojis.fields),
           });
@@ -3811,14 +3801,14 @@ module.exports = {
 
       const editarMenu = new StringSelectMenuBuilder()
         .setCustomId(`editar_info_embed:${embedSelecionada}`)
-        .setPlaceholder("Editar conteúdo da embed")
+        .setPlaceholder(t("visual_editar_embed_placeholder", interaction.guildId))
         .addOptions(editarMenuOptions);
 
       rows.push(new ActionRowBuilder().addComponents(editarMenu));
 
       const voltarButton = new ButtonBuilder()
         .setCustomId("configurar_ticket")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.home))
         .setStyle(ButtonStyle.Secondary);
 
@@ -3871,7 +3861,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Não foi possível encontrar os dados dessa embed.",
+              t("visual_err_embed_nao_encontrada", interaction.guildId),
             ),
           ),
         ];
@@ -3883,15 +3873,15 @@ module.exports = {
       }
 
       const options = [
-        { label: "Título", value: "titulo", emoji: getEmoji(emojis.title) },
+        { label: t("visual_opt_titulo", interaction.guildId), value: "titulo", emoji: getEmoji(emojis.title) },
         {
-          label: "Descrição",
+          label: t("visual_opt_descricao", interaction.guildId),
           value: "descricao",
           emoji: getEmoji(emojis.embeds),
         },
-        { label: "Cor", value: "cor", emoji: getEmoji(emojis.colorpicker) },
+        { label: t("visual_opt_cor", interaction.guildId), value: "cor", emoji: getEmoji(emojis.colorpicker) },
         {
-          label: "Placeholders disponíveis",
+          label: t("visual_opt_placeholders", interaction.guildId),
           value: "placeholders",
           emoji: getEmoji(emojis.cube),
         },
@@ -3900,7 +3890,7 @@ module.exports = {
       if (Array.isArray(dados.fields)) {
         dados.fields.forEach((field, index) => {
           options.push({
-            label: `Field ${index + 1} - ${field.name || "Sem nome"}`,
+            label: t("visual_field_sem_nome", guildId, { n: index + 1, nome: field.name || t("visual_sem_nome", guildId) }),
             value: `field_${index}`,
           });
         });
@@ -3911,7 +3901,7 @@ module.exports = {
         if (isNaN(fieldIndex) || !dados.fields || !dados.fields[fieldIndex]) {
           const components = [
             new ContainerBuilder().addTextDisplayComponents(
-              new TextDisplayBuilder().setContent("❌ Field inválido."),
+              new TextDisplayBuilder().setContent(t("visual_err_field_invalido", guildId)),
             ),
           ];
 
@@ -3923,26 +3913,26 @@ module.exports = {
         const field = dados.fields[fieldIndex];
 
         const modal = new ModalBuilder()
-          .setTitle(`Editar Field ${fieldIndex + 1}`)
+          .setTitle(t("visual_modal_editar_field_titulo", guildId, { n: fieldIndex + 1 }))
           .setCustomId(`salvar_edicao_field:${embedSelecionada}:${fieldIndex}`);
 
         const nameInput = new TextInputBuilder()
           .setCustomId("field_name")
-          .setLabel("Nome do campo")
+          .setLabel(t("visual_modal_field_nome_label", guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setValue(limparEmojisProcessados(field.name || ""));
 
         const valueInput = new TextInputBuilder()
           .setCustomId("field_value")
-          .setLabel("Valor do campo")
+          .setLabel(t("visual_modal_field_valor_label", guildId))
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(true)
           .setValue(limparEmojisProcessados(field.value || ""));
 
         const inlineInput = new TextInputBuilder()
           .setCustomId("field_inline")
-          .setLabel("Inline (true/false)")
+          .setLabel(t("visual_modal_field_inline_label", guildId))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setValue(field.inline ? "true" : "false");
@@ -3957,7 +3947,7 @@ module.exports = {
       }
 
       const modal = new ModalBuilder()
-        .setTitle("Editar Embed")
+        .setTitle(t("visual_modal_editar_embed_titulo", guildId))
         .setCustomId(`salvar_edicao_info_embed:${embedSelecionada}:${escolha}`);
 
       if (escolha === "titulo") {
@@ -3965,7 +3955,7 @@ module.exports = {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId("novo_valor")
-              .setLabel("Novo título")
+              .setLabel(t("visual_modal_novo_titulo_label", guildId))
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
               .setValue(limparEmojisProcessados(dados.title || "")),
@@ -3976,7 +3966,7 @@ module.exports = {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId("novo_valor")
-              .setLabel("Nova descrição")
+              .setLabel(t("visual_modal_nova_descricao_label", guildId))
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
               .setValue(limparEmojisProcessados(dados.descricao || "")),
@@ -3987,10 +3977,10 @@ module.exports = {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId("novo_valor")
-              .setLabel("Nova cor (hexadecimal, ex: #ffffff)")
+              .setLabel(t("visual_modal_nova_cor_label", guildId))
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
-              .setPlaceholder("Deixe vazio para sem cor")
+              .setPlaceholder(t("visual_modal_cor_placeholder", guildId))
               .setValue(dados.color || ""),
           ),
         );
@@ -3999,7 +3989,7 @@ module.exports = {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId("novo_valor")
-              .setLabel("URL do novo banner")
+              .setLabel(t("visual_modal_url_banner_label", guildId))
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
               .setValue(dados.banner || ""),
@@ -4060,7 +4050,7 @@ module.exports = {
       } else {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Opção inválida."),
+            new TextDisplayBuilder().setContent(t("visual_err_opcao_invalida", guildId)),
           ),
         ];
 
@@ -4086,7 +4076,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Dados dos fields não encontrados.",
+              t("visual_err_dados_fields_nao", interaction.guildId),
             ),
           ),
         ];
@@ -4120,26 +4110,26 @@ module.exports = {
       const field = dados.fields[fieldIndex];
 
       const modal = new ModalBuilder()
-        .setTitle(`Editar Field ${fieldIndex + 1}`)
+        .setTitle(t("visual_modal_editar_field_titulo", guildId, { n: fieldIndex + 1 }))
         .setCustomId(`salvar_edicao_field:${embedSelecionada}:${fieldIndex}`);
 
       const nameInput = new TextInputBuilder()
         .setCustomId("field_name")
-        .setLabel("Nome do campo")
+        .setLabel(t("visual_modal_field_nome_label", guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setValue(field.name || "");
 
       const valueInput = new TextInputBuilder()
         .setCustomId("field_value")
-        .setLabel("Valor do campo")
+        .setLabel(t("visual_modal_field_valor_label", guildId))
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setValue(field.value || "");
 
       const inlineInput = new TextInputBuilder()
         .setCustomId("field_inline")
-        .setLabel("Inline (true/false)")
+        .setLabel(t("visual_modal_field_inline_label", guildId))
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setValue(field.inline ? "true" : "false");
@@ -4167,25 +4157,28 @@ module.exports = {
 
       const selectCanal = new ChannelSelectMenuBuilder()
         .setCustomId("enviar_ticket_canal")
-        .setPlaceholder("Selecione o canal para enviar o painel")
+        .setPlaceholder(t("visual_canal_placeholder", interaction.guildId))
         .addChannelTypes(ChannelType.GuildText)
         .setMinValues(1)
         .setMaxValues(1);
 
       const voltarBtn = new ButtonBuilder()
         .setCustomId("enviar_ticket_painel")
-        .setLabel("Voltar")
+        .setLabel(t("btn_voltar", interaction.guildId))
         .setEmoji(getEmoji(emojis.arrowl))
         .setStyle(ButtonStyle.Secondary);
 
       const components = [
         new ContainerBuilder()
           .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("# Selecionar Canal"),
+            new TextDisplayBuilder().setContent(t("enviar_canal_titulo", interaction.guildId)),
             new TextDisplayBuilder().setContent(
-              `Tipo de painel: **${
-                tipoPainel === "botao" ? "Botões" : "Select Menu"
-              }**\n\nEscolha o canal onde o painel será enviado:`,
+              t("enviar_canal_desc", interaction.guildId, {
+                tipo:
+                  tipoPainel === "botao"
+                    ? t("enviar_tipo_botoes_nome", interaction.guildId)
+                    : t("enviar_tipo_select_nome", interaction.guildId),
+              }),
             ),
           )
           .addActionRowComponents(
@@ -4201,7 +4194,7 @@ module.exports = {
     }
 
     function parseEmoji(emojiString, guild) {
-      if (!emojiString) return null;
+      if (!emojiString) return undefined;
 
       if (/^[\u{1F000}-\u{1FFFF}]+$/u.test(emojiString)) {
         return emojiString;
@@ -4220,7 +4213,7 @@ module.exports = {
         }>`;
       }
 
-      return null;
+      return undefined;
     }
 
     if (
@@ -4234,7 +4227,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Sessão expirada. Tente novamente.",
+              t("visual_sessao_expirada", interaction.guildId),
             ),
           ),
         ];
@@ -4248,7 +4241,7 @@ module.exports = {
       if (!canal) {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent("❌ Canal não encontrado."),
+            new TextDisplayBuilder().setContent(t("visual_err_canal_nao_encontrado", interaction.guildId)),
           ),
         ];
         return interaction.editReply({
@@ -4261,14 +4254,14 @@ module.exports = {
       const tipoPainel = tempData.tipo;
       function parseColor(colorString) {
         if (!colorString || colorString === "" || colorString === " ")
-          return null;
+          return undefined;
         if (typeof colorString === "number") return colorString;
         const cleanColor = colorString.replace("#", "");
         const colorInt = parseInt(cleanColor, 16);
         return !isNaN(colorInt) ? colorInt : null;
       }
       function parseEmoji(emojiString, guild) {
-        if (!emojiString) return null;
+        if (!emojiString) return undefined;
         if (/^[\u{1F000}-\u{1FFFF}]+$/u.test(emojiString))
           return { name: emojiString };
         const match = emojiString.match(/^<a?:([a-zA-Z0-9_]+):(\d+)>$/);
@@ -4281,7 +4274,7 @@ module.exports = {
             name: foundEmoji.name,
             animated: foundEmoji.animated,
           };
-        return null;
+        return undefined;
       }
       try {
         if (tipoPainel === "botao") {
@@ -4305,14 +4298,14 @@ module.exports = {
           }
           containerTicket.addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${embedData.title || "🎫 Painel de Tickets"}**`,
+              `**${embedData.title || t("painel_default_titulo", interaction.guildId)}**`,
             ),
           );
           if (embedData.descricao) {
             containerTicket.addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
                 embedData.descricao ||
-                  "Abra seu ticket usando o painel abaixo.",
+                  t("painel_default_descricao", interaction.guildId),
               ),
             );
           }
@@ -4335,7 +4328,7 @@ module.exports = {
           const botoesFormatados = botoes.map((botao) => {
             const button = new ButtonBuilder()
               .setCustomId(`ticket_botoes_${botao.id}`)
-              .setLabel(botao.nome || "Abrir")
+              .setLabel(botao.nome || t("painel_default_botao", interaction.guildId))
               .setStyle(getButtonStyle(botao.cor));
             if (botao.emoji && typeof botao.emoji === "string") {
               const parsedEmoji = parseEmoji(botao.emoji, interaction.guild);
@@ -4364,9 +4357,9 @@ module.exports = {
 
           const options = selects.map((sel) => {
             const option = {
-              label: sel.nome || "Ticket",
+              label: sel.nome || t("painel_default_select_nome", interaction.guildId),
               value: `select_${sel.id}`,
-              description: `Abrir ticket para: ${sel.nome || "Atendimento"}`,
+              description: t("painel_default_select_desc", interaction.guildId, { nome: sel.nome || t("painel_default_select_nome", interaction.guildId) }),
             };
             if (sel.emoji && typeof sel.emoji === "string") {
               const parsedEmoji = parseEmoji(sel.emoji, interaction.guild);
@@ -4379,15 +4372,15 @@ module.exports = {
 
           const selectMenu = new StringSelectMenuBuilder()
             .setCustomId("ticket_select")
-            .setPlaceholder("Escolha uma opção")
+            .setPlaceholder(t("painel_select_placeholder", interaction.guildId))
             .addOptions(
               selects.map((sel) => {
                 const option = {
-                  label: sel.nome || "Ticket",
+                  label: sel.nome || t("painel_default_select_nome", interaction.guildId),
                   value: `select_${sel.id}`,
                   description:
                     sel.descricao ||
-                    `Abrir ticket para: ${sel.nome || "Atendimento"}`,
+                    t("painel_default_select_desc", interaction.guildId, { nome: sel.nome || t("painel_default_select_nome", interaction.guildId) }),
                 };
                 if (sel.emoji && typeof sel.emoji === "string") {
                   const parsedEmoji = parseEmoji(sel.emoji, interaction.guild);
@@ -4406,14 +4399,14 @@ module.exports = {
           }
           containerTicket.addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `**${embedData.title || "🎫 Painel de Tickets"}**`,
+              `**${embedData.title || t("painel_default_titulo", interaction.guildId)}**`,
             ),
           );
           if (embedData.descricao) {
             containerTicket.addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
                 embedData.descricao ||
-                  "Abra seu ticket usando o painel abaixo.",
+                  t("painel_default_descricao", interaction.guildId),
               ),
             );
           }
@@ -4452,57 +4445,57 @@ module.exports = {
 
         const buttonConfig = new ButtonBuilder()
           .setCustomId("configurar_ticket")
-          .setLabel("Configurar")
+          .setLabel(t("btn_configurar", gid))
           .setEmoji(getEmoji(emojis.settings))
           .setStyle(ButtonStyle.Primary);
 
         const buttonBanco = new ButtonBuilder()
           .setCustomId("banco_ticket")
-          .setLabel("Banco de Dados")
+          .setLabel(t("btn_banco", gid))
           .setEmoji(getEmoji(emojis.cardbox))
           .setStyle(ButtonStyle.Primary);
 
         const buttonPix = new ButtonBuilder()
           .setCustomId("pix_ticket")
-          .setLabel("Pix")
+          .setLabel(t("btn_pix", gid))
           .setEmoji(getEmoji(emojis.dollar))
           .setStyle(ButtonStyle.Primary);
 
         const enviarTicketBtn = new ButtonBuilder()
           .setCustomId("enviar_ticket_painel")
-          .setLabel("Enviar Ticket")
+          .setLabel(t("btn_enviar_ticket", gid))
           .setEmoji(getEmoji(emojis.embeds))
           .setStyle(ButtonStyle.Success);
 
         const iaSetupBtn = new ButtonBuilder()
           .setCustomId("ia_setup_inicial")
-          .setLabel("Setup com IA")
+          .setLabel(t("btn_ia_setup", gid))
           .setEmoji(getEmoji(emojis.bot))
           .setStyle(ButtonStyle.Success);
 
         const buttonSuporte = new ButtonBuilder()
-          .setLabel("Suporte")
-          .setEmoji(getEmoji(emojis.suporte))
+          .setLabel(t("btn_suporte", gid))
+          .setEmoji(getEmoji(emojis.discord$))
           .setStyle(ButtonStyle.Link)
           .setURL("https://discord.gg/MmUB4H3uCM");
 
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `# Painel Principal | ${interaction.guild.name}`,
+              t("painel_principal_titulo", gid, { guild: interaction.guild.name }),
             ),
           ),
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `Use os botões abaixo para acessar as configurações e o banco de dados e muito mais!\n\n-# Ping do bot: ${client.ws.ping}ms`,
+                `${t("painel_principal_desc", gid)}\n\n-# Ping do bot: ${client.ws.ping}ms`,
               ),
             )
             .addSectionComponents(
               new SectionBuilder()
                 .addTextDisplayComponents(
                   new TextDisplayBuilder().setContent(
-                    "**Configurar Ticket**\nGerencie as configurações do sistema de tickets",
+                    t("painel_secao_configurar", interaction.guildId),
                   ),
                 )
                 .setButtonAccessory(buttonConfig),
@@ -4562,7 +4555,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Erro ao enviar o painel. Verifique se o bot tem permissão para enviar mensagens neste canal.",
+              t("enviar_erro_canal", interaction.guildId),
             ),
           ),
         ];
@@ -4582,7 +4575,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "❌ Nenhuma opção de select encontrada para editar.",
+              t("visual_err_nenhum_select_editar", interaction.guildId),
             ),
           ),
         ];
@@ -4595,11 +4588,11 @@ module.exports = {
 
       const select = new StringSelectMenuBuilder()
         .setCustomId("editar_select_select")
-        .setPlaceholder("Selecione a opção que deseja editar")
+        .setPlaceholder(t("visual_selecionar_opcao_editar_placeholder", interaction.guildId))
         .addOptions(
           selects.map((s) => {
             const option = {
-              label: s.nome || "Sem nome",
+              label: s.nome || t("visual_sem_nome", interaction.guildId),
               value: s.id,
               description: `ID: ${s.id}`,
             };
@@ -4635,7 +4628,7 @@ module.exports = {
         new ContainerBuilder()
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Selecione a opção que deseja editar:",
+              t("visual_selecionar_opcao_editar", interaction.guildId),
             ),
           )
           .addActionRowComponents(row),
@@ -4650,7 +4643,7 @@ module.exports = {
     }
 
     function parseEmoji(emojiString, guild) {
-      if (!emojiString) return null;
+      if (!emojiString) return undefined;
 
       if (/^[\p{Extended_Pictographic}]+$/u.test(emojiString)) {
         return { name: emojiString };
@@ -4702,7 +4695,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Você já atingiu o limite máximo de 5 botões.",
+              t("visual_limite_botoes", interaction.guildId),
             ),
           ),
         ];
@@ -4746,7 +4739,7 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "Você já atingiu o limite máximo de 10 opções no select menu.",
+              t("visual_limite_selects", interaction.guildId),
             ),
           ),
         ];

@@ -5,6 +5,7 @@ const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
 const Groq = require("groq-sdk");
 const { promisify } = require("util");
+const { t } = require("../../utils/i18n");
 
 function safeJsonParse(value, fallback = []) {
   if (value === null || value === undefined || value === "") return fallback;
@@ -451,7 +452,7 @@ module.exports = {
           } = require("discord.js");
           const container = new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              "✅ **Certo! Encerrando o ticket em 30 segundos.**\nSe ainda precisar de ajuda, envie uma mensagem antes disso.",
+              t("ia_encerrar_aviso", guildId),
             ),
           );
           await message.channel
@@ -721,8 +722,7 @@ module.exports = {
                 const notifContainer =
                   new ContainerBuilder().addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                      `${safeEmojiStr(emojis.warning)} **Transferência para Staff**
-Identifiquei que esse caso precisa de atenção humana.${pingStaff}`,
+                      t("ia_transferencia_msg", guildId, { ping: pingStaff }),
                     ),
                   );
                 await message.channel
@@ -739,11 +739,11 @@ Identifiquei que esse caso precisa de atenção humana.${pingStaff}`,
         }
       } catch (erro) {
         console.error("Erro ao processar IA:", erro);
-        let mensagemErro = "❌ Erro ao processar a resposta da IA.";
+        let mensagemErro = t("ia_erro_resposta", guildId);
         if (erro.status === 429) {
           const retryAfter = erro.headers?.["retry-after"];
           const minutos = retryAfter ? Math.ceil(retryAfter / 60) : 30;
-          mensagemErro = `⏰ O sistema de IA atingiu o limite de uso. Tente novamente em aproximadamente **${minutos} minutos** ou aguarde um membro da equipe.`;
+          mensagemErro = t("ia_erro_limite_uso", guildId, { minutos });
         }
         await message.reply({ content: mensagemErro }).catch(() => {});
       }
