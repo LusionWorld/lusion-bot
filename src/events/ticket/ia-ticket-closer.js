@@ -9,6 +9,7 @@ const {
   SeparatorBuilder,
   MessageFlags,
   ChannelType,
+  FileBuilder,
 } = require("discord.js");
 const discordTranscripts = require("discord-html-transcripts");
 
@@ -108,7 +109,7 @@ async function fecharTicketPorIA(client, guildId, channelId) {
 
     const logCfg = dbConfig.get("logs.log_fechamento") || {};
     const logUserCfg = dbConfig.get("logs.log_user") || {};
-    const transcriptCfg = dbConfig.get("transcript") || {};
+    const transcriptCfg = dbConfig.get("transcript") || { system: false, staff: true, user: true };
 
     const embedLogsData = dbPersonalizacao.get("embedlogs") || {};
     const embedLogsUserData = dbPersonalizacao.get("embedlogsuser") || {};
@@ -140,16 +141,17 @@ async function fecharTicketPorIA(client, guildId, channelId) {
         .replaceAll("{horatotal}", horatotal);
 
     let transcriptAttachment = null;
+    let transcriptFileName = null;
     try {
       const ticketId = Math.floor(
         1000000000 + Math.random() * 9000000000,
       ).toString();
-      const fileName = `transcript-labz${ticketId}.html`;
+      transcriptFileName = `transcript-labz${ticketId}.html`;
 
       transcriptAttachment = await discordTranscripts.createTranscript(canal, {
         limit: 1000,
         returnBuffer: false,
-        filename: fileName,
+        filename: transcriptFileName,
         footerText: "Labz Application - Transcript",
         saveImages: false,
         poweredBy: false,
@@ -182,6 +184,12 @@ async function fecharTicketPorIA(client, guildId, channelId) {
         let containerLog = new ContainerBuilder().addTextDisplayComponents(
           ...components,
         );
+
+        if (transcriptCfg.staff === true && transcriptAttachment) {
+          containerLog.addFileComponents(
+            new FileBuilder().setURL(`attachment://${transcriptFileName}`),
+          );
+        }
 
         await canalLog
           .send({
@@ -223,6 +231,12 @@ async function fecharTicketPorIA(client, guildId, channelId) {
           let containerUser = new ContainerBuilder().addTextDisplayComponents(
             ...userComponents,
           );
+
+          if (transcriptCfg.user === true && transcriptAttachment) {
+            containerUser.addFileComponents(
+              new FileBuilder().setURL(`attachment://${transcriptFileName}`),
+            );
+          }
 
           await membro
             .send({

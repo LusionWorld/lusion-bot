@@ -9,6 +9,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  FileBuilder,
 } = require("discord.js");
 const path = require("path");
 const { JsonDatabase } = require("wio.db");
@@ -242,7 +243,7 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
       const dbConfig = getConfigDB(guildId);
       const logCfg = dbConfig.get("logs.log_fechamento") || {};
       const logUserCfg = dbConfig.get("logs.log_user") || {};
-      const transcriptCfg = dbConfig.get("transcript") || {};
+      const transcriptCfg = dbConfig.get("transcript") || { system: false, staff: true, user: true };
       const topic = canal.topic || "";
       const autorId = topic.split("Labz - ")[1];
       const dbPersonalizacao = getPersonalizacaoDB(guildId);
@@ -370,6 +371,17 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
           let containerUser = new ContainerBuilder().addTextDisplayComponents(
             ...containerUserComponents,
           );
+
+          if (transcriptCfg.staff === true) {
+            containerLog.addFileComponents(
+              new FileBuilder().setURL(`attachment://${fileName}`),
+            );
+          }
+          if (transcriptCfg.user === true) {
+            containerUser.addFileComponents(
+              new FileBuilder().setURL(`attachment://${fileName}`),
+            );
+          }
 
           if (logCfg.ativo === true && logCfg.canal) {
             const canalLog = guild.channels.cache.get(logCfg.canal);

@@ -3328,6 +3328,7 @@ module.exports = {
       interaction.isChannelSelectMenu() &&
       interaction.customId.startsWith("select_config_botao_categoria_")
     ) {
+      if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
       const botaoId = interaction.customId.split("_").pop();
       const db = getPersonalizacaoDB(interaction.guild.id);
       const botoes = db.get("embedprincipal.botoes") || [];
@@ -3349,6 +3350,7 @@ module.exports = {
       interaction.isChannelSelectMenu() &&
       interaction.customId.startsWith("select_config_select_categoria_")
     ) {
+      if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
       const selectId = interaction.customId.split("_").pop();
       const db = getPersonalizacaoDB(interaction.guild.id);
       const selects = db.get("embedprincipal.selects") || [];
@@ -3403,7 +3405,7 @@ module.exports = {
 
       const { components } = criarEmbedESelectDeBotao(botao, emojis, getEmoji);
 
-      return interaction.editReply({
+      return interaction.update({
         components,
         flags: MessageFlags.IsComponentsV2,
         embeds: [],

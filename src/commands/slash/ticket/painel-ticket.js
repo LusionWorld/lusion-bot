@@ -157,6 +157,12 @@ module.exports = {
       .setStyle(ButtonStyle.Link)
       .setURL('https://discord.gg/MmUB4H3uCM')
 
+    const buttonIdioma = new ButtonBuilder()
+      .setCustomId('config_idioma')
+      .setLabel('Alterar Idioma')
+      .setEmoji(getEmoji(emojis.world))
+      .setStyle(ButtonStyle.Secondary)
+
     const components = [
       new ContainerBuilder().addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
@@ -219,6 +225,13 @@ module.exports = {
               ),
             )
             .setButtonAccessory(buttonSuporte),
+          new SectionBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(
+                '**Alterar Idioma**\nMude o idioma do sistema de tickets',
+              ),
+            )
+            .setButtonAccessory(buttonIdioma),
         ),
     ]
 

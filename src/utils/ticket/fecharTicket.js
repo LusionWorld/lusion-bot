@@ -3,6 +3,7 @@ const {
   TextDisplayBuilder,
   MessageFlags,
   ChannelType,
+  FileBuilder,
 } = require("discord.js");
 
 const fs = require("fs");
@@ -121,7 +122,7 @@ async function fecharTicket(guild, channelId, motivo, client, staffId) {
   const dbConfig = getConfigDB(guildId);
   const logCfg = dbConfig.get("logs.log_fechamento") || {};
   const logUserCfg = dbConfig.get("logs.log_user") || {};
-  const transcriptCfg = dbConfig.get("transcript") || {};
+  const transcriptCfg = dbConfig.get("transcript") || { system: false, staff: true, user: true };
   const dbPersonalizacao = getPersonalizacaoDB(guildId);
   const embedLogsData = dbPersonalizacao.get("embedlogs") || {};
   const embedLogsUserData = dbPersonalizacao.get("embedlogsuser") || {};
@@ -219,6 +220,12 @@ async function fecharTicket(guild, channelId, motivo, client, staffId) {
     ...logComponents,
   );
 
+  if (transcriptCfg.staff === true && transcriptAttachment) {
+    containerLog.addFileComponents(
+      new FileBuilder().setURL(`attachment://${fileName}`),
+    );
+  }
+
   // Monta container de log para usuário
   const userComponents = [
     new TextDisplayBuilder().setContent(
@@ -233,6 +240,12 @@ async function fecharTicket(guild, channelId, motivo, client, staffId) {
   const containerUser = new ContainerBuilder().addTextDisplayComponents(
     ...userComponents,
   );
+
+  if (transcriptCfg.user === true && transcriptAttachment) {
+    containerUser.addFileComponents(
+      new FileBuilder().setURL(`attachment://${fileName}`),
+    );
+  }
 
   // Envia log para canal de staff (com transcript anexado localmente, se ativado)
   if (logCfg.ativo === true && logCfg.canal) {

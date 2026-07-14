@@ -25,10 +25,17 @@ const {
 } = require("discord.js");
 
 const path = require("path");
+const fs = require("fs");
 const { JsonDatabase } = require("wio.db");
 const { set } = require("date-fns");
 const config = require("../../../config.json");
 const Groq = require("groq-sdk");
+
+const _configDataCache = new Map();
+const _personalizacaoCache = new Map();
+const _estacoesCache = new Map();
+const _iaConfigCache = new Map();
+const CONFIG_CACHE_TTL = 30000;
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
@@ -51,6 +58,8 @@ function getOnOffEmojiId(status) {
 }
 
 function getPersonalizacaoDB(guildId) {
+  if (_personalizacaoCache.has(guildId)) return _personalizacaoCache.get(guildId);
+
   const db = new JsonDatabase({
     databasePath: path.resolve(
       __dirname,
@@ -85,6 +94,7 @@ function getPersonalizacaoDB(guildId) {
     }
   });
 
+  _personalizacaoCache.set(guildId, db);
   return db;
 }
 
@@ -93,21 +103,26 @@ function getConfigDB(guildId) {
     throw new Error("GuildId inválido");
   }
 
-  const fs = require("fs");
   const filePath = path.resolve(
     __dirname,
     `../../../banco/ticket/${guildId}/config.json`,
   );
 
   function read() {
+    const now = Date.now();
+    const cached = _configDataCache.get(guildId);
+    if (cached && now - cached.time < CONFIG_CACHE_TTL) return cached.data;
     try {
-      return JSON.parse(fs.readFileSync(filePath, "utf8"));
+      const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      _configDataCache.set(guildId, { data: JSON.parse(JSON.stringify(data)), time: now });
+      return data;
     } catch {
       return {};
     }
   }
 
   function write(data) {
+    _configDataCache.set(guildId, { data: JSON.parse(JSON.stringify(data)), time: Date.now() });
     try {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(data, null, 4), "utf8");
@@ -159,12 +174,15 @@ function getIAConfigDB(guildId) {
   if (!guildId || guildId === "null" || guildId === "undefined") {
     throw new Error("GuildId inválido");
   }
-  return new JsonDatabase({
+  if (_iaConfigCache.has(guildId)) return _iaConfigCache.get(guildId);
+  const db = new JsonDatabase({
     databasePath: path.resolve(
       __dirname,
       `../../../banco/ticket/${guildId}/iaconfig.json`,
     ),
   });
+  _iaConfigCache.set(guildId, db);
+  return db;
 }
 
 function safeParseEstacoes(raw) {
@@ -180,6 +198,8 @@ function safeParseEstacoes(raw) {
 }
 
 function getEstacoesDB(guildId) {
+  if (_estacoesCache.has(guildId)) return _estacoesCache.get(guildId);
+
   const db = new JsonDatabase({
     databasePath: path.resolve(
       __dirname,
@@ -191,6 +211,7 @@ function getEstacoesDB(guildId) {
     db.set("estacoes", JSON.stringify([]));
   }
 
+  _estacoesCache.set(guildId, db);
   return db;
 }
 

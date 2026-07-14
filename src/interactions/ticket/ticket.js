@@ -20,6 +20,7 @@ const {
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
   SeparatorBuilder,
+  FileBuilder,
 } = require("discord.js");
 
 const fs = require("fs");
@@ -778,20 +779,24 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
             const emojiObj = parseEmoji(btn.emoji, interaction.guild);
             if (emojiObj) {
               if (emojiObj.id) {
-                button.setEmoji({
-                  id: emojiObj.id,
-                  name: emojiObj.name,
-                  animated: emojiObj.animated || false,
-                });
+                const emojiExiste =
+                  interaction.guild.emojis.cache.has(emojiObj.id) ||
+                  interaction.client.emojis.cache.has(emojiObj.id) ||
+                  interaction.client.application?.emojis?.cache?.has(emojiObj.id);
+                if (emojiExiste) {
+                  button.setEmoji({
+                    id: emojiObj.id,
+                    name: emojiObj.name,
+                    animated: emojiObj.animated || false,
+                  });
+                }
               } else if (emojiObj.name) {
                 button.setEmoji(emojiObj.name);
               }
-            } else {
+            } else if (!/^\d+$/.test(btn.emoji)) {
               button.setEmoji(btn.emoji);
             }
-          } catch (error) {
-            button.setEmoji(btn.emoji);
-          }
+          } catch (error) {}
         }
 
         return button;
@@ -1955,10 +1960,15 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                       return { name: raw };
                     }
 
+                    const emojiExiste = (id) =>
+                      (guild && guild.emojis.cache.has(id)) ||
+                      interaction.client.emojis.cache.has(id) ||
+                      interaction.client.application?.emojis?.cache?.has(id);
+
                     const match = raw.match(/<(a)?:(\w+):(\d+)>/);
                     if (match) {
                       const emojiId = match[3];
-                      if (guild && guild.emojis.cache.has(emojiId)) {
+                      if (emojiExiste(emojiId)) {
                         return {
                           id: emojiId,
                           name: match[2],
@@ -2011,15 +2021,12 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                             } else if (emojiObj.name) {
                               button.setEmoji(emojiObj.name);
                             }
-                          } else {
-                            button.setEmoji(btn.emoji);
                           }
                         } catch (error) {
                           console.error(
                             "Erro ao processar emoji do botão:",
                             error,
                           );
-                          button.setEmoji(btn.emoji);
                         }
                       }
 
@@ -2556,7 +2563,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           const dbConfig = getConfigDB(guildId);
           const logCfg = dbConfig.get("logs.log_fechamento") || {};
           const logUserCfg = dbConfig.get("logs.log_user") || {};
-          const transcriptCfg = dbConfig.get("transcript") || {};
+          const transcriptCfg = dbConfig.get("transcript") || { system: false, staff: true, user: true };
           const topic = canal.topic || "";
           const autorId = topic.split("Labz - ")[1];
           const dbPersonalizacao = getPersonalizacaoDB(guildId);
@@ -2686,6 +2693,17 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                 new ContainerBuilder().addTextDisplayComponents(
                   ...containerUserComponents,
                 );
+
+              if (transcriptCfg.staff === true) {
+                containerLog.addFileComponents(
+                  new FileBuilder().setURL(`attachment://${fileName}`),
+                );
+              }
+              if (transcriptCfg.user === true) {
+                containerUser.addFileComponents(
+                  new FileBuilder().setURL(`attachment://${fileName}`),
+                );
+              }
 
               const dbPersonalizacaoAvaliacao = getPersonalizacaoDB(guildId);
               const config =
@@ -3048,10 +3066,15 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                         return { name: raw };
                       }
 
+                      const emojiExiste = (id) =>
+                        (guild && guild.emojis.cache.has(id)) ||
+                        interaction.client.emojis.cache.has(id) ||
+                        interaction.client.application?.emojis?.cache?.has(id);
+
                       const match = raw.match(/<(a)?:(\w+):(\d+)>/);
                       if (match) {
                         const emojiId = match[3];
-                        if (guild && guild.emojis.cache.has(emojiId)) {
+                        if (emojiExiste(emojiId)) {
                           return {
                             id: emojiId,
                             name: match[2],
@@ -3104,15 +3127,12 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                               } else if (emojiObj.name) {
                                 button.setEmoji(emojiObj.name);
                               }
-                            } else {
-                              button.setEmoji(btn.emoji);
                             }
                           } catch (error) {
                             console.error(
                               "Erro ao processar emoji do botão:",
                               error,
                             );
-                            button.setEmoji(btn.emoji);
                           }
                         }
 
@@ -4005,7 +4025,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
           const dbConfig = getConfigDB(guildId);
           const logCfg = dbConfig.get("logs.log_fechamento") || {};
           const logUserCfg = dbConfig.get("logs.log_user") || {};
-          const transcriptCfg = dbConfig.get("transcript") || {};
+          const transcriptCfg = dbConfig.get("transcript") || { system: false, staff: true, user: true };
           const topic = canal.topic || "";
           const autorId = topic.split("Labz - ")[1];
           const dbPersonalizacao = getPersonalizacaoDB(guildId);
@@ -4145,6 +4165,17 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                 new ContainerBuilder().addTextDisplayComponents(
                   ...containerUserComponents,
                 );
+
+              if (transcriptCfg.staff === true) {
+                containerLog.addFileComponents(
+                  new FileBuilder().setURL(`attachment://${fileName}`),
+                );
+              }
+              if (transcriptCfg.user === true) {
+                containerUser.addFileComponents(
+                  new FileBuilder().setURL(`attachment://${fileName}`),
+                );
+              }
 
               if (logCfg.ativo === true && logCfg.canal) {
                 const canalLog = guild.channels.cache.get(logCfg.canal);
