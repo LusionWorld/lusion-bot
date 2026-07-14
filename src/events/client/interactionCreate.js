@@ -1,6 +1,15 @@
 const {
   MessageFlags,
 } = require('discord.js')
+const { dim } = require('colorette').createColors({ useColor: true });
+const { log, error: logError } = require('../../utils/logger');
+
+function formatGuildTag(guild) {
+  if (!guild) return 'DM';
+  const count = guild.memberCount ?? 0;
+  const tag = count >= 1000 ? `${Math.floor(count / 1000)}k` : `${count}`;
+  return `${guild.name} | #${tag}`;
+}
 
 module.exports = {
   name: 'interactionCreate',
@@ -13,24 +22,19 @@ module.exports = {
 
     const startTime = Date.now();
     const command = client.slashCommands.get(interaction.commandName);
+    const guildTag = formatGuildTag(interaction.guild);
 
     if (!command) {
-      console.warn(`\n⚠️  Comando não encontrado: ${interaction.commandName}`);
-      console.warn(`   Usuário: ${interaction.user.tag} (${interaction.user.id})`);
-      console.warn(`   Guild: ${interaction.guild?.name || 'DM'}\n`);
+      logError("CMD", `/${interaction.commandName} não encontrado no client.slashCommands  ${dim(interaction.user.tag)}  ${dim(guildTag)}`);
 
       return interaction.reply({
         content: "❌ Comando não encontrado!",
         flags: MessageFlags.Ephemeral,
-
       });
     }
 
     if (command.ownerOnly && !client.config.ownerID?.includes(interaction.user.id)) {
-      console.warn(`\n🚫 Tentativa de uso de comando owner:`);
-      console.warn(`   Comando: ${interaction.commandName}`);
-      console.warn(`   Usuário: ${interaction.user.tag} (${interaction.user.id})`);
-      console.warn(`   Guild: ${interaction.guild?.name || 'DM'}\n`);
+      logError("CMD", `Tentativa de uso de comando owner: /${interaction.commandName}  ${dim(interaction.user.tag)}  ${dim(guildTag)}`);
 
       return interaction.reply({
         content: "🚫 Este comando é restrito ao dono do bot.",
@@ -44,28 +48,15 @@ module.exports = {
       const executionTime = Date.now() - startTime;
       client.stats.commandsExecuted++;
 
-      console.log(`\n✅ Comando executado com sucesso:`);
-      console.log(`   📝 Comando: /${interaction.commandName}`);
-      console.log(`   👤 Usuário: ${interaction.user.tag} (${interaction.user.id})`);
-      console.log(`   🏰 Guild: ${interaction.guild?.name || 'DM'} (${interaction.guild?.id || 'N/A'})`);
-      console.log(`   ⏱️  Tempo: ${executionTime}ms`);
-      console.log(`   📊 Total executados: ${client.stats.commandsExecuted}\n`);
+      log("CMD", `/${interaction.commandName}  ${dim(interaction.user.tag)}  ${dim(guildTag)}  ${executionTime}ms  ${dim("executados " + client.stats.commandsExecuted)}`);
 
     } catch (error) {
+      if (error?.code === 10062 || error?.code === 40060) return;
+
       client.stats.errorsCount++;
       const executionTime = Date.now() - startTime;
 
-      console.error(`\n❌ ════════ ERRO NO COMANDO ════════`);
-      console.error(`🕐 Timestamp: ${new Date().toISOString()}`);
-      console.error(`📝 Comando: /${interaction.commandName}`);
-      console.error(`👤 Usuário: ${interaction.user.tag} (${interaction.user.id})`);
-      console.error(`🏰 Guild: ${interaction.guild?.name || 'DM'} (${interaction.guild?.id || 'N/A'})`);
-      console.error(`⏱️  Tempo até erro: ${executionTime}ms`);
-      console.error(`📛 Tipo: ${error.name}`);
-      console.error(`💬 Mensagem: ${error.message}`);
-      console.error(`📍 Stack:\n${error.stack}`);
-      console.error(`📊 Total de erros: ${client.stats.errorsCount}`);
-      console.error('═══════════════════════════════════════\n');
+      logError("CMD", `/${interaction.commandName}  ${dim(interaction.user.tag)}  ${dim(guildTag)}  ${executionTime}ms\n${error.stack}`);
 
       const errorMessage = {
         content: "❌ Ocorreu um erro ao executar este comando.",
