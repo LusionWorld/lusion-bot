@@ -20,7 +20,9 @@ function getEmoji(raw) {
 
 module.exports = {
   name: 'painel-moderacao',
+  nameKey: 'cmd_painel_moderacao_name',
   description: 'Moderation panel.',
+  descriptionKey: 'cmd_painel_moderacao_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 
@@ -78,7 +80,7 @@ module.exports = {
             btn
               .setCustomId('onboarding_painel')
               .setLabel('Onboarding')
-              .setEmoji(getEmoji(emojis.bell))
+              .setEmoji(getEmoji(emojis.celebration))
               .setStyle(ButtonStyle.Secondary)
           )
       )

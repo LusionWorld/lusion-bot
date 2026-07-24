@@ -28,16 +28,22 @@ function get(sql, params = []) {
 const ready = (async () => {
   await run(`
     CREATE TABLE IF NOT EXISTS onboarding_config (
-      guild_id  TEXT PRIMARY KEY,
-      ativo     INTEGER DEFAULT 0,
-      descricao TEXT,
-      imagem    TEXT,
-      thumbnail TEXT,
-      footer    TEXT,
-      cor       TEXT,
-      links     TEXT DEFAULT '[]'
+      guild_id         TEXT PRIMARY KEY,
+      ativo            INTEGER DEFAULT 0,
+      descricao        TEXT,
+      imagem           TEXT,
+      thumbnail        TEXT,
+      footer           TEXT,
+      cor              TEXT,
+      links            TEXT DEFAULT '[]',
+      auto_roles_ativo INTEGER DEFAULT 0,
+      auto_roles       TEXT DEFAULT '[]'
     )
   `)
+
+  // Migrations for existing DBs
+  await run(`ALTER TABLE onboarding_config ADD COLUMN auto_roles_ativo INTEGER DEFAULT 0`).catch(() => {})
+  await run(`ALTER TABLE onboarding_config ADD COLUMN auto_roles       TEXT    DEFAULT '[]'`).catch(() => {})
 })()
 
 ready.catch(err => console.error('❌ Error initializing onboarding database:', err))
@@ -49,6 +55,7 @@ async function getConfig(guildId) {
   return {
     ...row,
     links: row.links ? JSON.parse(row.links) : [],
+    auto_roles: row.auto_roles ? JSON.parse(row.auto_roles) : [],
   }
 }
 
@@ -82,4 +89,26 @@ async function toggleAtivo(guildId) {
   return novoAtivo === 1
 }
 
-module.exports = { getConfig, saveConfig, toggleAtivo }
+async function toggleAutoRoles(guildId) {
+  await ready
+  const config = await getConfig(guildId)
+  const novoAtivo = config?.auto_roles_ativo ? 0 : 1
+  await run(
+    `INSERT INTO onboarding_config (guild_id, auto_roles_ativo) VALUES (?, ?)
+     ON CONFLICT(guild_id) DO UPDATE SET auto_roles_ativo = excluded.auto_roles_ativo`,
+    [guildId, novoAtivo]
+  )
+  return novoAtivo === 1
+}
+
+async function setAutoRoles(guildId, roleIds) {
+  await ready
+  const value = JSON.stringify(roleIds || [])
+  await run(
+    `INSERT INTO onboarding_config (guild_id, auto_roles) VALUES (?, ?)
+     ON CONFLICT(guild_id) DO UPDATE SET auto_roles = excluded.auto_roles`,
+    [guildId, value]
+  )
+}
+
+module.exports = { getConfig, saveConfig, toggleAtivo, toggleAutoRoles, setAutoRoles }

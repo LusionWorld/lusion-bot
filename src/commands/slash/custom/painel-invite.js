@@ -19,7 +19,9 @@ function getEmoji(raw) {
 
 module.exports = {
   name: 'painel-invite',
+  nameKey: 'cmd_painel_invite_name',
   description: 'Invite tracker management panel.',
+  descriptionKey: 'cmd_painel_invite_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 

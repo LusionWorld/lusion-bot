@@ -1099,14 +1099,21 @@ module.exports = {
       if (!escolhido) return interaction.deferUpdate().catch(() => {});
       setGuildLocale(interaction.guildId, escolhido);
 
+      try {
+        const { resyncGuildCommands } = require("../../handlers/slashHandler");
+        await resyncGuildCommands(interaction.client, interaction.guildId);
+      } catch {}
+
       const container = new ContainerBuilder()
         .setAccentColor(0xffffff)
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `${emojis.check} Idioma alterado`,
+            t("idioma_alterado_msg_titulo", interaction.guildId),
           ),
           new TextDisplayBuilder().setContent(
-            `O idioma do sistema de tickets foi alterado para **${LOCALE_LABELS[escolhido]}**.`,
+            t("idioma_alterado_msg_desc", interaction.guildId, {
+              idioma: LOCALE_LABELS[escolhido],
+            }),
           ),
         )
         .addSeparatorComponents(

@@ -19,12 +19,36 @@ function isValidURL(str) {
   try { new URL(str); return true } catch { return false }
 }
 
+async function assignAutoRoles(member, config) {
+  if (!config || config.auto_roles_ativo !== 1) return
+  const roleIds = config.auto_roles || []
+  if (!roleIds.length) return
+
+  const validRoleIds = roleIds.filter(id => member.guild.roles.cache.has(id))
+  if (!validRoleIds.length) return
+
+  try {
+    await member.roles.add(validRoleIds)
+  } catch (err) {
+    console.error('[onboarding] Error assigning auto roles:', err.message)
+  }
+}
+
 module.exports = {
   name: 'guildMemberAdd',
 
   async execute(client, member) {
+    let config = null
     try {
-      const config = await db.getConfig(member.guild.id)
+      config = await db.getConfig(member.guild.id)
+    } catch (err) {
+      console.error('[onboarding] Error loading config:', err.message)
+      return
+    }
+
+    await assignAutoRoles(member, config)
+
+    try {
       if (!config || config.ativo !== 1) return
 
       const accentColor =

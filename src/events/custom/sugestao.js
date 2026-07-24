@@ -51,7 +51,7 @@ module.exports = {
 
             const sugestaoId = `sugestao_${Date.now()}`
             const imageAttachments = message.attachments.filter(att => att.contentType?.startsWith('image/'))
-            const conteudo = message.content || 'Sugestão por imagem'
+            const conteudo = message.content || 'Suggestion with image'
             const hasImages = imageAttachments.size > 0
 
             const imageUrls = []
@@ -63,7 +63,7 @@ module.exports = {
 
             const container = new ContainerBuilder()
                 .addTextDisplayComponents((text) =>
-                    text.setContent(`${emojis.message} **Sugestão de ${message.author}**`)
+                    text.setContent(`${emojis.message} **Suggestion from ${message.author}**`)
                 )
                 .addSeparatorComponents((sep) =>
                     sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
@@ -80,7 +80,7 @@ module.exports = {
                     .addMediaGalleryComponents((gallery) => {
                         imageUrls.forEach((url, index) => {
                             gallery.addItems((item) =>
-                                item.setURL(url).setDescription(`Imagem ${index + 1} da sugestão`)
+                                item.setURL(url).setDescription(`Suggestion image ${index + 1}`)
                             )
                         })
                         return gallery
@@ -92,7 +92,7 @@ module.exports = {
                     sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
                 )
                 .addTextDisplayComponents((text) =>
-                    text.setContent(`${emojis.sparks} **Votação**`)
+                    text.setContent(`🚀 **Voting**`)
                 )
                 .addActionRowComponents((row) =>
                     row.setComponents(
@@ -112,13 +112,14 @@ module.exports = {
                     sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
                 )
                 .addTextDisplayComponents((text) =>
-                    text.setContent(`**Lusion**`)
+                    text.setContent(`**Suggestion Status**`)
                 )
                 .addActionRowComponents((row) =>
                     row.setComponents(
                         new ButtonBuilder()
                             .setCustomId(`sugestao_equipe_${sugestaoId}`)
-                            .setLabel('Equipe')
+                            .setLabel('Staff')
+                            .setEmoji(getEmoji(emojis.settings))
                             .setStyle(ButtonStyle.Secondary)
                     )
                 )
@@ -139,29 +140,7 @@ module.exports = {
             const thread = await sugestaoMsg.startThread({
                 name: `💡 ${conteudo.substring(0, 80)}`,
                 autoArchiveDuration: 1440,
-                reason: 'Tópico de sugestão criado automaticamente'
-            })
-
-            const threadContainer = new ContainerBuilder()
-                .addTextDisplayComponents((text) =>
-                    text.setContent(`${emojis.thread} **Tópico de Discussão**`)
-                )
-                .addSeparatorComponents((sep) =>
-                    sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-                )
-                .addTextDisplayComponents((text) =>
-                    text.setContent(`${emojis.user} **Autor:** ${message.author}`)
-                )
-                // .addSeparatorComponents((sep) =>
-                //     sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small)
-                // )
-                // .addTextDisplayComponents((text) =>
-                //     text.setContent(`Use este espaço para discutir essa sugestão!\n\n⚠️ Mantenha o respeito e a civilidade.`)
-                // )
-
-            await thread.send({
-                components: [threadContainer],
-                flags: MessageFlags.IsComponentsV2
+                reason: 'Suggestion discussion thread created automatically'
             })
 
             dbSugestoes.set(sugestaoId, {
@@ -178,22 +157,20 @@ module.exports = {
                 criadaEm: Date.now()
             })
 
-            console.log(`✅ Sugestão criada: ${sugestaoId} com ${imageUrls.length} imagem(ns)`)
-
         } catch (error) {
-            console.error('❌ Erro ao processar sugestão:', error)
+            console.error('❌ Error processing suggestion:', error)
 
             try {
                 const errorContainer = new ContainerBuilder()
                     .setAccentColor(0xFF0000)
                     .addTextDisplayComponents((text) =>
-                        text.setContent(`❌ **Erro**`)
+                        text.setContent(`❌ **Error**`)
                     )
                     .addSeparatorComponents((sep) =>
                         sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
                     )
                     .addTextDisplayComponents((text) =>
-                        text.setContent(`${message.author}, ocorreu um erro ao processar sua sugestão. Tente novamente.`)
+                        text.setContent(`${message.author}, an error occurred while processing your suggestion. Please try again.`)
                     )
 
                 await message.channel.send({

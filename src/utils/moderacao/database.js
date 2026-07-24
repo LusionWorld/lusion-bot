@@ -34,13 +34,15 @@ const ready = (async () => {
       canal_ban        TEXT,
       canal_kick       TEXT,
       canal_msg_delete TEXT,
-      canal_msg_edit   TEXT
+      canal_msg_edit   TEXT,
+      canal_timeout    TEXT
     )
   `)
 
   // Migrations for existing DBs
   await run(`ALTER TABLE mod_config ADD COLUMN canal_msg_delete TEXT`).catch(() => {})
   await run(`ALTER TABLE mod_config ADD COLUMN canal_msg_edit   TEXT`).catch(() => {})
+  await run(`ALTER TABLE mod_config ADD COLUMN canal_timeout    TEXT`).catch(() => {})
 })()
 
 ready.catch(err => console.error('❌ Erro ao inicializar banco de moderação:', err))

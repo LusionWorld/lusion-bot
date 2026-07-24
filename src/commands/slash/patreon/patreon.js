@@ -5,6 +5,7 @@ const { buildConfigHub } = require('../../../utils/patreon/manager')
 module.exports = {
   name: 'patreon',
   description: 'Open the Patreon system settings panel',
+  descriptionKey: 'cmd_patreon_desc',
   default_member_permissions: PermissionsBitField.Flags.ManageGuild.toString(),
 
   run: async (client, interaction) => {

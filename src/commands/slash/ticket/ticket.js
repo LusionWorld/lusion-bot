@@ -77,14 +77,7 @@ async function garantirConfigsExistem(guildId) {
 module.exports = {
   name: 'ticket',
   description: 'Enviar painel de tickets com botão ou select',
-  name_localizations: {
-    'en-US': 'ticket',
-    'es-ES': 'ticket',
-  },
-  description_localizations: {
-    'en-US': 'Send a ticket panel with button or select menu',
-    'es-ES': 'Enviar un panel de tickets con botón o select',
-  },
+  descriptionKey: 'cmd_ticket_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 
@@ -92,23 +85,19 @@ module.exports = {
     {
       name: 'tipo',
       description: 'Tipo de painel para abrir ticket',
-      nameLocalizations: { 'en-US': 'type', 'es-ES': 'tipo' },
-      descriptionLocalizations: {
-        'en-US': 'Panel type to open ticket',
-        'es-ES': 'Tipo de panel para abrir ticket',
-      },
+      descriptionKey: 'opt_ticket_tipo_desc',
       type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
         {
           name: 'Botão',
           value: 'botao',
-          nameLocalizations: { 'en-US': 'Button', 'es-ES': 'Botón' },
+          nameKey: 'choice_ticket_tipo_botao',
         },
         {
           name: 'Select',
           value: 'select',
-          nameLocalizations: { 'en-US': 'Select', 'es-ES': 'Select' },
+          nameKey: 'choice_ticket_tipo_select',
         },
       ],
     },

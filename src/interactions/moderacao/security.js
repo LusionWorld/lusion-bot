@@ -63,7 +63,7 @@ async function buildMainPanel(guild) {
       s.addTextDisplayComponents(td =>
         td.setContent(`${emojis.lock} **Link Control**\nBlock invites, shorteners, custom domains & repeated links`)
       ).setButtonAccessory(btn =>
-        btn.setCustomId('sec_link').setLabel('Configure').setEmoji(getEmoji(emojis.arrowr)).setStyle(ButtonStyle.Secondary)
+        btn.setCustomId('sec_link').setLabel('Configure').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Secondary)
       )
     )
     .addSeparatorComponents(sep => sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
@@ -71,7 +71,7 @@ async function buildMainPanel(guild) {
       s.addTextDisplayComponents(td =>
         td.setContent(`${emojis.lightning} **Flood Detection**\nDetect spam, mass mentions & message floods`)
       ).setButtonAccessory(btn =>
-        btn.setCustomId('sec_flood').setLabel('Configure').setEmoji(getEmoji(emojis.arrowr)).setStyle(ButtonStyle.Secondary)
+        btn.setCustomId('sec_flood').setLabel('Configure').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Secondary)
       )
     )
     .addSeparatorComponents(sep => sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
@@ -79,15 +79,15 @@ async function buildMainPanel(guild) {
       s.addTextDisplayComponents(td =>
         td.setContent(`${emojis.users} **New Member Restrictions**\nControl what new members can do until trusted`)
       ).setButtonAccessory(btn =>
-        btn.setCustomId('sec_newmember').setLabel('Configure').setEmoji(getEmoji(emojis.arrowr)).setStyle(ButtonStyle.Secondary)
+        btn.setCustomId('sec_newmember').setLabel('Configure').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Secondary)
       )
     )
     .addSeparatorComponents(sep => sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
     .addSectionComponents(s =>
       s.addTextDisplayComponents(td =>
-        td.setContent(`${emojis.bell} **Alerts & Notifications**\nChoose what events trigger staff alerts`)
+        td.setContent(`${emojis.activity} **Alerts & Notifications**\nChoose what events trigger staff alerts`)
       ).setButtonAccessory(btn =>
-        btn.setCustomId('sec_alerts').setLabel('Configure').setEmoji(getEmoji(emojis.arrowr)).setStyle(ButtonStyle.Secondary)
+        btn.setCustomId('sec_alerts').setLabel('Configure').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Secondary)
       )
     )
     .addSeparatorComponents(sep => sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
@@ -95,7 +95,7 @@ async function buildMainPanel(guild) {
       s.addTextDisplayComponents(td =>
         td.setContent(`${emojis.danger} **Server Protection**\nAuto-punish members who mass-delete channels or roles`)
       ).setButtonAccessory(btn =>
-        btn.setCustomId('sec_protect').setLabel('Configure').setEmoji(getEmoji(emojis.arrowr)).setStyle(ButtonStyle.Secondary)
+        btn.setCustomId('sec_protect').setLabel('Configure').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Secondary)
       )
     )
     .addSeparatorComponents(sep => sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
@@ -484,7 +484,7 @@ async function buildAlertsPanel(guild, msg = null) {
   if (cfg.alert_channel) alertSel.setDefaultChannels([cfg.alert_channel])
 
   const lines = [
-    `${emojis.bell} **Alerts & Notifications** | ${guild.name}`,
+    `${emojis.activity} **Alerts & Notifications** | ${guild.name}`,
     '',
     `${emojis.announcementc} **Alert Channel:** ${alertChannel}`,
     '',

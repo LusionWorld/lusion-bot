@@ -74,8 +74,6 @@ async function processRoleChange(client, originalOldMember, newMember) {
   else if (newHighest.tier_level > oldHighest.tier_level) eventType = 'upgrade'
   else eventType = 'downgrade'
 
-  console.log(`[Supporter] ${guild.name} | ${newMember.user.tag} | ${eventType} | ${oldHighest?.tier_name ?? 'none'} → ${newHighest?.tier_name ?? 'none'}`)
-
   // Update monthly stats
   const statKey = eventType === 'new_supporter' ? 'new_supporter' : eventType
   await conn.incrementStat(statKey).catch(() => {})

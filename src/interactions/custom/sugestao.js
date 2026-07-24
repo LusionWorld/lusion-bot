@@ -23,21 +23,24 @@ function getEmoji(raw) {
 }
 
 const STATUS_MAP = {
-    em_analise: { label: 'Em análise', emoji: emojis.clock,   dbValue: 'em_analise' },
-    aceito:     { label: 'Aceito',     emoji: emojis.success, dbValue: 'aceito'     },
-    rejeitado:  { label: 'Rejeitado',  emoji: emojis.cancel,  dbValue: 'rejeitado'  },
-    nao_agora:  { label: 'Não agora',  emoji: emojis.warning, dbValue: 'nao_agora'  },
+    em_analise:      { label: 'In Review',       emoji: emojis.clock,     dbValue: 'em_analise' },
+    aceito:          { label: 'Accepted',        emoji: emojis.success,   dbValue: 'aceito' },
+    rejeitado:       { label: 'Rejected',        emoji: emojis.cancel,    dbValue: 'rejeitado' },
+    nao_agora:       { label: 'Not Now',         emoji: emojis.warning,   dbValue: 'nao_agora' },
+    planejado:       { label: 'Planned',         emoji: emojis.calendar,  dbValue: 'planejado' },
+    em_progresso:    { label: 'In Progress',     emoji: emojis.refresh,   dbValue: 'em_progresso' },
+    ja_existe:       { label: 'Already Exists',  emoji: emojis.info,      dbValue: 'ja_existe' },
+    implementado:    { label: 'Implemented',     emoji: emojis.check,     dbValue: 'implementado' },
 }
 
 module.exports = {
     async execute(_client, interaction) {
-        // ── Botão "Equipe" na sugestão — abre modal com StringSelect ──────────
         if (interaction.isButton() && interaction.customId.startsWith('sugestao_equipe_')) {
             const sugestaoId = interaction.customId.replace('sugestao_equipe_', '')
 
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({
-                    content: '❌ Apenas **Administradores** podem gerenciar sugestões.',
+                    content: '❌ Only **Administrators** can manage suggestions.',
                     flags: MessageFlags.Ephemeral,
                 })
             }
@@ -51,53 +54,42 @@ module.exports = {
 
             if (!sugestao) {
                 return interaction.reply({
-                    content: '❌ Sugestão não encontrada.',
+                    content: '❌ Suggestion not found.',
                     flags: MessageFlags.Ephemeral,
                 })
             }
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('sugestao_status_select')
-                .setPlaceholder('Selecione o status...')
+                .setPlaceholder('Select a status...')
                 .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('Em análise')
-                        .setValue(`em_analise__${sugestaoId}`)
-                        .setEmoji(getEmoji(emojis.clock)),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('Aceito')
-                        .setValue(`aceito__${sugestaoId}`)
-                        .setEmoji(getEmoji(emojis.success)),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('Rejeitado')
-                        .setValue(`rejeitado__${sugestaoId}`)
-                        .setEmoji(getEmoji(emojis.cancel)),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('Não agora')
-                        .setValue(`nao_agora__${sugestaoId}`)
-                        .setEmoji(getEmoji(emojis.warning)),
+                    Object.values(STATUS_MAP).map(status =>
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(status.label)
+                            .setValue(`${status.dbValue}__${sugestaoId}`)
+                            .setEmoji(getEmoji(status.emoji))
+                    )
                 )
 
             const label = new LabelBuilder()
-                .setLabel('Status da Sugestão')
-                .setDescription('Selecione o novo status para esta sugestão')
+                .setLabel('Suggestion Status')
+                .setDescription('Select the new status for this suggestion')
                 .setStringSelectMenuComponent(selectMenu)
 
             const modal = new ModalBuilder()
                 .setCustomId(`sugestao_status_modal_${sugestaoId}`)
-                .setTitle('Definir Status')
+                .setTitle('Set Status')
                 .addLabelComponents(label)
 
             return interaction.showModal(modal)
         }
 
-        // ── Modal submit — aplica o status selecionado ─────────────────────────
         if (interaction.isModalSubmit() && interaction.customId.startsWith('sugestao_status_modal_')) {
             const sugestaoId = interaction.customId.replace('sugestao_status_modal_', '')
 
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({
-                    content: '❌ Apenas **Administradores** podem gerenciar sugestões.',
+                    content: '❌ Only **Administrators** can manage suggestions.',
                     flags: MessageFlags.Ephemeral,
                 })
             }
@@ -105,7 +97,6 @@ module.exports = {
             const selectedValue = interaction.fields.getField('sugestao_status_select').values?.[0]
             if (!selectedValue) return
 
-            // value format: <statusKey>__<sugestaoId>
             const [statusKey] = selectedValue.split('__')
             const statusInfo = STATUS_MAP[statusKey]
             if (!statusInfo) return
@@ -119,14 +110,13 @@ module.exports = {
 
             if (!sugestao) {
                 return interaction.reply({
-                    content: '❌ Sugestão não encontrada.',
+                    content: '❌ Suggestion not found.',
                     flags: MessageFlags.Ephemeral,
                 })
             }
 
             db.set(`${sugestaoId}.status`, statusInfo.dbValue)
 
-            // Atualiza a mensagem original da sugestão no canal
             try {
                 const msg = await interaction.channel.messages.fetch(sugestao.mensagemId).catch(() => null)
                 if (msg) {
@@ -135,7 +125,7 @@ module.exports = {
 
                     const updatedContainer = new ContainerBuilder()
                         .addTextDisplayComponents((text) =>
-                            text.setContent(`${emojis.message} **Sugestão de <@${sugestao.autorId}>**`)
+                            text.setContent(`${emojis.message} **Suggestion from <@${sugestao.autorId}>**`)
                         )
                         .addSeparatorComponents((sep) =>
                             sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
@@ -152,7 +142,7 @@ module.exports = {
                             .addMediaGalleryComponents((gallery) => {
                                 sugestao.imageUrls.forEach((url, index) => {
                                     gallery.addItems((item) =>
-                                        item.setURL(url).setDescription(`Imagem ${index + 1} da sugestão`)
+                                        item.setURL(url).setDescription(`Suggestion image ${index + 1}`)
                                     )
                                 })
                                 return gallery
@@ -164,7 +154,7 @@ module.exports = {
                             sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
                         )
                         .addTextDisplayComponents((text) =>
-                            text.setContent(`${emojis.sparks} **Votação**`)
+                            text.setContent(`🚀 **Voting**`)
                         )
                         .addActionRowComponents((row) =>
                             row.setComponents(
@@ -186,7 +176,7 @@ module.exports = {
                             sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
                         )
                         .addTextDisplayComponents((text) =>
-                            text.setContent(`**Lusion**`)
+                            text.setContent(`**Suggestion Status**`)
                         )
                         .addActionRowComponents((row) =>
                             row.setComponents(
@@ -212,7 +202,7 @@ module.exports = {
             } catch { }
 
             return interaction.reply({
-                content: `${statusInfo.emoji} Status atualizado para **${statusInfo.label}**!`,
+                content: `${statusInfo.emoji} Status updated to **${statusInfo.label}**!`,
                 flags: MessageFlags.Ephemeral,
             })
         }

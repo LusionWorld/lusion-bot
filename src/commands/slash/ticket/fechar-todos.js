@@ -84,26 +84,16 @@ async function getTicketsAbertos(guild) {
 
 module.exports = {
   name: "fechar-todos",
+  nameKey: "cmd_fechar_todos_name",
   description: "Fecha todos os tickets abertos do servidor de uma vez.",
-  name_localizations: {
-    "en-US": "close-all",
-    "es-ES": "cerrar-todos",
-  },
-  description_localizations: {
-    "en-US": "Closes all open tickets in the server at once.",
-    "es-ES": "Cierra todos los tickets abiertos del servidor de una vez.",
-  },
+  descriptionKey: "cmd_fechar_todos_desc",
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
   options: [
     {
       name: "motivo",
       description: "Motivo do fechamento em massa (opcional)",
-      nameLocalizations: { "en-US": "reason", "es-ES": "motivo" },
-      descriptionLocalizations: {
-        "en-US": "Reason for the bulk closure (optional)",
-        "es-ES": "Motivo del cierre masivo (opcional)",
-      },
+      descriptionKey: "opt_fechar_todos_motivo_desc",
       type: ApplicationCommandOptionType.String,
       required: false,
     },

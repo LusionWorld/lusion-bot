@@ -5,6 +5,7 @@ const { buildConfigHub } = require('../../../utils/faq/manager')
 module.exports = {
   name: 'faq',
   description: 'Open the FAQ system settings panel',
+  descriptionKey: 'cmd_faq_desc',
   default_member_permissions: PermissionsBitField.Flags.ManageGuild.toString(),
 
   run: async (client, interaction) => {

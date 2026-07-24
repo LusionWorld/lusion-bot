@@ -54,7 +54,7 @@ function buildMainPanel(guild) {
           btn
             .setCustomId('onboarding_painel')
             .setLabel('Onboarding')
-            .setEmoji(getEmoji(emojis.bell))
+            .setEmoji(getEmoji(emojis.celebration))
             .setStyle(ButtonStyle.Secondary)
         )
     )
@@ -85,14 +85,16 @@ async function buildLogsPanel(guild, msg = null) {
   const canalKick      = config?.canal_kick
   const canalMsgDelete = config?.canal_msg_delete
   const canalMsgEdit   = config?.canal_msg_edit
+  const canalTimeout   = config?.canal_timeout
 
   const lines = [
-    `${emojis.online}    **Member joined:** ${canalEntrou ? `<#${canalEntrou}>` : 'Not configured'}`,
+    `${emojis.online} **Member joined:** ${canalEntrou ? `<#${canalEntrou}>` : 'Not configured'}`,
     `${emojis.invisible} **Member left:** ${canalSaiu ? `<#${canalSaiu}>` : 'Not configured'}`,
-    `${emojis.hammer}    **Member banned:** ${canalBan ? `<#${canalBan}>` : 'Not configured'}`,
-    `${emojis.remove}    **Member kicked:** ${canalKick ? `<#${canalKick}>` : 'Not configured'}`,
-    `${emojis.trashcan}  **Message deleted:** ${canalMsgDelete ? `<#${canalMsgDelete}>` : 'Not configured'}`,
-    `${emojis.brush}     **Message edited:** ${canalMsgEdit ? `<#${canalMsgEdit}>` : 'Not configured'}`,
+    `${emojis.hammer} **Member banned:** ${canalBan ? `<#${canalBan}>` : 'Not configured'}`,
+    `${emojis.remove} **Member kicked:** ${canalKick ? `<#${canalKick}>` : 'Not configured'}`,
+    `${emojis.timedout} **Member timed out:** ${canalTimeout ? `<#${canalTimeout}>` : 'Not configured'}`,
+    `${emojis.trashcan} **Message deleted:** ${canalMsgDelete ? `<#${canalMsgDelete}>` : 'Not configured'}`,
+    `${emojis.brush} **Message edited:** ${canalMsgEdit ? `<#${canalMsgEdit}>` : 'Not configured'}`,
     ...(msg ? ['', msg] : []),
   ]
 
@@ -148,6 +150,15 @@ async function buildLogsPanel(guild, msg = null) {
     .addActionRowComponents(row =>
       row.setComponents(
         new ChannelSelectMenuBuilder()
+          .setCustomId('mod_set_canal_timeout')
+          .setPlaceholder('Channel for: Member timed out')
+          .addChannelTypes(ChannelType.GuildText)
+          .setMinValues(1).setMaxValues(1)
+      )
+    )
+    .addActionRowComponents(row =>
+      row.setComponents(
+        new ChannelSelectMenuBuilder()
           .setCustomId('mod_set_canal_msg_delete')
           .setPlaceholder('Channel for: Message deleted')
           .addChannelTypes(ChannelType.GuildText)
@@ -180,10 +191,11 @@ async function buildLogsPanel(guild, msg = null) {
 const BUTTON_IDS  = ['mod_logs', 'mod_voltar']
 const SELECT_IDS  = [
   'mod_set_canal_entrou', 'mod_set_canal_saiu', 'mod_set_canal_ban', 'mod_set_canal_kick',
-  'mod_set_canal_msg_delete', 'mod_set_canal_msg_edit',
+  'mod_set_canal_timeout', 'mod_set_canal_msg_delete', 'mod_set_canal_msg_edit',
 ]
 
 module.exports = {
+  buildMainPanel,
   async execute(_client, interaction) {
     const isMod =
       (interaction.isButton() && BUTTON_IDS.includes(interaction.customId)) ||
@@ -223,6 +235,7 @@ module.exports = {
         mod_set_canal_saiu:       'canal_saiu',
         mod_set_canal_ban:        'canal_ban',
         mod_set_canal_kick:       'canal_kick',
+        mod_set_canal_timeout:    'canal_timeout',
         mod_set_canal_msg_delete: 'canal_msg_delete',
         mod_set_canal_msg_edit:   'canal_msg_edit',
       }
@@ -232,6 +245,7 @@ module.exports = {
         mod_set_canal_saiu:       'Member Left',
         mod_set_canal_ban:        'Member Banned',
         mod_set_canal_kick:       'Member Kicked',
+        mod_set_canal_timeout:    'Member Timed Out',
         mod_set_canal_msg_delete: 'Message Deleted',
         mod_set_canal_msg_edit:   'Message Edited',
       }

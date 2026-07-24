@@ -21,6 +21,7 @@ function getEmoji(raw) {
 module.exports = {
   name: 'announcement',
   description: 'Server announcement management system.',
+  descriptionKey: 'cmd_anuncio_desc',
   type: Discord.ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 

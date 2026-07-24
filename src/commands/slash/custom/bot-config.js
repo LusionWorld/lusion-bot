@@ -24,6 +24,7 @@ function getEmoji(raw) {
 module.exports = {
   name: 'bot-config',
   description: 'Painel de controle do bot.',
+  descriptionKey: 'cmd_bot_config_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 

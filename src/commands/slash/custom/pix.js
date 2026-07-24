@@ -95,6 +95,7 @@ function converterCorHex(cor) {
 module.exports = {
   name: "pix",
   description: "Gerar QR Code e código copia-e-cola do Pix",
+  descriptionKey: "cmd_pix_desc",
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
 
@@ -102,12 +103,14 @@ module.exports = {
     {
       name: "valor",
       description: "Valor em reais",
+      descriptionKey: "opt_pix_valor_desc",
       type: ApplicationCommandOptionType.Number,
       required: false,
     },
     {
       name: "descricao",
       description: "Descrição/Mensagem",
+      descriptionKey: "opt_pix_descricao_desc",
       type: ApplicationCommandOptionType.String,
       required: false,
     },

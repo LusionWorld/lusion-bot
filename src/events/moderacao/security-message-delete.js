@@ -1,5 +1,6 @@
 const { ContainerBuilder, SeparatorSpacingSize, MessageFlags, AuditLogEvent } = require('discord.js')
 const db = require('../../utils/moderacao/database')
+const messageLog = require('../../utils/moderacao/message-log-database')
 const emojis = require('../../utils/emojis/emojis.json')
 
 module.exports = {
@@ -9,41 +10,51 @@ module.exports = {
     try {
       const guild = message.guild
       if (!guild) return
-      if (message.author?.bot) return
 
       const config = await db.getConfig(guild.id)
       const canalId = config?.canal_msg_delete
       if (!canalId) return
 
-      const channel = await guild.channels.fetch(canalId).catch(() => null)
-      if (!channel?.isTextBased()) return
+      const snapshot = await messageLog.getMessage(message.id)
 
-      const author = message.author
-        ? `<@${message.author.id}> \`${message.author.id}\``
+      const authorId = snapshot?.author_id ?? message.author?.id ?? null
+      const authorIsBot = snapshot ? !!snapshot.author_bot : !!message.author?.bot
+      const author = authorId
+        ? `<@${authorId}> \`${authorId}\``
         : `${emojis.warning} Unknown (uncached)`
 
-      const content = (message.partial || !message.content)
-        ? `${emojis.warning} *Content unavailable (uncached message)*`
-        : message.content.length > 500
-          ? `${message.content.slice(0, 500)}...`
-          : message.content
+      const rawContent = snapshot?.content ?? (!message.partial ? message.content : null)
+      const content = rawContent
+        ? (rawContent.length > 500 ? `${rawContent.slice(0, 500)}...` : rawContent)
+        : `${emojis.warning} *Content unavailable (uncached message)*`
 
       await new Promise(r => setTimeout(r, 1000))
 
-      // Audit logs only record an entry when someone deletes another member's message
-      let deletedBy = message.author ? `<@${message.author.id}> *(self-deleted)*` : `${emojis.warning} Unknown`
+      let executorId = null
       try {
-        const logs = await guild.fetchAuditLogs({ type: AuditLogEvent.MessageDelete, limit: 1 })
-        const entry = logs.entries.first()
-        if (
-          entry &&
-          (Date.now() - entry.createdTimestamp) < 5_000 &&
-          entry.extra?.channel?.id === message.channelId &&
-          (!message.author || entry.target?.id === message.author.id)
-        ) {
-          deletedBy = `<@${entry.executor.id}> \`${entry.executor.id}\``
-        }
+        const logs = await guild.fetchAuditLogs({ type: AuditLogEvent.MessageDelete, limit: 5 })
+        const entry = logs.entries.find(e =>
+          (Date.now() - e.createdTimestamp) < 10_000 &&
+          e.extra?.channel?.id === message.channelId &&
+          (!authorId || e.target?.id === authorId)
+        )
+        if (entry) executorId = entry.executor.id
       } catch {}
+
+      if (!executorId && authorIsBot) {
+        return
+      }
+
+      const deletedBy = executorId
+        ? `<@${executorId}> \`${executorId}\``
+        : authorId
+          ? `<@${authorId}> *(self-deleted)*`
+          : `${emojis.warning} Unknown`
+
+      await messageLog.markDeleted(message.id, executorId ?? authorId ?? null)
+
+      const channel = await guild.channels.fetch(canalId).catch(() => null)
+      if (!channel?.isTextBased()) return
 
       const container = new ContainerBuilder()
         .setAccentColor(0x9B59B6) // purple — message deleted

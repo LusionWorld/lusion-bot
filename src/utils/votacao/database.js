@@ -56,11 +56,11 @@ function getConnection(guildId) {
         image_urls         TEXT,
         color              TEXT,
         options            TEXT NOT NULL,
-        duration_ms        INTEGER NOT NULL,
+        duration_ms        INTEGER,
         role_id            TEXT,
         results_channel_id TEXT,
         created_by         TEXT NOT NULL,
-        ends_at            INTEGER NOT NULL,
+        ends_at            INTEGER,
         ended              INTEGER NOT NULL DEFAULT 0,
         winner_index       INTEGER
       )
@@ -78,6 +78,50 @@ function getConnection(guildId) {
     await run(`ALTER TABLE polls ADD COLUMN results_channel_id TEXT`).catch(() => {})
     await run(`ALTER TABLE polls ADD COLUMN header_image_url TEXT`).catch(() => {})
     await run(`ALTER TABLE polls ADD COLUMN image_urls TEXT`).catch(() => {})
+
+    const newColNames = ['id', 'guild_id', 'channel_id', 'message_id', 'thread_id', 'title', 'description', 'image_url', 'header_image_url', 'image_urls', 'color', 'options', 'duration_ms', 'role_id', 'results_channel_id', 'created_by', 'ends_at', 'ended', 'winner_index']
+
+    async function mergeOldPollsTable() {
+      const oldColNames = (await all(`PRAGMA table_info(polls_old)`)).map(c => c.name)
+      const commonCols  = newColNames.filter(c => oldColNames.includes(c))
+      await run(`INSERT INTO polls (${commonCols.join(', ')}) SELECT ${commonCols.join(', ')} FROM polls_old`)
+      await run(`DROP TABLE polls_old`)
+    }
+
+    const leftoverOldTable = await get(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'polls_old'`)
+    if (leftoverOldTable) {
+      await mergeOldPollsTable()
+    }
+
+    const cols = await all(`PRAGMA table_info(polls)`)
+    const durationCol = cols.find(c => c.name === 'duration_ms')
+    if (durationCol?.notnull) {
+      await run(`ALTER TABLE polls RENAME TO polls_old`)
+      await run(`
+        CREATE TABLE polls (
+          id                 TEXT PRIMARY KEY,
+          guild_id           TEXT NOT NULL,
+          channel_id         TEXT NOT NULL,
+          message_id         TEXT,
+          thread_id          TEXT,
+          title              TEXT NOT NULL,
+          description        TEXT,
+          image_url          TEXT,
+          header_image_url   TEXT,
+          image_urls         TEXT,
+          color              TEXT,
+          options            TEXT NOT NULL,
+          duration_ms        INTEGER,
+          role_id            TEXT,
+          results_channel_id TEXT,
+          created_by         TEXT NOT NULL,
+          ends_at            INTEGER,
+          ended              INTEGER NOT NULL DEFAULT 0,
+          winner_index       INTEGER
+        )
+      `)
+      await mergeOldPollsTable()
+    }
   })()
 
   ready.catch(err => console.error(`[Poll] Erro ao inicializar banco (${guildId}):`, err))

@@ -17,6 +17,7 @@ const path = require('path')
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../')
 
 const { getEmojis } = require("../../../utils/emojis/emojiHelper");
+const { t } = require("../../../utils/i18n");
 const emojis = getEmojis();
 
 function getEmoji(raw) {
@@ -60,20 +61,22 @@ async function garantirConfigsExistem(guildId) {
 
 module.exports = {
   name: 'painel-ticket',
+  nameKey: 'cmd_painel_ticket_name',
   description: 'Envia um painel para configurar o sistema de tickets.',
+  descriptionKey: 'cmd_painel_ticket_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
   options: [],
 
   run: async (client, interaction) => {
-    if (!interaction.guild || !interaction.guildId) {
+    const guildId = interaction.guild?.id
+
+    if (!interaction.guild || !guildId) {
       return interaction.reply({
-        content: '❌ Este comando só pode ser usado em servidores.',
+        content: t('painel_ticket_only_guild', guildId),
         flags: MessageFlags.Ephemeral,
       })
     }
-
-    const guildId = interaction.guild.id
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
@@ -81,7 +84,7 @@ module.exports = {
 
     if (!criou) {
       return interaction.editReply({
-        content: '❌ Erro ao verificar/criar configurações. Tente novamente.',
+        content: t('painel_ticket_erro_config', guildId),
       })
     }
 
@@ -102,8 +105,7 @@ module.exports = {
         config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
       } else {
         return interaction.editReply({
-          content:
-            '❌ Erro ao criar configurações. Tente novamente em alguns segundos.',
+          content: t('painel_ticket_erro_config2', guildId),
         })
       }
     }
@@ -117,97 +119,97 @@ module.exports = {
 
     if (!isAdmin && !hasConfigPerm) {
       return interaction.editReply({
-        content: '❌ Você não tem permissão para usar este comando.',
+        content: t('painel_ticket_sem_permissao', guildId),
       })
     }
 
     const buttonConfig = new ButtonBuilder()
       .setCustomId('configurar_ticket')
-      .setLabel('Configurar')
+      .setLabel(t('btn_configurar', guildId))
       .setEmoji(getEmoji(emojis.settings))
       .setStyle(ButtonStyle.Primary)
 
     const buttonBanco = new ButtonBuilder()
       .setCustomId('banco_ticket')
-      .setLabel('Banco de Dados')
+      .setLabel(t('btn_banco', guildId))
       .setEmoji(getEmoji(emojis.cardbox))
       .setStyle(ButtonStyle.Primary)
 
     const buttonPix = new ButtonBuilder()
       .setCustomId('pix_ticket')
-      .setLabel('Pix')
+      .setLabel(t('btn_pix', guildId))
       .setEmoji(getEmoji(emojis.dollar))
       .setStyle(ButtonStyle.Primary)
 
     const enviarTicketBtn = new ButtonBuilder()
       .setCustomId('enviar_ticket_painel')
-      .setLabel('Enviar Ticket')
+      .setLabel(t('btn_enviar_ticket', guildId))
       .setEmoji(getEmoji(emojis.embeds))
       .setStyle(ButtonStyle.Success)
 
     const iaSetupBtn = new ButtonBuilder()
       .setCustomId('ia_setup_inicial')
-      .setLabel('Setup com IA')
+      .setLabel(t('btn_setup_ia', guildId))
       .setEmoji(getEmoji(emojis.bot))
       .setStyle(ButtonStyle.Success)
 
     const buttonSuporte = new ButtonBuilder()
-      .setLabel('Suporte')
+      .setLabel(t('btn_suporte', guildId))
       .setEmoji(getEmoji(emojis.suporte))
       .setStyle(ButtonStyle.Link)
       .setURL('https://discord.gg/MmUB4H3uCM')
 
     const buttonIdioma = new ButtonBuilder()
       .setCustomId('config_idioma')
-      .setLabel('Alterar Idioma')
+      .setLabel(t('btn_alterar_idioma', guildId))
       .setEmoji(getEmoji(emojis.world))
       .setStyle(ButtonStyle.Secondary)
 
     const components = [
       new ContainerBuilder().addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-          `# Painel Principal | ${interaction.guild.name}`,
+          t('painel_ticket_titulo', guildId, { guild: interaction.guild.name }),
         ),
       ),
       new ContainerBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `Use os botões abaixo para acessar as configurações e o banco de dados e muito mais!\n\n-# Ping do bot: ${client.ws.ping}ms`,
+            t('painel_ticket_desc', guildId, { ping: client.ws.ping }),
           ),
         )
         .addSectionComponents(
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Configurar Ticket**\nGerencie as configurações do sistema de tickets',
+                t('painel_ticket_sec_configurar', guildId),
               ),
             )
             .setButtonAccessory(buttonConfig),
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Banco de Dados**\nAcesse relatórios e estatísticas dos tickets',
+                t('painel_ticket_sec_banco', guildId),
               ),
             )
             .setButtonAccessory(buttonBanco),
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Pix**\nConfigurações relacionadas ao sistema de pagamento',
+                t('painel_ticket_sec_pix', guildId),
               ),
             )
             .setButtonAccessory(buttonPix),
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Enviar Ticket**\nEnvie o painel de tickets configurado em um canal específico',
+                t('painel_ticket_sec_enviar', guildId),
               ),
             )
             .setButtonAccessory(enviarTicketBtn),
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Setup com IA**\nDeixe a inteligência artificial configurar automaticamente seu sistema de tickets de forma rápida e personalizada',
+                t('painel_ticket_sec_ia', guildId),
               ),
             )
             .setButtonAccessory(iaSetupBtn),
@@ -221,14 +223,14 @@ module.exports = {
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Suporte**\nPrecisa de ajuda? Entre em contato conosco!',
+                t('painel_ticket_sec_suporte', guildId),
               ),
             )
             .setButtonAccessory(buttonSuporte),
           new SectionBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                '**Alterar Idioma**\nMude o idioma do sistema de tickets',
+                t('painel_ticket_sec_idioma', guildId),
               ),
             )
             .setButtonAccessory(buttonIdioma),

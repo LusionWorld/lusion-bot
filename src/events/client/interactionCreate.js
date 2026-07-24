@@ -3,6 +3,7 @@ const {
 } = require('discord.js')
 const { dim } = require('colorette').createColors({ useColor: true });
 const { log, error: logError } = require('../../utils/logger');
+const { getGuildLocale } = require('../../utils/i18n');
 
 function formatGuildTag(guild) {
   if (!guild) return 'DM';
@@ -21,7 +22,10 @@ module.exports = {
     if (!interaction.isChatInputCommand() && !interaction.isContextMenuCommand()) return;
 
     const startTime = Date.now();
-    const command = client.slashCommands.get(interaction.commandName);
+    const locale = interaction.guildId ? getGuildLocale(interaction.guildId) : null;
+    const command =
+      (locale && client.slashCommandsByLocale?.[locale]?.get(interaction.commandName)) ||
+      client.slashCommands.get(interaction.commandName);
     const guildTag = formatGuildTag(interaction.guild);
 
     if (!command) {

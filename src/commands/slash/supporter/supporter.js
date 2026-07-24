@@ -5,6 +5,7 @@ const { buildConfigHub } = require('../../../utils/supporter/manager')
 module.exports = {
   name: 'supporter',
   description: 'Open the Supporter Experience system settings',
+  descriptionKey: 'cmd_supporter_desc',
   default_member_permissions: PermissionsBitField.Flags.ManageGuild.toString(),
 
   run: async (client, interaction) => {

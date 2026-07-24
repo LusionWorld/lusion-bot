@@ -32,14 +32,11 @@ function buildManageList(polls) {
     .setCustomId('poll_manage_select')
     .setPlaceholder('Select a poll to manage…')
     .addOptions(
-      polls.slice(0, 25).map(p => {
-        const endsTs  = Math.floor(p.ends_at / 1000)
-        return {
-          label:       p.title.slice(0, 100),
-          value:       p.id,
-          description: `Ends <t:${endsTs}:R>`.slice(0, 100),
-        }
-      }),
+      polls.slice(0, 25).map(p => ({
+        label:       p.title.slice(0, 100),
+        value:       p.id,
+        description: (p.ends_at ? `Ends <t:${Math.floor(p.ends_at / 1000)}:R>` : 'No time limit').slice(0, 100),
+      })),
     )
 
   return new ContainerBuilder()
@@ -51,7 +48,9 @@ function buildManageList(polls) {
 }
 
 function buildManageDetail(poll, totalVotes) {
-  const endsTs = Math.floor(poll.ends_at / 1000)
+  const endsLine = poll.ends_at
+    ? `${emojis.clock} Ends: <t:${Math.floor(poll.ends_at / 1000)}:R> (<t:${Math.floor(poll.ends_at / 1000)}:f>)\n`
+    : `${emojis.clock} No time limit\n`
 
   return new ContainerBuilder()
     .addTextDisplayComponents(td =>
@@ -61,7 +60,7 @@ function buildManageDetail(poll, totalVotes) {
     .addTextDisplayComponents(td =>
       td.setContent(
         `${emojis.crown} **${poll.title}**\n` +
-        `${emojis.clock} Ends: <t:${endsTs}:R> (<t:${endsTs}:f>)\n` +
+        endsLine +
         `${emojis.users} Votes: **${totalVotes}**`,
       ),
     )
@@ -89,7 +88,9 @@ function buildManageDetail(poll, totalVotes) {
 
 module.exports = {
   name: 'poll-manage',
+  nameKey: 'cmd_poll_manage_name',
   description: 'Gerencia votações ativas — extender tempo ou encerrar',
+  descriptionKey: 'cmd_poll_manage_desc',
   default_member_permissions: PermissionsBitField.Flags.ManageMessages.toString(),
 
   buildManageList,

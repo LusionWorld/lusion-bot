@@ -1,18 +1,18 @@
-const { ContainerBuilder, SeparatorSpacingSize, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags, AuditLogEvent } = require('discord.js')
+const { ContainerBuilder, SeparatorSpacingSize, MessageFlags, AuditLogEvent } = require('discord.js')
 const db = require('../../utils/moderacao/database')
 const emojis = require('../../utils/emojis/emojis.json')
 
 function timeAgo(ms) {
   const diff = Date.now() - ms
   const days = Math.floor(diff / 86400000)
-  if (days < 1) return 'menos de 1 dia'
-  if (days === 1) return '1 dia'
-  if (days < 30) return `${days} dias`
+  if (days < 1) return 'less than 1 day'
+  if (days === 1) return '1 day'
+  if (days < 30) return `${days} days`
   const months = Math.floor(days / 30)
-  if (months === 1) return '1 mês'
-  if (months < 12) return `${months} meses`
+  if (months === 1) return '1 month'
+  if (months < 12) return `${months} months`
   const years = Math.floor(months / 12)
-  return years === 1 ? '1 ano' : `${years} anos`
+  return years === 1 ? '1 year' : `${years} years`
 }
 
 module.exports = {
@@ -34,7 +34,7 @@ module.exports = {
 
       let wasKicked = false
       let kickExecutor = null
-      let kickReason = 'Nenhum motivo informado'
+      let kickReason = 'No reason provided'
 
       try {
         const auditLogs = await member.guild.fetchAuditLogs({ type: AuditLogEvent.MemberKick, limit: 5 })
@@ -44,7 +44,7 @@ module.exports = {
         if (entry) {
           wasKicked = true
           kickExecutor = entry.executor
-          kickReason = entry.reason || 'Nenhum motivo informado'
+          kickReason = entry.reason || 'No reason provided'
         }
       } catch {}
 
@@ -56,16 +56,16 @@ module.exports = {
         if (!channel?.isTextBased()) return
 
         const container = new ContainerBuilder()
-          .setAccentColor(0xE67E22) // orange — member kicked
+          .setAccentColor(0xE67E22)
           .addTextDisplayComponents(td =>
-            td.setContent(`${emojis.hammer} **Membro expulso,** ${member}`)
+            td.setContent(`${emojis.hammer} **Member kicked,** ${member}`)
           )
           .addSeparatorComponents(sep => sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
           .addTextDisplayComponents(td =>
             td.setContent(
               `${emojis.user} **ID:** ${user.id}\n` +
-              `${emojis.account} **Expulso por:** ${kickExecutor ?? 'Desconhecido'}\n` +
-              `${emojis.warning} **Motivo:** ${kickReason}`
+              `${emojis.account} **Kicked by:** ${kickExecutor ?? 'Unknown'}\n` +
+              `${emojis.warning} **Reason:** ${kickReason}`
             )
           )
 
@@ -78,23 +78,13 @@ module.exports = {
         const channel = await member.guild.channels.fetch(canalId).catch(() => null)
         if (!channel?.isTextBased()) return
 
-        const bannerURL = user.bannerURL({ dynamic: true, size: 1024 }) ?? null
         const avatarURL = user.displayAvatarURL({ dynamic: true, size: 256 })
         const joinedAgo = member.joinedTimestamp ? timeAgo(member.joinedTimestamp) : null
 
-        const container = new ContainerBuilder().setAccentColor(0x95A5A6) // gray — member left
-
-        if (bannerURL) {
-          container.addMediaGalleryComponents(
-            new MediaGalleryBuilder().addItems(
-              new MediaGalleryItemBuilder().setURL(bannerURL)
-            )
-          )
-        }
-
-        container
+        const container = new ContainerBuilder()
+          .setAccentColor(0x95A5A6)
           .addTextDisplayComponents(td =>
-            td.setContent(`${emojis.cancel} **Membro saiu,** ${member}`)
+            td.setContent(`${emojis.cancel} **Member left,** ${member}`)
           )
           .addSeparatorComponents(sep => sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
           .addSectionComponents(section =>
@@ -102,8 +92,8 @@ module.exports = {
               .addTextDisplayComponents(td =>
                 td.setContent(
                   `${emojis.user} **ID:** ${user.id}\n` +
-                  (joinedAgo ? `${emojis.clock} **Entrou** há ${joinedAgo}\n` : '') +
-                  `${emojis.users} **Total de membros:** ${member.guild.memberCount}`
+                  (joinedAgo ? `${emojis.clock} **Joined** ${joinedAgo} ago\n` : '') +
+                  `${emojis.users} **Total members:** ${member.guild.memberCount}`
                 )
               )
               .setThumbnailAccessory(thumb => thumb.setURL(avatarURL))
@@ -112,7 +102,7 @@ module.exports = {
         await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 })
       }
     } catch (err) {
-      console.error('[mod] Erro em guildMemberRemove:', err.message)
+      console.error('[mod] Error in guildMemberRemove:', err.message)
     }
   },
 }

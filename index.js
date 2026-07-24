@@ -46,6 +46,7 @@ function buildIntents(detected) {
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildExpressions ?? GatewayIntentBits.GuildEmojisAndStickers,
+    GatewayIntentBits.GuildInvites,
   ];
 
   if (detected.members) intents.push(GatewayIntentBits.GuildMembers);
@@ -68,7 +69,7 @@ function createClient(intents) {
     sweepers: {
       messages: {
         interval: 3600,
-        lifetime: 3600,
+        lifetime: 21600,
       },
       users: {
         interval: 7200,
@@ -89,7 +90,7 @@ function createClient(intents) {
       },
     },
     makeCache: Options.cacheWithLimits({
-      MessageManager: 100,
+      MessageManager: 300,
       GuildMemberManager: 500,
       PresenceManager: 0,
       ReactionManager: 0,
@@ -140,10 +141,10 @@ function startMemoryMonitoring() {
         }
 
         guild.channels.cache.forEach((channel) => {
-          if (channel.messages && channel.messages.cache.size > 100) {
+          if (channel.messages && channel.messages.cache.size > 300) {
             const messagesToDelete = channel.messages.cache
               .sort((a, b) => b.createdTimestamp - a.createdTimestamp)
-              .filter((msg, index) => index > 50);
+              .filter((msg, index) => index > 300);
             messagesToDelete.forEach((msg) =>
               channel.messages.cache.delete(msg.id),
             );
@@ -158,7 +159,7 @@ function startMemoryMonitoring() {
         global.gc();
       }
     }
-  }, 300000);
+  }, 900000);
 }
 
 process.setMaxListeners(15);

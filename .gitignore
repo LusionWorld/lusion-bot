@@ -22,6 +22,9 @@ desktop.ini
 .vscode/
 .idea/
 
+# Claude Code
+CLAUDE.md
+
 # Emoji manifest (auto-generated)
 src/utils/emojis/.emoji-manifest.json
 src/utils/emojis/.emoji-setup-done

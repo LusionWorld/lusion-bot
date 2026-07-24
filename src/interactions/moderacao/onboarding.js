@@ -8,10 +8,12 @@ const {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
+  RoleSelectMenuBuilder,
   PermissionFlagsBits,
 } = require('discord.js')
 
 const db = require('../../utils/onboarding/database')
+const { buildMainPanel: buildModMainPanel } = require('./painel-moderacao')
 const { getEmojis } = require('../../utils/emojis/emojiHelper')
 const emojis = getEmojis()
 
@@ -37,52 +39,13 @@ function hexToDecimal(hex) {
 
 // ─── Panel Builders ───────────────────────────────────────────────────────────
 
-function buildModMainPanel(guild) {
-  return new ContainerBuilder()
-    .addTextDisplayComponents(td =>
-      td.setContent(`${emojis.hammer} **Moderation Panel** | ${guild.name}`)
-    )
-    .addSeparatorComponents(sep =>
-      sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-    )
-    .addSectionComponents(section =>
-      section
-        .addTextDisplayComponents(td =>
-          td.setContent(`**Logs**\nConfigure action logging channels`)
-        )
-        .setButtonAccessory(btn =>
-          btn
-            .setCustomId('mod_logs')
-            .setLabel('Logs')
-            .setEmoji(getEmoji(emojis.logs))
-            .setStyle(ButtonStyle.Secondary)
-        )
-    )
-    .addSeparatorComponents(sep =>
-      sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small)
-    )
-    .addSectionComponents(section =>
-      section
-        .addTextDisplayComponents(td =>
-          td.setContent(`**Onboarding**\nConfigure the welcome DM for new members`)
-        )
-        .setButtonAccessory(btn =>
-          btn
-            .setCustomId('onboarding_painel')
-            .setLabel('Onboarding')
-            .setEmoji(getEmoji(emojis.bell))
-            .setStyle(ButtonStyle.Secondary)
-        )
-    )
-}
-
 async function buildMainPanel(guild) {
   const config = await db.getConfig(guild.id)
   const ativo = config?.ativo === 1
 
   return new ContainerBuilder()
     .addTextDisplayComponents(td =>
-      td.setContent(`${emojis.bell} **Onboarding System** | ${guild.name}`)
+      td.setContent(`${emojis.celebration} **Onboarding System** | ${guild.name}`)
     )
     .addSeparatorComponents(sep =>
       sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
@@ -120,6 +83,25 @@ async function buildMainPanel(guild) {
         .setButtonAccessory(btn =>
           btn
             .setCustomId('ob_configure')
+            .setLabel('Configure')
+            .setEmoji(getEmoji(emojis.settings))
+            .setStyle(ButtonStyle.Secondary)
+        )
+    )
+    .addSeparatorComponents(sep =>
+      sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small)
+    )
+    .addSectionComponents(section =>
+      section
+        .addTextDisplayComponents(td =>
+          td.setContent(
+            `**Auto Role**\nAutomatically assign roles to new members\n` +
+            `${config?.auto_roles_ativo ? emojis.success : emojis.danger} ${config?.auto_roles_ativo ? 'Active' : 'Inactive'} — ${(config?.auto_roles || []).length} role(s) configured`
+          )
+        )
+        .setButtonAccessory(btn =>
+          btn
+            .setCustomId('ob_autorole')
             .setLabel('Configure')
             .setEmoji(getEmoji(emojis.settings))
             .setStyle(ButtonStyle.Secondary)
@@ -293,6 +275,48 @@ function buildConfigPanel(data) {
   return container
 }
 
+function buildAutoRolePanel(guild, config) {
+  const ativo = config?.auto_roles_ativo === 1
+  const roles = config?.auto_roles || []
+
+  const roleSel = new RoleSelectMenuBuilder()
+    .setCustomId('ob_autorole_select')
+    .setPlaceholder(roles.length ? 'Update auto-assigned roles (reselect to keep)…' : 'Select one or more roles…')
+    .setMinValues(0)
+    .setMaxValues(10)
+  if (roles.length) roleSel.setDefaultRoles(roles)
+
+  return new ContainerBuilder()
+    .addTextDisplayComponents(td =>
+      td.setContent(`${emojis.role} **Auto Role** | ${guild.name}`)
+    )
+    .addSeparatorComponents(sep => sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addTextDisplayComponents(td =>
+      td.setContent(
+        `${ativo ? emojis.success : emojis.danger} **Status:** ${ativo ? 'Active' : 'Inactive'}\n` +
+        `${emojis.info} Roles below are automatically given to every new member as soon as they join.\n\n` +
+        `**Selected roles:** ${roles.length ? roles.map(id => `<@&${id}>`).join(', ') : 'None'}`
+      )
+    )
+    .addSeparatorComponents(sep => sep.setDivider(false).setSpacing(SeparatorSpacingSize.Small))
+    .addActionRowComponents(row => row.setComponents(roleSel))
+    .addSeparatorComponents(sep => sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+    .addActionRowComponents(row =>
+      row.setComponents(
+        new ButtonBuilder()
+          .setCustomId('ob_autorole_toggle')
+          .setLabel(ativo ? 'Disable' : 'Enable')
+          .setEmoji(getEmoji(ativo ? emojis.cancel : emojis.check))
+          .setStyle(ativo ? ButtonStyle.Danger : ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('ob_back')
+          .setLabel('Back')
+          .setEmoji(getEmoji(emojis.arrowl))
+          .setStyle(ButtonStyle.Secondary)
+      )
+    )
+}
+
 // ─── Interaction IDs ──────────────────────────────────────────────────────────
 
 const BUTTON_IDS = [
@@ -308,6 +332,8 @@ const BUTTON_IDS = [
   'ob_edit_footer',
   'ob_edit_cor',
   'ob_add_link',
+  'ob_autorole',
+  'ob_autorole_toggle',
 ]
 
 const MODAL_IDS = [
@@ -319,11 +345,14 @@ const MODAL_IDS = [
   'modal_ob_link',
 ]
 
+const ROLE_SELECT_IDS = ['ob_autorole_select']
+
 module.exports = {
   async execute(client, interaction) {
     const isOnboarding =
       (interaction.isButton() && BUTTON_IDS.includes(interaction.customId)) ||
-      (interaction.isModalSubmit() && MODAL_IDS.includes(interaction.customId))
+      (interaction.isModalSubmit() && MODAL_IDS.includes(interaction.customId)) ||
+      (interaction.isRoleSelectMenu() && ROLE_SELECT_IDS.includes(interaction.customId))
 
     if (!isOnboarding) return
 
@@ -383,6 +412,23 @@ module.exports = {
         const nowActive = await db.toggleAtivo(guildId)
         return interaction.update({
           components: [await buildMainPanel(guild)],
+          flags: MessageFlags.IsComponentsV2,
+        })
+      }
+
+      if (id === 'ob_autorole') {
+        const config = await db.getConfig(guildId)
+        return interaction.update({
+          components: [buildAutoRolePanel(guild, config)],
+          flags: MessageFlags.IsComponentsV2,
+        })
+      }
+
+      if (id === 'ob_autorole_toggle') {
+        await db.toggleAutoRoles(guildId)
+        const config = await db.getConfig(guildId)
+        return interaction.update({
+          components: [buildAutoRolePanel(guild, config)],
           flags: MessageFlags.IsComponentsV2,
         })
       }
@@ -546,6 +592,15 @@ module.exports = {
 
         return interaction.showModal(modal)
       }
+    }
+
+    if (interaction.isRoleSelectMenu() && interaction.customId === 'ob_autorole_select') {
+      await db.setAutoRoles(guildId, interaction.values)
+      const config = await db.getConfig(guildId)
+      return interaction.update({
+        components: [buildAutoRolePanel(guild, config)],
+        flags: MessageFlags.IsComponentsV2,
+      })
     }
 
     // ─── Modals ───────────────────────────────────────────────────────────────

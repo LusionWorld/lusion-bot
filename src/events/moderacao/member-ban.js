@@ -23,7 +23,7 @@ module.exports = {
       await new Promise(r => setTimeout(r, 1000))
 
       let banExecutor = null
-      let banReason = ban.reason || 'Nenhum motivo informado'
+      let banReason = ban.reason || 'No reason provided'
 
       try {
         const auditLogs = await ban.guild.fetchAuditLogs({ type: AuditLogEvent.MemberBanAdd, limit: 5 })
@@ -37,22 +37,22 @@ module.exports = {
       } catch {}
 
       const container = new ContainerBuilder()
-        .setAccentColor(0xE74C3C) // red — member banned
+        .setAccentColor(0xE74C3C)
         .addTextDisplayComponents(td =>
-          td.setContent(`${emojis.block} **Membro banido,** ${user}`)
+          td.setContent(`${emojis.block} **Member banned,** ${user}`)
         )
         .addSeparatorComponents(sep => sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small))
         .addTextDisplayComponents(td =>
           td.setContent(
             `${emojis.user} **ID:** ${user.id}\n` +
-            `${emojis.hammer} **Banido por:** ${banExecutor ?? 'Desconhecido'}\n` +
-            `${emojis.warning} **Motivo:** ${banReason}`
+            `${emojis.hammer} **Banned by:** ${banExecutor ?? 'Unknown'}\n` +
+            `${emojis.warning} **Reason:** ${banReason}`
           )
         )
 
       await channel.send({ components: [container], flags: MessageFlags.IsComponentsV2 })
     } catch (err) {
-      console.error('[mod] Erro em guildBanAdd:', err.message)
+      console.error('[mod] Error in guildBanAdd:', err.message)
     }
   },
 }

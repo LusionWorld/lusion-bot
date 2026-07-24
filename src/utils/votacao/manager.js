@@ -56,6 +56,11 @@ function formatPct(votes, total) {
   return total > 0 ? Math.round((votes / total) * 100) : 0
 }
 
+function endsLine(poll, style = 'R') {
+  if (!poll.ends_at) return `${emojis.clock} No time limit`
+  return `${emojis.clock} Ends: <t:${Math.floor(poll.ends_at / 1000)}:${style}>`
+}
+
 // ─── Tie detection ────────────────────────────────────────────────────────────
 
 function resolveWinners(poll, voteCounts, total) {
@@ -79,8 +84,6 @@ function buildResultLines(poll, voteCounts, total, winnerIndices = []) {
 // ─── Active poll container (public channel message) ───────────────────────────
 
 function buildActivePollContainer(poll) {
-  const endTs = Math.floor(poll.ends_at / 1000)
-
   const container = new ContainerBuilder()
   const color = resolveColor(poll)
   if (color !== null) container.setAccentColor(color)
@@ -110,7 +113,7 @@ function buildActivePollContainer(poll) {
   }
 
   container.addTextDisplayComponents(td =>
-    td.setContent(`${emojis.clock} Ends: <t:${endTs}:R>`),
+    td.setContent(endsLine(poll)),
   )
 
   container.addSeparatorComponents(sep =>
@@ -140,7 +143,6 @@ function buildActivePollContainer(poll) {
 // ─── Voted (ephemeral) ────────────────────────────────────────────────────────
 
 function buildVotedEphemeralContainer(poll, voteCounts, total, chosenIndex) {
-  const endTs = Math.floor(poll.ends_at / 1000)
   const { winners } = resolveWinners(poll, voteCounts, total)
   const lines = buildResultLines(poll, voteCounts, total, winners.map(w => w.i))
 
@@ -163,14 +165,13 @@ function buildVotedEphemeralContainer(poll, voteCounts, total, chosenIndex) {
       sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small),
     )
     .addTextDisplayComponents(td =>
-      td.setContent(`${emojis.clock} Ends: <t:${endTs}:R>`),
+      td.setContent(endsLine(poll)),
     )
 }
 
 // ─── Already voted (ephemeral) ────────────────────────────────────────────────
 
 function buildAlreadyVotedContainer(poll, voteCounts, total, originalIndex) {
-  const endTs = Math.floor(poll.ends_at / 1000)
   const { winners } = resolveWinners(poll, voteCounts, total)
   const lines = buildResultLines(poll, voteCounts, total, winners.map(w => w.i))
 
@@ -193,14 +194,13 @@ function buildAlreadyVotedContainer(poll, voteCounts, total, originalIndex) {
       sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small),
     )
     .addTextDisplayComponents(td =>
-      td.setContent(`${emojis.clock} Ends: <t:${endTs}:R>`),
+      td.setContent(endsLine(poll)),
     )
 }
 
 // ─── Closed poll (replaces original message) ──────────────────────────────────
 
 function buildClosedPollContainer(poll, voteCounts, total) {
-  const endTs = Math.floor(poll.ends_at / 1000)
   const { winners, isTie, noVotes } = resolveWinners(poll, voteCounts, total)
   const winnerIndices = winners.map(w => w.i)
   const lines = buildResultLines(poll, voteCounts, total, winnerIndices)
@@ -248,9 +248,10 @@ function buildClosedPollContainer(poll, voteCounts, total) {
     .addSeparatorComponents(sep =>
       sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small),
     )
-    .addTextDisplayComponents(td =>
-      td.setContent(`${emojis.clock} Ended: <t:${endTs}:F>`),
-    )
+    .addTextDisplayComponents(td => {
+      const endTs = Math.floor((poll.ends_at ?? Date.now()) / 1000)
+      return td.setContent(`${emojis.clock} Ended: <t:${endTs}:F>`)
+    })
 
   return container
 }
@@ -332,7 +333,7 @@ async function closePoll(client, guildId, pollId) {
 // ─── Timer management ─────────────────────────────────────────────────────────
 
 function schedulePoll(client, guildId, pollId, msRemaining) {
-  if (activeTimers.has(pollId)) return
+  if (msRemaining == null || activeTimers.has(pollId)) return
   const timeout = setTimeout(() => closePoll(client, guildId, pollId), Math.max(msRemaining, 0))
   activeTimers.set(pollId, { timeout, guildId })
 }
@@ -347,7 +348,7 @@ async function extendPoll(client, guildId, pollId, addMs) {
   const poll       = await db.getPoll(guildId, pollId)
   if (!poll || poll.ended) return null
 
-  const newEndsAt  = poll.ends_at + addMs
+  const newEndsAt  = (poll.ends_at ?? Date.now()) + addMs
   await db.updateEndsAt(guildId, pollId, newEndsAt)
 
   const msRemaining = newEndsAt - Date.now()
@@ -381,6 +382,7 @@ async function rescheduleActivePolls(client) {
     for (const guildId of guildIds) {
       const polls = await db.getActivePolls(guildId).catch(() => [])
       for (const poll of polls) {
+        if (poll.ends_at == null) continue
         const ms = poll.ends_at - now
         ms <= 0
           ? closePoll(client, guildId, poll.id).catch(() => {})

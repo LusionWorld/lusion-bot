@@ -35,15 +35,9 @@ function getConfigDB(guildId) {
 
 module.exports = {
   name: 'painel-staff',
+  nameKey: 'cmd_painel_staff_name',
   description: 'Abre o painel de gerenciamento do staff no ticket.',
-  name_localizations: {
-    'en-US': 'staff-panel',
-    'es-ES': 'panel-staff',
-  },
-  description_localizations: {
-    'en-US': 'Opens the staff management panel for tickets.',
-    'es-ES': 'Abre el panel de gestión del staff en el ticket.',
-  },
+  descriptionKey: 'cmd_painel_staff_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.Administrator.toString(),
   options: [],

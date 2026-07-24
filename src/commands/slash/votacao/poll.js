@@ -26,7 +26,7 @@ function getEmoji(raw) {
 function buildBuilderPanel(data) {
   const titleVal = data.title       || '*Not set*'
   const descVal  = data.description || '*Not set*'
-  const durVal   = data.durationMs  ? formatDuration(data.durationMs) : '*Not set*'
+  const durVal   = data.durationMs  ? formatDuration(data.durationMs) : '*No time limit*'
 
   const headerImgVal = data.headerImageUrl || '*Not set*'
 
@@ -38,7 +38,7 @@ function buildBuilderPanel(data) {
     ? data.options.map((o, i) => `\`${i + 1}.\` ${o}`).join('\n')
     : '*No options added yet — add at least 2*'
 
-  const canSend = !!data.title && data.options.length >= 2 && !!data.durationMs && !!data.channelId
+  const canSend = !!data.title && data.options.length >= 2 && !!data.channelId
 
   const colorRaw = data.color && isValidHexColor(data.color) ? data.color : null
   const colorVal = colorRaw ?? '*Not set*'
@@ -221,7 +221,7 @@ function buildManageList(activePolls) {
       activePolls.slice(0, 25).map(p => ({
         label:       p.title.slice(0, 100),
         value:       p.id,
-        description: `Ends <t:${Math.floor(p.ends_at / 1000)}:R>`.slice(0, 100),
+        description: (p.ends_at ? `Ends <t:${Math.floor(p.ends_at / 1000)}:R>` : 'No time limit').slice(0, 100),
       })),
     )
 
@@ -243,7 +243,9 @@ function buildManageList(activePolls) {
 }
 
 function buildManageDetail(poll, totalVotes) {
-  const endsTs = Math.floor(poll.ends_at / 1000)
+  const endsLine = poll.ends_at
+    ? `${emojis.clock} Ends: <t:${Math.floor(poll.ends_at / 1000)}:R> (<t:${Math.floor(poll.ends_at / 1000)}:f>)\n`
+    : `${emojis.clock} No time limit\n`
 
   return new ContainerBuilder()
     .addTextDisplayComponents(td =>
@@ -253,7 +255,7 @@ function buildManageDetail(poll, totalVotes) {
     .addTextDisplayComponents(td =>
       td.setContent(
         `${emojis.crown} **${poll.title}**\n` +
-        `${emojis.clock} Ends: <t:${endsTs}:R> (<t:${endsTs}:f>)\n` +
+        endsLine +
         `${emojis.users} Votes: **${totalVotes}**`,
       ),
     )
@@ -281,7 +283,9 @@ function buildManageDetail(poll, totalVotes) {
 
 module.exports = {
   name: 'poll',
+  nameKey: 'cmd_poll_name',
   description: 'Cria ou gerencia votações.',
+  descriptionKey: 'cmd_poll_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.ManageMessages.toString(),
 

@@ -33,14 +33,15 @@ function back(customId) {
 
 // ─── Public Panel ─────────────────────────────────────────────────────────────
 
-function buildMainPanel({ patreonUrl, supporterCount, milestone, showCount, countThreshold } = {}) {
+function buildMainPanel({ patreonUrl, supporterCount, milestone, showCount, countThreshold, mainTitle, mainDescription } = {}) {
   const threshold = parseInt(countThreshold) || 20
   const container = new ContainerBuilder()
 
-  container.addTextDisplayComponents(td => td.setContent(`## ${emojis.fav} Support Lusion`))
-  container.addTextDisplayComponents(td =>
-    td.setContent('Help us build the future of social worlds.\nBy supporting, you become part of the creation.'),
-  )
+  const title = mainTitle || 'Support Us'
+  const desc  = mainDescription || 'Help us build the future of social worlds.\nBy supporting, you become part of the creation.'
+
+  container.addTextDisplayComponents(td => td.setContent(`## ${emojis.fav} ${title}`))
+  container.addTextDisplayComponents(td => td.setContent(desc))
 
   if (showCount === 'true' && parseInt(supporterCount) >= threshold) {
     container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
@@ -85,9 +86,9 @@ function buildMainPanel({ patreonUrl, supporterCount, milestone, showCount, coun
 
 // ─── Tiers ephemeral panel ────────────────────────────────────────────────────
 
-function buildTiersPanel(tiers, patreonUrl) {
+function buildTiersPanel(tiers, patreonUrl, tiersTitle, tiersFooter) {
   const container = new ContainerBuilder()
-  container.addTextDisplayComponents(td => td.setContent('## Our Support Tiers'))
+  container.addTextDisplayComponents(td => td.setContent(`## ${tiersTitle || 'Our Support Tiers'}`))
   container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
 
   for (const tier of tiers) {
@@ -99,7 +100,7 @@ function buildTiersPanel(tiers, patreonUrl) {
     container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
   }
 
-  container.addTextDisplayComponents(td => td.setContent(`**${emojis.sparks} Ready to join?**`))
+  container.addTextDisplayComponents(td => td.setContent(`**${emojis.sparks} ${tiersFooter || 'Ready to join?'}**`))
 
   if (patreonUrl) {
     container.addActionRowComponents(row =>
@@ -170,11 +171,13 @@ function buildPostPanelSubpanel(channelId) {
 
 // ─── Settings sub-panel ───────────────────────────────────────────────────────
 
-function buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone } = {}) {
+function buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone, mainTitle, mainDescription } = {}) {
   const container = new ContainerBuilder()
   container.addTextDisplayComponents(td => td.setContent(`## ${emojis.settings} Settings`))
 
   const lines = [
+    `**Main Title:** ${mainTitle || '`not set (default: Support Us)`'}`,
+    `**Main Description:** ${mainDescription || '`not set (default)`'}`,
     `**Patreon URL:** ${patreonUrl || '`not set`'}`,
     `**Show Supporter Count:** ${showCount === 'true' ? emojis.success : emojis.cancel}`,
     `**Minimum to show count:** ${countThreshold || '20'}`,
@@ -185,6 +188,7 @@ function buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone }
 
   container.addActionRowComponents(row =>
     row.addComponents(
+      new ButtonBuilder().setCustomId('patreon_set_message').setLabel('Edit Main Message').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('patreon_set_url').setLabel('Set URL').setEmoji(getEmoji(emojis.url)).setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId('patreon_toggle_count')
@@ -206,9 +210,22 @@ function buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone }
 
 // ─── Edit Tiers sub-panel ─────────────────────────────────────────────────────
 
-function buildEditTiersPanel(tiers) {
+function buildEditTiersPanel(tiers, tiersTitle, tiersFooter) {
   const container = new ContainerBuilder()
   container.addTextDisplayComponents(td => td.setContent(`## ${emojis.role} Edit Display Tiers\nThese are shown in the public "View Tiers" panel.`))
+  container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
+
+  container.addTextDisplayComponents(td =>
+    td.setContent(
+      `**Panel Title:** ${tiersTitle || '`not set (default: Our Support Tiers)`'}\n` +
+      `**Panel Footer:** ${tiersFooter || '`not set (default: Ready to join?)`'}`,
+    ),
+  )
+  container.addActionRowComponents(row =>
+    row.addComponents(
+      new ButtonBuilder().setCustomId('patreon_tier_text').setLabel('Edit Title & Footer').setEmoji(getEmoji(emojis.settings)).setStyle(ButtonStyle.Secondary),
+    ),
+  )
   container.addSeparatorComponents(sep => sep.setSpacing(SeparatorSpacingSize.Small))
 
   if (tiers.length) {
@@ -299,6 +316,62 @@ function buildEditTierModal(tier) {
     )
 }
 
+function buildMessageModal(currentTitle, currentDescription) {
+  return new ModalBuilder()
+    .setCustomId('modal_patreon_set_message')
+    .setTitle('Main Message')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('main_title')
+          .setLabel('Title')
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(100)
+          .setRequired(false)
+          .setValue(currentTitle || '')
+          .setPlaceholder('Support Us'),
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('main_description')
+          .setLabel('Description')
+          .setStyle(TextInputStyle.Paragraph)
+          .setMaxLength(500)
+          .setRequired(false)
+          .setValue(currentDescription || '')
+          .setPlaceholder('Help us build the future of social worlds.'),
+      ),
+    )
+}
+
+function buildTiersTextModal(currentTitle, currentFooter) {
+  return new ModalBuilder()
+    .setCustomId('modal_patreon_tier_text')
+    .setTitle('Tiers Panel Text')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('tiers_title')
+          .setLabel('Panel Title')
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(100)
+          .setRequired(false)
+          .setValue(currentTitle || '')
+          .setPlaceholder('Our Support Tiers'),
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('tiers_footer')
+          .setLabel('Panel Footer')
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(100)
+          .setRequired(false)
+          .setValue(currentFooter || '')
+          .setPlaceholder('Ready to join?'),
+      ),
+    )
+}
+
 function buildUrlModal(current) {
   return new ModalBuilder()
     .setCustomId('modal_patreon_set_url')
@@ -364,4 +437,6 @@ module.exports = {
   buildUrlModal,
   buildThresholdModal,
   buildMilestoneModal,
+  buildMessageModal,
+  buildTiersTextModal,
 }

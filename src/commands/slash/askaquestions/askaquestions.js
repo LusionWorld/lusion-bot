@@ -41,6 +41,7 @@ async function loadFullConfig(conn) {
 module.exports = {
   name: 'askaquestions',
   description: 'Opens the Ask a Questions settings panel',
+  descriptionKey: 'cmd_askaquestions_desc',
   default_member_permissions: PermissionsBitField.Flags.ManageGuild.toString(),
 
   loadFullConfig,

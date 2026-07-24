@@ -14,7 +14,9 @@ const emojis = getEmojis()
 
 module.exports = {
   name: 'autotranslate',
+  nameKey: 'cmd_autotranslate_name',
   description: 'Configure automatic translation reactions for a channel.',
+  descriptionKey: 'cmd_autotranslate_desc',
   type: ApplicationCommandType.ChatInput,
   default_member_permissions: PermissionsBitField.Flags.ManageChannels.toString(),
 
@@ -22,11 +24,13 @@ module.exports = {
     {
       name: 'set',
       description: 'Set the channel where the bot will react with 🌐 for translation.',
+      descriptionKey: 'opt_autotranslate_set_desc',
       type: ApplicationCommandOptionType.Subcommand,
       options: [
         {
           name: 'channel',
           description: 'The text channel to monitor.',
+          descriptionKey: 'opt_autotranslate_channel_desc',
           type: ApplicationCommandOptionType.Channel,
           channel_types: [ChannelType.GuildText],
           required: true,
@@ -36,6 +40,7 @@ module.exports = {
     {
       name: 'remove',
       description: 'Remove the auto-translate reaction from the configured channel.',
+      descriptionKey: 'opt_autotranslate_remove_desc',
       type: ApplicationCommandOptionType.Subcommand,
     },
   ],

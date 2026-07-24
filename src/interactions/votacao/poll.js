@@ -205,7 +205,7 @@ module.exports = {
           return interaction.editReply({ content: `${emojis.danger} This poll no longer exists.` })
         }
 
-        if (poll.ended || Date.now() > poll.ends_at) {
+        if (poll.ended || (poll.ends_at && Date.now() > poll.ends_at)) {
           return interaction.editReply({ content: `${emojis.danger} This poll has already ended.` })
         }
 
@@ -591,7 +591,6 @@ module.exports = {
         const errors = []
         if (!data.title)              errors.push('• Title is required')
         if (data.options.length < 2)  errors.push('• Add at least 2 options')
-        if (!data.durationMs)         errors.push('• Duration is required')
         if (!data.channelId)          errors.push('• Select a channel')
 
         if (errors.length) {
@@ -618,8 +617,7 @@ module.exports = {
         }
 
         const pollId = generateId()
-        const endsAt = Date.now() + data.durationMs
-        const endTs  = Math.floor(endsAt / 1000)
+        const endsAt = data.durationMs ? Date.now() + data.durationMs : null
 
         const pollData = {
           id:                 pollId,
@@ -654,7 +652,9 @@ module.exports = {
           })
           await thread.send(
             `${emojis.users} Discussion thread for **${data.title}**.\n` +
-            `${emojis.clock} Poll closes <t:${endTs}:R>`,
+            (endsAt
+              ? `${emojis.clock} Poll closes <t:${Math.floor(endsAt / 1000)}:R>`
+              : `${emojis.clock} No time limit set`),
           )
         } catch {}
 

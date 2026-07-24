@@ -12,6 +12,8 @@ const {
   buildUrlModal,
   buildThresholdModal,
   buildMilestoneModal,
+  buildMessageModal,
+  buildTiersTextModal,
 } = require('../../utils/patreon/manager')
 const { DEFAULT_TIERS } = require('../../utils/patreon/database')
 
@@ -19,6 +21,14 @@ const { DEFAULT_TIERS } = require('../../utils/patreon/database')
 
 function isStaff(interaction) {
   return !!interaction.member?.permissions?.has('ManageMessages')
+}
+
+async function loadTiersText(conn) {
+  const [tiersTitle, tiersFooter] = await Promise.all([
+    conn.getConfig('tiers_title'),
+    conn.getConfig('tiers_footer'),
+  ])
+  return { tiersTitle, tiersFooter }
 }
 
 async function loadHub(conn) {
@@ -37,16 +47,18 @@ async function postOrRefreshPanel(guild, conn) {
   const ch = guild.channels.cache.get(channelId)
   if (!ch) return false
 
-  const [patreonUrl, showCount, countThreshold, milestone, supporterCount] = await Promise.all([
+  const [patreonUrl, showCount, countThreshold, milestone, supporterCount, mainTitle, mainDescription] = await Promise.all([
     conn.getConfig('patreon_url'),
     conn.getConfig('show_count', 'false'),
     conn.getConfig('count_threshold', '20'),
     conn.getConfig('milestone'),
     conn.getConfig('supporter_count', '0'),
+    conn.getConfig('main_title'),
+    conn.getConfig('main_description'),
   ])
 
   const payload = {
-    components: [buildMainPanel({ patreonUrl, supporterCount, milestone, showCount, countThreshold })],
+    components: [buildMainPanel({ patreonUrl, supporterCount, milestone, showCount, countThreshold, mainTitle, mainDescription })],
     flags: [MessageFlags.IsComponentsV2],
   }
 
@@ -80,10 +92,14 @@ module.exports = {
 
     // ── Public: View Tiers ────────────────────────────────────────────────
     if (interaction.isButton() && id === 'patreon_view_tiers') {
-      const tiers      = await conn.getTiers()
-      const patreonUrl = await conn.getConfig('patreon_url')
+      const [tiers, patreonUrl, tiersTitle, tiersFooter] = await Promise.all([
+        conn.getTiers(),
+        conn.getConfig('patreon_url'),
+        conn.getConfig('tiers_title'),
+        conn.getConfig('tiers_footer'),
+      ])
       return interaction.reply({
-        components: [buildTiersPanel(tiers, patreonUrl)],
+        components: [buildTiersPanel(tiers, patreonUrl, tiersTitle, tiersFooter)],
         flags: [MessageFlags.Ephemeral, MessageFlags.IsComponentsV2],
       })
     }
@@ -113,21 +129,24 @@ module.exports = {
 
       if (panel === 'tiers') {
         const tiers = await conn.getTiers()
+        const { tiersTitle, tiersFooter } = await loadTiersText(conn)
         return interaction.update({
-          components: [buildEditTiersPanel(tiers)],
+          components: [buildEditTiersPanel(tiers, tiersTitle, tiersFooter)],
           flags: [MessageFlags.IsComponentsV2],
         })
       }
 
       if (panel === 'settings') {
-        const [patreonUrl, showCount, countThreshold, milestone] = await Promise.all([
+        const [patreonUrl, showCount, countThreshold, milestone, mainTitle, mainDescription] = await Promise.all([
           conn.getConfig('patreon_url'),
           conn.getConfig('show_count', 'false'),
           conn.getConfig('count_threshold', '20'),
           conn.getConfig('milestone'),
+          conn.getConfig('main_title'),
+          conn.getConfig('main_description'),
         ])
         return interaction.update({
-          components: [buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone })],
+          components: [buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone, mainTitle, mainDescription })],
           flags: [MessageFlags.IsComponentsV2],
         })
       }
@@ -160,6 +179,34 @@ module.exports = {
     // ═════════════════════════════════════════════════════════════════════
     // SETTINGS
     // ═════════════════════════════════════════════════════════════════════
+
+    if (interaction.isButton() && id === 'patreon_set_message') {
+      const [currentTitle, currentDescription] = await Promise.all([
+        conn.getConfig('main_title', ''),
+        conn.getConfig('main_description', ''),
+      ])
+      return interaction.showModal(buildMessageModal(currentTitle, currentDescription))
+    }
+
+    if (interaction.isModalSubmit() && id === 'modal_patreon_set_message') {
+      const title       = interaction.fields.getTextInputValue('main_title').trim()
+      const description = interaction.fields.getTextInputValue('main_description').trim()
+
+      title ? await conn.setConfig('main_title', title) : await conn.deleteConfig('main_title')
+      description ? await conn.setConfig('main_description', description) : await conn.deleteConfig('main_description')
+
+      await postOrRefreshPanel(interaction.guild, conn)
+      const [patreonUrl, showCount, countThreshold, milestone] = await Promise.all([
+        conn.getConfig('patreon_url'),
+        conn.getConfig('show_count', 'false'),
+        conn.getConfig('count_threshold', '20'),
+        conn.getConfig('milestone'),
+      ])
+      return interaction.update({
+        components: [buildSettingsPanel({ patreonUrl, showCount, countThreshold, milestone, mainTitle: title, mainDescription: description })],
+        flags: [MessageFlags.IsComponentsV2],
+      })
+    }
 
     if (interaction.isButton() && id === 'patreon_set_url') {
       const current = await conn.getConfig('patreon_url', '')
@@ -252,6 +299,25 @@ module.exports = {
     // EDIT TIERS
     // ═════════════════════════════════════════════════════════════════════
 
+    if (interaction.isButton() && id === 'patreon_tier_text') {
+      const { tiersTitle, tiersFooter } = await loadTiersText(conn)
+      return interaction.showModal(buildTiersTextModal(tiersTitle, tiersFooter))
+    }
+
+    if (interaction.isModalSubmit() && id === 'modal_patreon_tier_text') {
+      const title  = interaction.fields.getTextInputValue('tiers_title').trim()
+      const footer = interaction.fields.getTextInputValue('tiers_footer').trim()
+
+      title ? await conn.setConfig('tiers_title', title) : await conn.deleteConfig('tiers_title')
+      footer ? await conn.setConfig('tiers_footer', footer) : await conn.deleteConfig('tiers_footer')
+
+      const updated = await conn.getTiers()
+      return interaction.update({
+        components: [buildEditTiersPanel(updated, title, footer)],
+        flags: [MessageFlags.IsComponentsV2],
+      })
+    }
+
     if (interaction.isButton() && id === 'patreon_tier_add') {
       return interaction.showModal(buildAddTierModal())
     }
@@ -269,8 +335,9 @@ module.exports = {
       await conn.upsertTier({ id: tierId, name, price, benefits, sort_order: sortOrder })
       await postOrRefreshPanel(interaction.guild, conn)
       const updated = await conn.getTiers()
+      const { tiersTitle, tiersFooter } = await loadTiersText(conn)
       return interaction.update({
-        components: [buildEditTiersPanel(updated)],
+        components: [buildEditTiersPanel(updated, tiersTitle, tiersFooter)],
         flags: [MessageFlags.IsComponentsV2],
       })
     }
@@ -295,8 +362,9 @@ module.exports = {
       await conn.upsertTier({ id: tierId, name, price, benefits, sort_order: existing.sort_order })
       await postOrRefreshPanel(interaction.guild, conn)
       const updated = await conn.getTiers()
+      const { tiersTitle, tiersFooter } = await loadTiersText(conn)
       return interaction.update({
-        components: [buildEditTiersPanel(updated)],
+        components: [buildEditTiersPanel(updated, tiersTitle, tiersFooter)],
         flags: [MessageFlags.IsComponentsV2],
       })
     }
@@ -306,8 +374,9 @@ module.exports = {
       await conn.removeTier(tierId)
       await postOrRefreshPanel(interaction.guild, conn)
       const updated = await conn.getTiers()
+      const { tiersTitle, tiersFooter } = await loadTiersText(conn)
       return interaction.update({
-        components: [buildEditTiersPanel(updated)],
+        components: [buildEditTiersPanel(updated, tiersTitle, tiersFooter)],
         flags: [MessageFlags.IsComponentsV2],
       })
     }
@@ -318,8 +387,9 @@ module.exports = {
       }
       await postOrRefreshPanel(interaction.guild, conn)
       const updated = await conn.getTiers()
+      const { tiersTitle, tiersFooter } = await loadTiersText(conn)
       return interaction.update({
-        components: [buildEditTiersPanel(updated)],
+        components: [buildEditTiersPanel(updated, tiersTitle, tiersFooter)],
         flags: [MessageFlags.IsComponentsV2],
       })
     }

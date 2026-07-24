@@ -1,13 +1,67 @@
 const fs = require("fs");
 const path = require("path");
 const { Collection } = require("discord.js");
+const { tLocale, getGuildLocale, DEFAULT, SUPPORTED } = require("../utils/i18n");
 
-module.exports = async (client) => {
+function localizeOptions(options, locale) {
+  if (!Array.isArray(options)) return options;
+  return options.map((opt) => {
+    const localized = { ...opt };
+    if (opt.descriptionKey) {
+      localized.description = tLocale(opt.descriptionKey, locale);
+    }
+    if (Array.isArray(opt.choices)) {
+      localized.choices = opt.choices.map((choice) => ({
+        ...choice,
+        name: choice.nameKey ? tLocale(choice.nameKey, locale) : choice.name,
+      }));
+    }
+    if (Array.isArray(opt.options)) {
+      localized.options = localizeOptions(opt.options, locale);
+    }
+    return localized;
+  });
+}
+
+function localizedName(comando, locale) {
+  return comando.nameKey ? tLocale(comando.nameKey, locale) : comando.name;
+}
+
+function buildRegisterObject(comando, locale) {
+  const isContextMenu = comando.type === 2 || comando.type === 3;
+
+  return {
+    name: localizedName(comando, locale),
+    ...(isContextMenu
+      ? {}
+      : {
+          description: comando.descriptionKey
+            ? tLocale(comando.descriptionKey, locale)
+            : comando.description || "Sem descrição",
+          options: localizeOptions(comando.options, locale) || [],
+        }),
+    ...(comando.type && { type: comando.type }),
+    ...(comando.default_member_permissions !== undefined && {
+      defaultMemberPermissions: comando.default_member_permissions,
+    }),
+  };
+}
+
+async function resyncGuildCommands(client, guildId) {
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild || !client._slashCommandsRaw) return;
+
+  const locale = getGuildLocale(guildId);
+  const localized = client._slashCommandsRaw.map((c) => buildRegisterObject(c, locale));
+  await guild.commands.set(localized);
+}
+
+async function loadSlashCommands(client) {
   client.slashCommands = client.slashCommands || new Collection();
 
   const DEV_GUILD_ID = "";
-  const commandsForRegister = [];
-  const devCommandsForRegister = [];
+  const commandsRaw = [];
+  const devCommandsRaw = [];
   const basePath = path.join(__dirname, "../commands/slash");
   const devPath = path.join(__dirname, "../commands/dev");
 
@@ -36,27 +90,10 @@ module.exports = async (client) => {
 
         client.slashCommands.set(comando.name, comando);
 
-        // Context menu commands (User=2, Message=3) must NOT have description/options
-        const isContextMenu = comando.type === 2 || comando.type === 3;
-
-        const toRegister = {
-          name: comando.name,
-          ...(isContextMenu
-            ? {}
-            : {
-                description: comando.description || "Sem descrição",
-                options: comando.options || [],
-              }),
-          ...(comando.type && { type: comando.type }),
-          ...(comando.default_member_permissions !== undefined && {
-            defaultMemberPermissions: comando.default_member_permissions,
-          }),
-        };
-
         if (isDevFolder) {
-          devCommandsForRegister.push(toRegister);
+          devCommandsRaw.push(comando);
         } else {
-          commandsForRegister.push(toRegister);
+          commandsRaw.push(comando);
         }
 
         loadedCommands++;
@@ -72,28 +109,46 @@ module.exports = async (client) => {
     walk(devPath, true);
   }
 
+  client._slashCommandsRaw = commandsRaw;
+  client._devSlashCommandsRaw = devCommandsRaw;
+
+  client.slashCommandsByLocale = {};
+  for (const locale of SUPPORTED) {
+    const byName = new Map();
+    for (const comando of [...commandsRaw, ...devCommandsRaw]) {
+      byName.set(localizedName(comando, locale), comando);
+    }
+    client.slashCommandsByLocale[locale] = byName;
+  }
+
+  const commandsForRegister = commandsRaw.map((c) => buildRegisterObject(c, DEFAULT));
+  const devCommandsForRegister = devCommandsRaw.map((c) => buildRegisterObject(c, DEFAULT));
+
   try {
     if (!client.application?.owner) {
       await client.application?.fetch();
     }
 
-    if (DEV_GUILD_ID && devCommandsForRegister.length > 0) {
+    if (DEV_GUILD_ID && devCommandsRaw.length > 0) {
       const devGuild = client.guilds.cache.get(DEV_GUILD_ID);
       if (devGuild) {
+        const devLocale = getGuildLocale(DEV_GUILD_ID);
         await devGuild.commands.set([
-          ...commandsForRegister,
-          ...devCommandsForRegister,
+          ...commandsRaw.map((c) => buildRegisterObject(c, devLocale)),
+          ...devCommandsRaw.map((c) => buildRegisterObject(c, devLocale)),
         ]);
       }
     }
 
     for (const [guildId, guild] of client.guilds.cache) {
       try {
-        if (guild.id === DEV_GUILD_ID && devCommandsForRegister.length > 0) {
+        if (guild.id === DEV_GUILD_ID && devCommandsRaw.length > 0) {
           continue;
         }
 
-        await guild.commands.set(commandsForRegister);
+        const locale = getGuildLocale(guildId);
+        const localized = commandsRaw.map((c) => buildRegisterObject(c, locale));
+        await guild.commands.set(localized);
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
         console.error(`[commands] erro ao sincronizar ${guild.name}: ${error.message}`);
@@ -108,4 +163,7 @@ module.exports = async (client) => {
     dev: devCommandsForRegister,
     total: loadedCommands,
   };
-};
+}
+
+module.exports = loadSlashCommands;
+module.exports.resyncGuildCommands = resyncGuildCommands;
