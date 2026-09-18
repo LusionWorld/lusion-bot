@@ -9,30 +9,13 @@ const {
 } = require("discord.js");
 
 const path = require("path");
-const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const { JsonDatabase } = require("wio.db");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const dbConnections = new Map();
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) return dbConnections.get(guildId);
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  dbConnections.set(guildId, db);
-  return db;
-}
 
 function getEstacoesDB(guildId) {
   return new JsonDatabase({
@@ -66,91 +49,19 @@ function formatDuration(ms) {
 }
 
 async function buildEstatisticasEstacao(guildId, estacaoId) {
-  const db = getDBConnection(guildId);
   const estacoes = getEstacoes(guildId);
   const estacao = estacoes.find((e) => e.id === estacaoId);
   if (!estacao) return null;
 
   const nomeCategoria = estacao.nome;
-  const whereBase = `guild_id = ? AND (nome_categoria = ? OR (nome_categoria IS NULL AND motivo_abertura LIKE ?))`;
-  const paramsBase = [guildId, nomeCategoria, `%${nomeCategoria}%`];
+  const stats = await ticketRepo.estatisticasEstacao(guildId, nomeCategoria).catch(() => null);
 
-  const [abertos, total, fechados, comStaff, semStaff] = await Promise.all([
-    db
-      .getAsync(
-        `SELECT COUNT(*) as c FROM tickets WHERE ${whereBase} AND fechado_em IS NULL`,
-        paramsBase,
-      )
-      .catch(() => ({ c: 0 })),
-    db
-      .getAsync(
-        `SELECT COUNT(*) as c FROM tickets WHERE ${whereBase}`,
-        paramsBase,
-      )
-      .catch(() => ({ c: 0 })),
-    db
-      .getAsync(
-        `SELECT COUNT(*) as c FROM tickets WHERE ${whereBase} AND fechado_em IS NOT NULL`,
-        paramsBase,
-      )
-      .catch(() => ({ c: 0 })),
-    db
-      .getAsync(
-        `SELECT COUNT(*) as c FROM tickets WHERE ${whereBase} AND fechado_em IS NULL AND assumido_em IS NOT NULL`,
-        paramsBase,
-      )
-      .catch(() => ({ c: 0 })),
-    db
-      .getAsync(
-        `SELECT COUNT(*) as c FROM tickets WHERE ${whereBase} AND fechado_em IS NULL AND assumido_em IS NULL`,
-        paramsBase,
-      )
-      .catch(() => ({ c: 0 })),
-  ]);
+  const topStaff = stats?.topStaff ?? [];
 
-  const tmResposta = await db
-    .getAsync(
-      `SELECT AVG(primeira_resposta_em - criado_em) as media FROM tickets WHERE ${whereBase} AND primeira_resposta_em IS NOT NULL`,
-      paramsBase,
-    )
-    .catch(() => null);
-
-  const tmResolucao = await db
-    .getAsync(
-      `SELECT AVG(fechado_em - criado_em) as media FROM tickets WHERE ${whereBase} AND fechado_em IS NOT NULL`,
-      paramsBase,
-    )
-    .catch(() => null);
-
-  const avalMedia = await db
-    .getAsync(
-      `SELECT AVG(media) as avg_media FROM avaliacoes_criterios ac 
-     INNER JOIN tickets t ON ac.ticket_id = t.ticket_id 
-     WHERE t.guild_id = ? AND t.nome_categoria = ?`,
-      [guildId, nomeCategoria],
-    )
-    .catch(() => null);
-
-  const avalSimples = await db
-    .getAsync(
-      `SELECT AVG(a.nota) as avg_nota FROM avaliacoes a
-     INNER JOIN tickets t ON a.ticket_id = t.ticket_id
-     WHERE t.guild_id = ? AND t.nome_categoria = ?`,
-      [guildId, nomeCategoria],
-    )
-    .catch(() => null);
-
-  const topStaff = await db
-    .allAsync(
-      `SELECT respondido_id, COUNT(*) as c FROM tickets WHERE guild_id = ? AND nome_categoria = ? AND respondido_id IS NOT NULL GROUP BY respondido_id ORDER BY c DESC LIMIT 3`,
-      [guildId, nomeCategoria],
-    )
-    .catch(() => []);
-
-  const mediaAval = avalMedia?.avg_media
-    ? `${avalMedia.avg_media.toFixed(1)}/5.0 ⭐`
-    : avalSimples?.avg_nota
-      ? `${avalSimples.avg_nota.toFixed(1)}/5.0 ⭐`
+  const mediaAval = stats?.avalMedia
+    ? `${Number(stats.avalMedia).toFixed(1)}/5.0 ⭐`
+    : stats?.avalSimples
+      ? `${Number(stats.avalSimples).toFixed(1)}/5.0 ⭐`
       : "Sem avaliações";
 
   const topStaffText =
@@ -169,13 +80,13 @@ async function buildEstatisticasEstacao(guildId, estacaoId) {
   return {
     estacao,
     stats: {
-      abertos: abertos?.c || 0,
-      total: total?.c || 0,
-      fechados: fechados?.c || 0,
-      comStaff: comStaff?.c || 0,
-      semStaff: semStaff?.c || 0,
-      tmResposta: formatDuration(tmResposta?.media),
-      tmResolucao: formatDuration(tmResolucao?.media),
+      abertos: stats?.abertos || 0,
+      total: stats?.total || 0,
+      fechados: stats?.fechados || 0,
+      comStaff: stats?.comStaff || 0,
+      semStaff: stats?.semStaff || 0,
+      tmResposta: formatDuration(stats?.tmResposta),
+      tmResolucao: formatDuration(stats?.tmResolucao),
       mediaAval,
       topStaffText,
       agora,

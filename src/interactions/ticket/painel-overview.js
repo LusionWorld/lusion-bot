@@ -14,16 +14,14 @@ const {
 
 const path = require("path");
 const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const { JsonDatabase } = require("wio.db");
 const cron = require("node-cron");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const dbConnections = new Map();
 
 function getEmoji(raw) {
   if (!raw) return undefined;
@@ -31,20 +29,6 @@ function getEmoji(raw) {
   if (!match) return undefined;
   const [, name, id] = match;
   return { name, id };
-}
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) return dbConnections.get(guildId);
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  dbConnections.set(guildId, db);
-  return db;
 }
 
 function getConfigDB(guildId) {
@@ -98,7 +82,6 @@ function formatarTempo(ms) {
 }
 
 async function buildOverviewComponents(guildId, guild, options = {}) {
-  const db = getDBConnection(guildId);
   const configDB = getConfigDB(guildId);
   const tagsConfig = configDB.get("tags_config") || {};
   const tagsCadastradas = tagsConfig.tags || [];
@@ -107,30 +90,7 @@ async function buildOverviewComponents(guildId, guild, options = {}) {
   const POR_PAGINA = 5;
   const agora = Date.now();
 
-  const [totalRow, assumidosRow, semStaffRow] = await Promise.all([
-    db
-      .getAsync(
-        "SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND fechado_em IS NULL",
-        [guildId],
-      )
-      .catch(() => ({ c: 0 })),
-    db
-      .getAsync(
-        "SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND fechado_em IS NULL AND assumido_em IS NOT NULL",
-        [guildId],
-      )
-      .catch(() => ({ c: 0 })),
-    db
-      .getAsync(
-        "SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND fechado_em IS NULL AND assumido_em IS NULL",
-        [guildId],
-      )
-      .catch(() => ({ c: 0 })),
-  ]);
-
-  let ticketsQuery =
-    "SELECT ticket_id, user_id, staff_id, nome_categoria, criado_em, assumido_em, tags, ultima_mensagem_em, respondido_id FROM tickets WHERE guild_id = ? AND fechado_em IS NULL ORDER BY criado_em ASC";
-  let allTickets = await db.allAsync(ticketsQuery, [guildId]).catch(() => []);
+  let allTickets = await ticketRepo.listarTicketsAbertosOrdenados(guildId).catch(() => []);
 
   if (filtroTag) {
     allTickets = allTickets.filter((t) => {
@@ -148,12 +108,7 @@ async function buildOverviewComponents(guildId, guild, options = {}) {
   if (deletados.length > 0) {
     const agora2 = Date.now();
     for (const t of deletados) {
-      await db
-        .runAsync(
-          `UPDATE tickets SET fechado_em = ? WHERE ticket_id = ? AND fechado_em IS NULL`,
-          [agora2, t.ticket_id],
-        )
-        .catch(() => {});
+      await ticketRepo.atualizarTicket(t.ticket_id, { fechado_em: agora2 }).catch(() => {});
     }
   }
   const ticketsValidos = allTickets.filter((t) =>
@@ -435,13 +390,7 @@ module.exports = {
         });
       }
 
-      const db = getDBConnection(guildId);
-      const ticket = await db
-        .getAsync(
-          "SELECT user_id, staff_id, nome_categoria, criado_em, assumido_em, tags, respondido_id, ultima_mensagem_em FROM tickets WHERE ticket_id = ?",
-          [ticketId],
-        )
-        .catch(() => null);
+      const ticket = await ticketRepo.getTicketByChannel(ticketId).catch(() => null);
 
       if (!ticket) {
         return interaction.reply({

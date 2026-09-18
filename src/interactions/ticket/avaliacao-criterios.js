@@ -18,15 +18,13 @@ const {
 
 const path = require("path");
 const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 
 const { JsonDatabase } = require("wio.db");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
+const ticketRepo = require("../../utils/ticket/repository");
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const dbConnections = new Map();
 
 function safeEmoji(raw) {
   if (!raw) return undefined;
@@ -39,32 +37,6 @@ function be(btn, emojiKey) {
   const e = safeEmoji(emojis[emojiKey]);
   if (e) btn.setEmoji(e);
   return btn;
-}
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) return dbConnections.get(guildId);
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  dbConnections.set(guildId, db);
-  db.run(`CREATE TABLE IF NOT EXISTS avaliacoes_criterios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ticket_id TEXT NOT NULL,
-    user_id TEXT NOT NULL,
-    staff_id TEXT,
-    nota_velocidade INTEGER,
-    nota_qualidade INTEGER,
-    nota_simpatia INTEGER,
-    media REAL,
-    comentario TEXT,
-    avaliado_em INTEGER NOT NULL
-  )`);
-  return db;
 }
 
 function getConfigDB(guildId) {
@@ -259,8 +231,6 @@ module.exports = {
 
     if (!guildId) return;
 
-    const db = getDBConnection(guildId);
-
     if (customId.startsWith("aval_criterios_")) {
       const parts = customId.replace("aval_criterios_", "").split("_");
       const ticketId = parts[0];
@@ -338,23 +308,7 @@ module.exports = {
       const configDB = getConfigDB(guildId);
       const metaNota = configDB.get("meta_avaliacao") ?? 0;
 
-      const rows = await db
-        .allAsync(
-          `
-        SELECT staff_id,
-          AVG(media) as media_geral,
-          AVG(nota_velocidade) as media_velocidade,
-          AVG(nota_qualidade) as media_qualidade,
-          AVG(nota_simpatia) as media_simpatia,
-          COUNT(*) as total_avals
-        FROM avaliacoes_criterios
-        WHERE staff_id IS NOT NULL
-        GROUP BY staff_id
-        ORDER BY media_geral DESC
-        LIMIT 10
-      `,
-        )
-        .catch(() => []);
+      const rows = await ticketRepo.rankingStaffCriterios(guildId).catch(() => []);
 
       if (rows.length === 0) {
         return interaction.editReply({
@@ -469,31 +423,9 @@ module.exports = {
 
       const inicioSemana = getInicioSemana();
 
-      let rowsFinal = await db
-        .allAsync(
-          `
-        SELECT fechado_id as staff_id, COUNT(*) as tickets_fechados
-        FROM tickets
-        WHERE guild_id = ? AND fechado_em IS NOT NULL AND fechado_em >= ? AND fechado_id IS NOT NULL
-        GROUP BY fechado_id ORDER BY tickets_fechados DESC LIMIT 10
-      `,
-          [guildId, inicioSemana],
-        )
+      const rowsFinal = await ticketRepo
+        .rankingSemanalFechados(guildId, inicioSemana)
         .catch(() => []);
-
-      if (rowsFinal.length === 0) {
-        rowsFinal = await db
-          .allAsync(
-            `
-          SELECT staff_id, COUNT(*) as tickets_fechados
-          FROM tickets
-          WHERE guild_id = ? AND fechado_em IS NOT NULL AND fechado_em >= ? AND staff_id IS NOT NULL
-          GROUP BY staff_id ORDER BY tickets_fechados DESC LIMIT 10
-        `,
-            [guildId, inicioSemana],
-          )
-          .catch(() => []);
-      }
 
       const inicioStr = new Date(inicioSemana).toLocaleDateString("pt-BR", {
         timeZone: "America/Sao_Paulo",
@@ -712,25 +644,20 @@ module.exports = {
 
       const submitGuildId = guildId;
       if (!submitGuildId) return;
-      const submitDb = getDBConnection(submitGuildId);
       const submitGuild =
         guild || client.guilds.cache.get(submitGuildId) || null;
 
       const media = (velocidade + qualidade + simpatia) / 3;
-      await submitDb.runAsync(
-        "INSERT INTO avaliacoes_criterios (ticket_id, user_id, staff_id, nota_velocidade, nota_qualidade, nota_simpatia, media, comentario, avaliado_em) VALUES (?,?,?,?,?,?,?,?,?)",
-        [
-          ticketId,
-          interaction.user.id,
-          staffId,
-          velocidade,
-          qualidade,
-          simpatia,
-          media,
-          comentario,
-          Date.now(),
-        ],
-      );
+      await ticketRepo.inserirAvaliacaoCriterios({
+        ticketId,
+        userId: interaction.user.id,
+        staffId,
+        notaVelocidade: velocidade,
+        notaQualidade: qualidade,
+        notaSimpatia: simpatia,
+        media,
+        comentario,
+      });
 
       try {
         const configDB = getConfigDB(submitGuildId);

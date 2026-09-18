@@ -16,7 +16,91 @@ const path = require("path");
 const sqlite3 = require("sqlite3");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const { t } = require("../../utils/i18n");
+const ticketRepo = require("../../utils/ticket/repository");
 const emojis = getEmojis();
+
+/** Lê uma semana arquivada localmente (snapshot .db do cron semanal). */
+function queryArchivedDb(dbPath, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+      if (err) return reject(err);
+    });
+    db.all(sql, params, (err, rows) => {
+      db.close();
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+/**
+ * Dados de tickets de um período: "atual" vem do Supabase (dados vivos);
+ * qualquer outro valor é uma semana arquivada, lida do snapshot .db local
+ * gerado pelo cron semanal (não migrado — são fotos congeladas do passado).
+ */
+async function getContadoresPeriodo(guildId, selectedSemana, semanalDir) {
+  if (selectedSemana === "atual") {
+    return ticketRepo.getContadores(guildId);
+  }
+  const dbPath = path.join(semanalDir, `tickets_${selectedSemana}.db`);
+  const [row] = await queryArchivedDb(
+    dbPath,
+    `SELECT * FROM contadores WHERE guild_id = ?`,
+    [guildId],
+  ).catch(() => []);
+  return row || { abertos: 0, assumidos: 0, fechados: 0 };
+}
+
+async function getTicketsPeriodo(guildId, selectedSemana, semanalDir) {
+  if (selectedSemana === "atual") {
+    return ticketRepo.listarTodosTickets(guildId);
+  }
+  const dbPath = path.join(semanalDir, `tickets_${selectedSemana}.db`);
+  return queryArchivedDb(dbPath, `SELECT * FROM tickets WHERE guild_id = ?`, [
+    guildId,
+  ]).catch(() => []);
+}
+
+async function getTicketsPorCategoriaPeriodo(guildId, selectedSemana, categoriaIds, semanalDir) {
+  if (selectedSemana === "atual") {
+    return ticketRepo.ticketsPorCategoria(guildId, categoriaIds);
+  }
+  const dbPath = path.join(semanalDir, `tickets_${selectedSemana}.db`);
+  const placeholders = categoriaIds.map(() => "?").join(",");
+  return queryArchivedDb(
+    dbPath,
+    `SELECT criado_em, assumido_em, fechado_em, primeira_resposta_em FROM tickets WHERE guild_id = ? AND categoria IN (${placeholders})`,
+    [guildId, ...categoriaIds],
+  ).catch(() => []);
+}
+
+async function getContagemUsuarioPeriodo(guildId, selectedSemana, userId, semanalDir) {
+  if (selectedSemana === "atual") {
+    return ticketRepo.contarTicketsPorUsuario(guildId, userId);
+  }
+  const dbPath = path.join(semanalDir, `tickets_${selectedSemana}.db`);
+  const [row] = await queryArchivedDb(
+    dbPath,
+    `SELECT
+      (SELECT COUNT(*) FROM tickets WHERE staff_id = ? AND guild_id = ?) AS assumidos,
+      (SELECT COUNT(*) FROM tickets WHERE fechado_id = ? AND guild_id = ?) AS fechados,
+      (SELECT COUNT(*) FROM tickets WHERE respondido_id = ? AND guild_id = ?) AS respondidos`,
+    [userId, guildId, userId, guildId, userId, guildId],
+  ).catch(() => []);
+  return row || { assumidos: 0, fechados: 0, respondidos: 0 };
+}
+
+async function getCategoriasDistintasPeriodo(guildId, selectedSemana, semanalDir) {
+  if (selectedSemana === "atual") {
+    return ticketRepo.distinctCategorias(guildId);
+  }
+  const dbPath = path.join(semanalDir, `tickets_${selectedSemana}.db`);
+  return queryArchivedDb(
+    dbPath,
+    `SELECT DISTINCT categoria FROM tickets WHERE guild_id = ? AND categoria IS NOT NULL`,
+    [guildId],
+  ).catch(() => []);
+}
 
 function getEmoji(raw) {
   if (!raw) return undefined;
@@ -63,37 +147,18 @@ module.exports = {
         `../../../banco/ticket/${guildId}/banco`,
       );
       const semanalDir = path.join(baseDir, "semanal");
-      const dbPath = path.join(baseDir, "tickets.db");
-
-      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) return console.error("Erro ao abrir banco:", err.message);
-      });
-
-      const query = (sql, params = []) =>
-        new Promise((resolve, reject) => {
-          db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
 
       let container;
       let containerData = {};
 
       try {
-        const [contadores] =
-          (await query(`SELECT * FROM contadores WHERE guild_id = ?`, [
-            guildId,
-          ])) || [];
+        const contadores = await getContadoresPeriodo(guildId, "atual", semanalDir);
 
         const abertos = contadores?.abertos ?? 0;
         const assumidos = contadores?.assumidos ?? 0;
         const fechados = contadores?.fechados ?? 0;
 
-        const tickets = await query(
-          `SELECT criado_em, assumido_em, fechado_em, primeira_resposta_em FROM tickets WHERE guild_id = ?`,
-          [guildId],
-        );
+        const tickets = await getTicketsPeriodo(guildId, "atual", semanalDir);
 
         let totalAssumir = 0,
           countAssumir = 0;
@@ -169,8 +234,6 @@ module.exports = {
           title: t("banco_titulo", guildId),
           error: t("banco_erro_carregar", guildId),
         };
-      } finally {
-        db.close();
       }
 
       let arquivosSemana = [];
@@ -272,32 +335,13 @@ module.exports = {
         `../../../banco/ticket/${guildId}/banco`,
       );
       const semanalDir = path.join(baseDir, "semanal");
-      const dbPath =
-        selectedSemana === "atual"
-          ? path.join(baseDir, "tickets.db")
-          : path.join(semanalDir, `tickets_${selectedSemana}.db`);
-
-      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
-      const query = (sql, params = []) =>
-        new Promise((resolve, reject) => {
-          db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
 
       try {
-        const [contadores] =
-          (await query(`SELECT * FROM contadores WHERE guild_id = ?`, [
-            guildId,
-          ])) || [];
+        const contadores = await getContadoresPeriodo(guildId, selectedSemana, semanalDir);
         const abertos = contadores?.abertos ?? 0;
         const assumidos = contadores?.assumidos ?? 0;
         const fechados = contadores?.fechados ?? 0;
-        const tickets = await query(
-          `SELECT * FROM tickets WHERE guild_id = ?`,
-          [guildId],
-        );
+        const tickets = await getTicketsPeriodo(guildId, selectedSemana, semanalDir);
 
         let totalAssumir = 0,
           countAssumir = 0;
@@ -415,8 +459,6 @@ module.exports = {
           components: [containerError],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
-      } finally {
-        db.close();
       }
     }
     if (
@@ -446,9 +488,9 @@ module.exports = {
           (file) =>
             file.startsWith(`tickets_${ano}-${mes}-`) && file.endsWith(".db"),
         );
-      const dbPaths = [
-        path.join(baseDir, "tickets.db"),
-        ...arquivosMes.map((f) => path.join(semanalDir, f)),
+      const periodos = [
+        "atual",
+        ...arquivosMes.map((f) => f.replace(".db", "").replace("tickets_", "")),
       ];
       let abertos = 0,
         assumidos = 0,
@@ -460,35 +502,15 @@ module.exports = {
       let totalResponder = 0,
         countResponder = 0;
       const desempenho = {};
-      const queryDb = (dbPath, sql, params = []) => {
-        return new Promise((resolve, reject) => {
-          const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
-          db.all(sql, params, (err, rows) => {
-            db.close();
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
-      };
-      for (const dbPath of dbPaths) {
+      for (const periodo of periodos) {
         try {
-          const [contador] =
-            (await queryDb(
-              dbPath,
-              `SELECT * FROM contadores WHERE guild_id = ?`,
-              [guildId],
-            )) || [];
+          const contador = await getContadoresPeriodo(guildId, periodo, semanalDir);
           abertos += contador?.abertos ?? 0;
           assumidos += contador?.assumidos ?? 0;
           fechados += contador?.fechados ?? 0;
         } catch {}
         try {
-          const tickets = await queryDb(
-            dbPath,
-            `SELECT criado_em, assumido_em, fechado_em, primeira_resposta_em, staff_id, respondido_id, fechado_id 
-             FROM tickets WHERE guild_id = ?`,
-            [guildId],
-          );
+          const tickets = await getTicketsPeriodo(guildId, periodo, semanalDir);
           for (const t of tickets) {
             if (t.assumido_em && t.criado_em) {
               totalAssumir += t.assumido_em - t.criado_em;
@@ -584,23 +606,8 @@ module.exports = {
         `../../../banco/ticket/${guildId}/banco`,
       );
       const semanalDir = path.join(baseDir, "semanal");
-      const dbPath =
-        semanaSelecionada === "atual"
-          ? path.join(baseDir, "tickets.db")
-          : path.join(semanalDir, `tickets_${semanaSelecionada}.db`);
-      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
-      const query = (sql, params = []) =>
-        new Promise((resolve, reject) => {
-          db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
       try {
-        const rows = await query(
-          `SELECT DISTINCT categoria FROM tickets WHERE guild_id = ? AND categoria IS NOT NULL`,
-          [guildId],
-        );
+        const rows = await getCategoriasDistintasPeriodo(guildId, semanaSelecionada, semanalDir);
         if (!rows.length) {
           const containerError =
             new ContainerBuilder().addTextDisplayComponents(
@@ -658,8 +665,6 @@ module.exports = {
           components: [containerError],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
-      } finally {
-        db.close();
       }
     }
 
@@ -702,46 +707,12 @@ module.exports = {
         `../../../banco/ticket/${guildId}/banco`,
       );
       const semanalDir = path.join(baseDir, "semanal");
-      const dbPath =
-        semanaSelecionada === "atual"
-          ? path.join(baseDir, "tickets.db")
-          : path.join(semanalDir, `tickets_${semanaSelecionada}.db`);
-      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-          console.error("Erro ao abrir banco:", err.message);
-          const containerError =
-            new ContainerBuilder().addTextDisplayComponents(
-              new TextDisplayBuilder().setContent(
-                t("banco_usuario_banco_erro", guildId),
-              ),
-            );
-
-          return interaction.reply({
-            components: [containerError],
-            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-          });
-        }
-      });
-      const query = (sql, params = []) =>
-        new Promise((resolve, reject) => {
-          db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
       try {
-        const counts = await query(
-          `SELECT
-            (SELECT COUNT(*) FROM tickets WHERE staff_id = ? AND guild_id = ?) AS assumidos,
-            (SELECT COUNT(*) FROM tickets WHERE fechado_id = ? AND guild_id = ?) AS fechados,
-            (SELECT COUNT(*) FROM tickets WHERE respondido_id = ? AND guild_id = ?) AS respondidos`,
-          [userId, guildId, userId, guildId, userId, guildId],
-        );
         const {
           assumidos = 0,
           fechados = 0,
           respondidos = 0,
-        } = counts[0] || {};
+        } = await getContagemUsuarioPeriodo(guildId, semanaSelecionada, userId, semanalDir);
 
         const containerResult = new ContainerBuilder().addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
@@ -774,8 +745,6 @@ module.exports = {
           components: [containerError],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
-      } finally {
-        db.close();
       }
     }
 
@@ -793,30 +762,14 @@ module.exports = {
       );
       const semanalDir = path.join(baseDir, "semanal");
 
-      const dbPath =
-        semanaSelecionada === "atual"
-          ? path.join(baseDir, "tickets.db")
-          : path.join(semanalDir, `tickets_${semanaSelecionada}.db`);
-
-      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
-      const query = (sql, params = []) =>
-        new Promise((resolve, reject) => {
-          db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
-
       let containerData = {};
 
       try {
-        const tickets = await query(
-          `
-          SELECT criado_em, assumido_em, fechado_em, primeira_resposta_em
-          FROM tickets
-          WHERE guild_id = ? AND categoria = ?
-        `,
-          [guildId, categoriaSelecionada],
+        const tickets = await getTicketsPorCategoriaPeriodo(
+          guildId,
+          semanaSelecionada,
+          [categoriaSelecionada],
+          semanalDir,
         );
 
         let abertos = 0,
@@ -910,8 +863,6 @@ module.exports = {
           title: "# Resumo da Categoria",
           error: t("banco_categoria_erro_dados", guildId),
         };
-      } finally {
-        db.close();
       }
 
       const rowVoltar = new ActionRowBuilder().addComponents(
@@ -961,43 +912,20 @@ module.exports = {
 
       const baseDir = path.join(
         __dirname,
-        `../../banco/ticket/${guildId}/banco`,
+        `../../../banco/ticket/${guildId}/banco`,
       );
       const semanalDir = path.join(baseDir, "semanal");
-
-      const dbFile =
-        selectedValue === "atual"
-          ? path.join(baseDir, "tickets.db")
-          : path.join(semanalDir, `tickets_${selectedValue}.db`);
-
-      const db = new sqlite3.Database(dbFile, sqlite3.OPEN_READONLY, (err) => {
-        if (err) return console.error("Erro ao abrir banco:", err.message);
-      });
-
-      const query = (sql, params = []) =>
-        new Promise((resolve, reject) => {
-          db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        });
 
       let containerData = {};
 
       try {
-        const [contadores] =
-          (await query(`SELECT * FROM contadores WHERE guild_id = ?`, [
-            guildId,
-          ])) || [];
+        const contadores = await getContadoresPeriodo(guildId, selectedValue, semanalDir);
 
         const abertos = contadores?.abertos ?? 0;
         const assumidos = contadores?.assumidos ?? 0;
         const fechados = contadores?.fechados ?? 0;
 
-        const tickets = await query(
-          `SELECT criado_em, assumido_em, fechado_em, primeira_resposta_em FROM tickets WHERE guild_id = ?`,
-          [guildId],
-        );
+        const tickets = await getTicketsPeriodo(guildId, selectedValue, semanalDir);
 
         let totalAssumir = 0,
           countAssumir = 0;
@@ -1075,8 +1003,6 @@ module.exports = {
           title: t("banco_titulo", guildId),
           error: t("banco_erro_semana", guildId),
         };
-      } finally {
-        db.close();
       }
 
       let arquivosSemana = [];
