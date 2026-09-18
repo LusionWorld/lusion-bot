@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 const DISCORD_API = "https://discord.com/api/v10";
 
 export interface DiscordGuild {
@@ -51,13 +53,21 @@ export async function fetchCurrentUser(accessToken: string): Promise<DiscordUser
   return res.json();
 }
 
-export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
+/**
+ * Deduplicado (React cache) dentro do mesmo request e cacheado por 30s
+ * (Next.js data cache) entre requests — a rota /users/@me/guilds do
+ * Discord tem rate limit apertado, e várias partes do painel (layout,
+ * guildAccess, home) pediam a lista de servidores de novo a cada
+ * navegação, o que estourava o limite e derrubava a página com 429.
+ */
+export const fetchUserGuilds = cache(async (accessToken: string): Promise<DiscordGuild[]> => {
   const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    next: { revalidate: 30 },
   });
   if (!res.ok) throw new Error(`Falha ao buscar servidores: ${res.status}`);
   return res.json();
-}
+});
 
 const ADMINISTRATOR = 0x8n;
 const MANAGE_GUILD = 0x20n;
