@@ -67,3 +67,9 @@ export function canManage(guild: DiscordGuild): boolean {
   const perms = BigInt(guild.permissions);
   return (perms & ADMINISTRATOR) === ADMINISTRATOR || (perms & MANAGE_GUILD) === MANAGE_GUILD;
 }
+
+export function guildIconUrl(guild: { id: string; icon: string | null }): string | null {
+  if (!guild.icon) return null;
+  const ext = guild.icon.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${ext}?size=64`;
+}
