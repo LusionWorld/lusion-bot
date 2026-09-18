@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGuildMember, fetchChannelName } from "@/lib/discordBot";
 import { StatCard } from "../stat-card";
 
 export default async function TicketsPage({
@@ -8,22 +9,47 @@ export default async function TicketsPage({
 }) {
   const { guildId } = params;
 
-  const [{ data: contadores }, { data: recentes }] = await Promise.all([
-    supabaseAdmin
-      .from("ticket_contadores")
-      .select("*")
-      .eq("guild_id", guildId)
-      .maybeSingle(),
+  const [abertosRes, assumidosRes, fechadosRes, recentesRes] = await Promise.all([
     supabaseAdmin
       .from("tickets")
-      .select("ticket_id, user_id, criado_em, fechado_em, categoria")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .is("fechado_em", null),
+    supabaseAdmin
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .is("fechado_em", null)
+      .not("assumido_em", "is", null),
+    supabaseAdmin
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .not("fechado_em", "is", null),
+    supabaseAdmin
+      .from("tickets")
+      .select("ticket_id, user_id, criado_em, fechado_em, categoria, nome_categoria")
       .eq("guild_id", guildId)
       .order("criado_em", { ascending: false })
       .limit(10),
   ]);
 
-  const stats = contadores ?? { abertos: 0, assumidos: 0, fechados: 0 };
+  const abertos = abertosRes.count ?? 0;
+  const assumidos = assumidosRes.count ?? 0;
+  const fechados = fechadosRes.count ?? 0;
+  const recentes = recentesRes.data;
+
   const rows = recentes ?? [];
+
+  const enrichedRows = await Promise.all(
+    rows.map(async (row) => {
+      const [member, categoriaNome] = await Promise.all([
+        fetchGuildMember(guildId, row.user_id),
+        row.categoria ? fetchChannelName(row.categoria) : Promise.resolve(null),
+      ]);
+      return { ...row, member, categoriaNome: row.nome_categoria || categoriaNome };
+    }),
+  );
 
   return (
     <div>
@@ -35,9 +61,9 @@ export default async function TicketsPage({
       </header>
 
       <section className="mb-8 grid grid-cols-3 gap-3">
-        <StatCard label="Abertos" value={stats.abertos} tone="warning" />
-        <StatCard label="Assumidos" value={stats.assumidos} tone="accent" />
-        <StatCard label="Fechados" value={stats.fechados} tone="success" />
+        <StatCard label="Abertos agora" value={abertos} tone="warning" />
+        <StatCard label="Abertos com staff" value={assumidos} tone="accent" />
+        <StatCard label="Fechados (total)" value={fechados} tone="success" />
       </section>
 
       <section className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -45,7 +71,7 @@ export default async function TicketsPage({
           <h2 className="text-sm font-medium text-text">Tickets recentes</h2>
         </header>
 
-        {rows.length === 0 ? (
+        {enrichedRows.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-text-muted">
             Nenhum ticket registrado ainda.
           </p>
@@ -53,21 +79,36 @@ export default async function TicketsPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-text-faint">
-                <th className="px-4 py-2.5 font-medium">Ticket</th>
                 <th className="px-4 py-2.5 font-medium">Usuário</th>
+                <th className="px-4 py-2.5 font-medium">Ticket</th>
                 <th className="px-4 py-2.5 font-medium">Categoria</th>
                 <th className="px-4 py-2.5 font-medium">Criado em</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {enrichedRows.map((row) => (
                 <tr key={row.ticket_id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-2.5 font-mono text-xs text-text-muted">
-                    {row.ticket_id}
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <UserAvatar
+                        avatarUrl={row.member?.avatarUrl ?? null}
+                        name={row.member?.username ?? row.user_id}
+                      />
+                      <span className="text-text">{row.member?.username ?? row.user_id}</span>
+                    </div>
                   </td>
-                  <td className="px-4 py-2.5 text-text">{row.user_id}</td>
-                  <td className="px-4 py-2.5 text-text-muted">{row.categoria ?? "—"}</td>
+                  <td className="px-4 py-2.5">
+                    <a
+                      href={`https://discord.com/channels/${guildId}/${row.ticket_id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent hover:text-accent-hover hover:underline"
+                    >
+                      Abrir canal ↗
+                    </a>
+                  </td>
+                  <td className="px-4 py-2.5 text-text-muted">{row.categoriaNome ?? "—"}</td>
                   <td className="px-4 py-2.5 text-text-muted">
                     {new Date(row.criado_em).toLocaleString("pt-BR")}
                   </td>
@@ -80,6 +121,18 @@ export default async function TicketsPage({
           </table>
         )}
       </section>
+    </div>
+  );
+}
+
+function UserAvatar({ avatarUrl, name }: { avatarUrl: string | null; name: string }) {
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatarUrl} alt="" className="h-6 w-6 rounded-full" />;
+  }
+  return (
+    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-raised text-[10px] text-text-muted">
+      {name.slice(0, 1).toUpperCase()}
     </div>
   );
 }

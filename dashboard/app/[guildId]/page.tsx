@@ -8,13 +8,30 @@ export default async function GuildOverviewPage({
 }) {
   const { guildId } = params;
 
-  const { data: contadores } = await supabaseAdmin
-    .from("ticket_contadores")
-    .select("*")
-    .eq("guild_id", guildId)
-    .maybeSingle();
+  const [abertosRes, assumidosRes, fechadosRes] = await Promise.all([
+    supabaseAdmin
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .is("fechado_em", null),
+    supabaseAdmin
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .is("fechado_em", null)
+      .not("assumido_em", "is", null),
+    supabaseAdmin
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId)
+      .not("fechado_em", "is", null),
+  ]);
 
-  const stats = contadores ?? { abertos: 0, assumidos: 0, fechados: 0 };
+  const stats = {
+    abertos: abertosRes.count ?? 0,
+    assumidos: assumidosRes.count ?? 0,
+    fechados: fechadosRes.count ?? 0,
+  };
 
   return (
     <div>
@@ -24,8 +41,8 @@ export default async function GuildOverviewPage({
       </header>
 
       <section className="mb-8 grid grid-cols-3 gap-3">
-        <StatCard label="Tickets abertos" value={stats.abertos} tone="warning" />
-        <StatCard label="Assumidos" value={stats.assumidos} tone="accent" />
+        <StatCard label="Abertos agora" value={stats.abertos} tone="warning" />
+        <StatCard label="Abertos com staff" value={stats.assumidos} tone="accent" />
         <StatCard label="Fechados (total)" value={stats.fechados} tone="success" />
       </section>
 
