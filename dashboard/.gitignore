@@ -3,3 +3,9 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Gerado localmente no Windows: o Tailwind v4 (@tailwindcss/oxide) tem
+# binários nativos por plataforma via optionalDependencies, e um lockfile
+# gerado no Windows não resolve o binário Linux que o Railway precisa
+# (bug conhecido do npm). Deixa cada ambiente gerar o seu.
+package-lock.json
