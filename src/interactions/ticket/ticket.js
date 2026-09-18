@@ -2623,17 +2623,27 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
           (async () => {
             try {
-              const attachment = await discordTranscripts.createTranscript(
+              const transcriptBuffer = await discordTranscripts.createTranscript(
                 interaction.channel,
                 {
                   limit: 1000,
-                  returnBuffer: false,
+                  returnType: "buffer",
                   filename: fileName,
                   footerText: "Labz Application - Transcript",
                   saveImages: false,
                   poweredBy: false,
                 },
               );
+              const attachment = new AttachmentBuilder(transcriptBuffer, {
+                name: fileName,
+              });
+              await ticketRepo
+                .atualizarTicket(canalId, {
+                  transcript_html: transcriptBuffer.toString("utf-8"),
+                })
+                .catch((err) =>
+                  console.error("Erro ao salvar transcript no banco:", err.message),
+                );
               const containerUserComponents = [
                 new TextDisplayBuilder().setContent(
                   `# ${
@@ -4092,17 +4102,27 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
           (async () => {
             try {
-              const attachment = await discordTranscripts.createTranscript(
+              const transcriptBuffer = await discordTranscripts.createTranscript(
                 canal,
                 {
                   limit: 1000,
-                  returnBuffer: false,
+                  returnType: "buffer",
                   filename: fileName,
                   footerText: "Labz Application - Transcript",
                   saveImages: false,
                   poweredBy: false,
                 },
               );
+              const attachment = new AttachmentBuilder(transcriptBuffer, {
+                name: fileName,
+              });
+              await ticketRepo
+                .atualizarTicket(canal.id, {
+                  transcript_html: transcriptBuffer.toString("utf-8"),
+                })
+                .catch((err) =>
+                  console.error("Erro ao salvar transcript no banco:", err.message),
+                );
 
               const containerUserComponents = [
                 new TextDisplayBuilder().setContent(

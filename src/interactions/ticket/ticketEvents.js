@@ -10,6 +10,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   FileBuilder,
+  AttachmentBuilder,
 } = require("discord.js");
 const path = require("path");
 const { JsonDatabase } = require("wio.db");
@@ -322,14 +323,22 @@ async function fecharTicketAutomaticamente(guild, channelId, motivo, client) {
 
       (async () => {
         try {
-          const attachment = await discordTranscripts.createTranscript(canal, {
+          const transcriptBuffer = await discordTranscripts.createTranscript(canal, {
             limit: -1,
-            returnBuffer: false,
+            returnType: "buffer",
             filename: fileName,
             footerText: "Labz Application - Transcript",
             saveImages: false,
             poweredBy: false,
           });
+          const attachment = new AttachmentBuilder(transcriptBuffer, { name: fileName });
+          await ticketRepo
+            .atualizarTicket(channelId, {
+              transcript_html: transcriptBuffer.toString("utf-8"),
+            })
+            .catch((err) =>
+              console.error("Erro ao salvar transcript no banco:", err.message),
+            );
 
           const containerUserComponents = [
             new TextDisplayBuilder().setContent(
