@@ -5,45 +5,15 @@ const {
 const { green, yellow, red, bold, cyan } = require("colorette");
 const fs = require("fs");
 const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 
 const guildsProcessadas = new Set();
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 
-async function criarBancoSQLite(guildId) {
-  const bancoPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-
-  if (!fs.existsSync(bancoPath)) {
-    fs.mkdirSync(bancoPath, { recursive: true });
-  }
-
-  const dbPath = path.join(bancoPath, "tickets.db");
-  const db = new sqlite3.Database(dbPath);
-  const runAsync = promisify(db.run.bind(db));
-
-  try {
-    await runAsync(`
-      CREATE TABLE IF NOT EXISTS tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ticket_id TEXT NOT NULL,
-        guild_id TEXT NOT NULL,
-        assumido_em INTEGER DEFAULT NULL,
-        ia_pausada_por_staff INTEGER DEFAULT 0,
-        chat_historico TEXT DEFAULT '[]',
-        primeira_resposta_em INTEGER DEFAULT NULL,
-        respondido_id TEXT DEFAULT NULL
-      );
-    `);
-
-    await runAsync("PRAGMA journal_mode = WAL;");
-  } catch (error) {
-    console.error("Erro ao criar banco SQLite:", error);
-    throw error;
-  } finally {
-    db.close();
-  }
-}
+/**
+ * O schema de tickets já vive no Postgres (Supabase) via migration —
+ * não há mais banco SQLite por guild pra criar aqui.
+ */
+async function criarBancoSQLite(_guildId) {}
 
 module.exports = {
   name: Events.GuildCreate,

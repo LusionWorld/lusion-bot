@@ -1,56 +1,23 @@
 const supabase = require("../db/supabase");
 
 /**
- * Marca um ticket como fechado e incrementa o contador de fechados da guild.
- * Substitui o antigo par de queries SQLite (UPDATE tickets + UPSERT contadores).
- *
- * @param {string} guildId
- * @param {string} ticketId - ID do canal do ticket (coluna ticket_id)
- * @param {string} fechadoId - ID de quem fechou
+ * Incrementa atomicamente uma coluna de ticket_contadores (via RPC no
+ * Postgres), criando a linha da guild se ainda não existir.
  */
-async function fecharTicketDB(guildId, ticketId, fechadoId) {
-  const { error: updateError } = await supabase
-    .from("tickets")
-    .update({ fechado_em: new Date().toISOString(), fechado_id: fechadoId })
-    .eq("guild_id", guildId)
-    .eq("ticket_id", ticketId);
-  if (updateError) throw updateError;
-
-  const { error: rpcError } = await supabase.rpc("incrementar_contador", {
+async function incrementarContador(guildId, coluna) {
+  const { error } = await supabase.rpc("incrementar_contador", {
     p_guild_id: guildId,
-    p_coluna: "fechados",
+    p_coluna: coluna,
   });
-  if (rpcError) throw rpcError;
+  if (error) throw error;
 }
 
-/**
- * Cria o registro de um novo ticket e incrementa o contador de abertos.
- */
-async function criarTicketDB({
-  guildId,
-  ticketId,
-  userId,
-  categoria,
-  nomeCategoria,
-  motivoAbertura,
-  messageId,
-}) {
-  const { error: insertError } = await supabase.from("tickets").insert({
-    guild_id: guildId,
-    ticket_id: ticketId,
-    user_id: userId,
-    categoria: categoria ?? null,
-    nome_categoria: nomeCategoria ?? null,
-    motivo_abertura: motivoAbertura ?? null,
-    message_id: messageId ?? null,
-  });
-  if (insertError) throw insertError;
-
-  const { error: rpcError } = await supabase.rpc("incrementar_contador", {
-    p_guild_id: guildId,
-    p_coluna: "abertos",
-  });
-  if (rpcError) throw rpcError;
+/** Garante que a linha de contadores da guild existe (equivalente a INSERT OR IGNORE). */
+async function ensureContadores(guildId) {
+  const { error } = await supabase
+    .from("ticket_contadores")
+    .upsert({ guild_id: guildId }, { onConflict: "guild_id", ignoreDuplicates: true });
+  if (error) throw error;
 }
 
 async function getContadores(guildId) {
@@ -61,6 +28,37 @@ async function getContadores(guildId) {
     .maybeSingle();
   if (error) throw error;
   return data ?? { guild_id: guildId, abertos: 0, assumidos: 0, fechados: 0 };
+}
+
+/**
+ * Cria o registro de um novo ticket e incrementa o contador de abertos.
+ */
+async function criarTicketDB({ guildId, ticketId, userId, categoria, motivoAbertura }) {
+  const { error } = await supabase.from("tickets").insert({
+    guild_id: guildId,
+    ticket_id: ticketId,
+    user_id: userId,
+    categoria: categoria ?? null,
+    criado_em: Date.now(),
+    motivo_abertura: motivoAbertura ?? null,
+  });
+  if (error) throw error;
+
+  await incrementarContador(guildId, "abertos");
+}
+
+/**
+ * Ticket é identificado só pelo ticket_id (= id do canal do Discord, único
+ * globalmente), igual o código original fazia contra o SQLite.
+ */
+async function getTicketByChannel(ticketId) {
+  const { data, error } = await supabase
+    .from("tickets")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function getTicket(guildId, ticketId) {
@@ -74,4 +72,56 @@ async function getTicket(guildId, ticketId) {
   return data;
 }
 
-module.exports = { fecharTicketDB, criarTicketDB, getContadores, getTicket };
+/** Atualização genérica por ticket_id — `patch` usa os nomes de coluna reais. */
+async function atualizarTicket(ticketId, patch) {
+  const { error } = await supabase.from("tickets").update(patch).eq("ticket_id", ticketId);
+  if (error) throw error;
+}
+
+async function listarTicketsAbertos(guildId) {
+  const { data, error } = await supabase
+    .from("tickets")
+    .select("*")
+    .eq("guild_id", guildId)
+    .is("fechado_em", null);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Marca um ticket como fechado e incrementa o contador de fechados da guild.
+ */
+async function fecharTicketDB(guildId, ticketId, fechadoId) {
+  const { error: updateError } = await supabase
+    .from("tickets")
+    .update({ fechado_em: Date.now(), fechado_id: fechadoId })
+    .eq("guild_id", guildId)
+    .eq("ticket_id", ticketId);
+  if (updateError) throw updateError;
+
+  await incrementarContador(guildId, "fechados");
+}
+
+async function inserirAvaliacao({ ticketId, userId, estrelas, comentario, avaliadoEm }) {
+  const { error } = await supabase.from("ticket_avaliacoes").insert({
+    ticket_id: ticketId,
+    user_id: userId,
+    estrelas,
+    comentario: comentario ?? null,
+    avaliado_em: avaliadoEm ?? Date.now(),
+  });
+  if (error) throw error;
+}
+
+module.exports = {
+  incrementarContador,
+  ensureContadores,
+  getContadores,
+  criarTicketDB,
+  getTicketByChannel,
+  getTicket,
+  atualizarTicket,
+  listarTicketsAbertos,
+  fecharTicketDB,
+  inserirAvaliacao,
+};

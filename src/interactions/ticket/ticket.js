@@ -90,82 +90,97 @@ function getEstacoesDB(guildId) {
 }
 
 
-const _dbConnectionPool = new Map();
-
-function getDBConnection(guildId) {
-  if (_dbConnectionPool.has(guildId)) return _dbConnectionPool.get(guildId);
-
-  const folderPath = path.resolve(
-    __dirname,
-    "../../../banco/ticket",
-    guildId,
-    "banco",
-  );
-
-  if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
-  }
-
-  const dbPath = path.join(folderPath, "tickets.db");
-  const db = new sqlite3.Database(dbPath);
-
-  db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS tickets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guild_id TEXT NOT NULL,
-      ticket_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      staff_id TEXT DEFAULT NULL,
-      categoria TEXT,
-      criado_em INTEGER NOT NULL,
-      assumido_em INTEGER DEFAULT NULL,
-      fechado_em INTEGER DEFAULT NULL,
-      ia_pausada_por_staff INTEGER DEFAULT 0,
-      chat_historico TEXT DEFAULT '[]',
-      primeira_resposta_em INTEGER DEFAULT NULL,
-      respondido_id TEXT DEFAULT NULL,
-      fechado_id TEXT DEFAULT NULL,
-      message_id TEXT DEFAULT NULL,
-      motivo_abertura TEXT DEFAULT NULL,
-      nome_categoria TEXT DEFAULT NULL
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS contadores (
-      guild_id TEXT PRIMARY KEY,
-      abertos INTEGER DEFAULT 0,
-      assumidos INTEGER DEFAULT 0,
-      fechados INTEGER DEFAULT 0
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS avaliacoes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ticket_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      estrelas INTEGER NOT NULL,
-      comentario TEXT,
-      avaliado_em INTEGER NOT NULL
-    )`);
-
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON tickets(guild_id)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_fechado ON tickets(guild_id, fechado_em)`);
-    db.run(`PRAGMA journal_mode=WAL`);
-    db.run(`ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]'`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN fechado_id TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN message_id TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN motivo_abertura TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN nome_categoria TEXT DEFAULT NULL`, () => {});
-  });
-
-  _dbConnectionPool.set(guildId, db);
-  return db;
-}
+const ticketRepo = require("../../utils/ticket/repository");
 
 function closeDB(_db) {
-  // conexões são mantidas no pool — não fechar
+  // no-op: mantido só por compatibilidade com chamadas antigas do SQLite.
+}
+
+/**
+ * Adaptador que expõe a mesma API sqlite3 (.run/.get/.all com callback
+ * (err, row/rows)) usada em todo este arquivo, mas executa contra o
+ * Supabase via src/utils/ticket/repository.js. Reconhece só as queries que
+ * este arquivo de fato usa (listadas abaixo) — qualquer query fora dessa
+ * lista lança erro alto e explícito em vez de falhar silenciosamente.
+ */
+function makeTicketDbAdapter(guildId) {
+  const norm = (sql) => sql.replace(/\s+/g, " ").trim();
+
+  return {
+    serialize(fn) {
+      fn();
+    },
+    run(sql, params, cb) {
+      const q = norm(sql);
+      (async () => {
+        try {
+          if (q.startsWith("UPDATE tickets SET assumido_em")) {
+            const [assumidoEm, staffId, ticketId] = params;
+            await ticketRepo.atualizarTicket(ticketId, {
+              assumido_em: assumidoEm,
+              staff_id: staffId,
+            });
+          } else if (q.startsWith("INSERT INTO contadores") && q.includes("assumidos = assumidos + 1")) {
+            const [gId] = params;
+            await ticketRepo.incrementarContador(gId, "assumidos");
+          } else if (q.startsWith("INSERT INTO contadores") && q.includes("abertos = abertos + 1")) {
+            const [gId] = params;
+            await ticketRepo.incrementarContador(gId, "abertos");
+          } else if (q.startsWith("UPDATE tickets SET fechado_em")) {
+            const [fechadoEm, fechadoId, ticketId] = params;
+            await ticketRepo.atualizarTicket(ticketId, {
+              fechado_em: fechadoEm,
+              fechado_id: fechadoId,
+            });
+          } else if (q.startsWith("UPDATE contadores SET fechados")) {
+            const gId = params[params.length - 1];
+            await ticketRepo.incrementarContador(gId, "fechados");
+          } else if (q.startsWith("INSERT INTO contadores") && q.includes("0, 0, 1")) {
+            const [gId] = params;
+            await ticketRepo.incrementarContador(gId, "fechados");
+          } else if (q.startsWith("INSERT INTO avaliacoes")) {
+            const [ticketId, userId, estrelas, comentario, avaliadoEm] = params;
+            await ticketRepo.inserirAvaliacao({ ticketId, userId, estrelas, comentario, avaliadoEm });
+          } else {
+            throw new Error(`makeTicketDbAdapter: query .run() não reconhecida: ${q}`);
+          }
+          cb?.call({ lastID: undefined, changes: 1 }, null);
+        } catch (err) {
+          cb?.(err);
+        }
+      })();
+    },
+    get(sql, params, cb) {
+      const q = norm(sql);
+      (async () => {
+        try {
+          if (q.startsWith("SELECT staff_id FROM tickets")) {
+            const row = await ticketRepo.getTicketByChannel(params[0]);
+            cb(null, row ? { staff_id: row.staff_id } : undefined);
+          } else if (q.startsWith("SELECT message_id, motivo_abertura, nome_categoria FROM tickets")) {
+            const row = await ticketRepo.getTicketByChannel(params[0]);
+            cb(
+              null,
+              row
+                ? {
+                    message_id: row.message_id,
+                    motivo_abertura: row.motivo_abertura,
+                    nome_categoria: row.nome_categoria,
+                  }
+                : undefined,
+            );
+          } else if (q.startsWith("SELECT * FROM contadores")) {
+            const row = await ticketRepo.getContadores(params[0]);
+            cb(null, row);
+          } else {
+            throw new Error(`makeTicketDbAdapter: query .get() não reconhecida: ${q}`);
+          }
+        } catch (err) {
+          cb(err);
+        }
+      })();
+    },
+  };
 }
 
 function isWithinSchedule(schedule, horarioAtivo) {
@@ -690,55 +705,17 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
       permissionOverwrites: permissionOverwrites,
     });
 
-    const agora = Date.now();
-    const dbsql = getDBConnection(guild.id);
-
-    dbsql.serialize(() => {
-      dbsql.run(
-        `INSERT INTO tickets (
-      guild_id, 
-      ticket_id, 
-      user_id, 
-      staff_id, 
-      categoria, 
-      criado_em, 
-      assumido_em, 
-      fechado_em, 
-      motivo_abertura,
-      ia_pausada_por_staff,
-      chat_historico
-    ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, 0, '[]')`,
-        [
-          guild.id,
-          canalCriado.id,
-          interaction.user.id,
-          null,
-          ticketData.categoria || null,
-          agora,
-          motivo || null,
-        ],
-        function (err) {
-          if (err) {
-            console.error("❌ Erro ao salvar ticket:", err);
-            closeDB(dbsql);
-            return;
-          }
-
-          dbsql.run(
-            `INSERT INTO contadores (guild_id, abertos, assumidos, fechados)
-         VALUES (?, 1, 0, 0)
-         ON CONFLICT(guild_id) DO UPDATE SET abertos = abertos + 1`,
-            [guild.id],
-            function (err) {
-              if (err) {
-                console.error("❌ Erro ao atualizar contadores:", err);
-              }
-              closeDB(dbsql);
-            },
-          );
-        },
-      );
-    });
+    try {
+      await ticketRepo.criarTicketDB({
+        guildId: guild.id,
+        ticketId: canalCriado.id,
+        userId: interaction.user.id,
+        categoria: ticketData.categoria || null,
+        motivoAbertura: motivo || null,
+      });
+    } catch (err) {
+      console.error("❌ Erro ao salvar ticket:", err);
+    }
 
     if (mencionarAoAbrir) {
       const mencoes = [];
@@ -862,23 +839,21 @@ async function criarTicketComMotivo(interaction, ticketData, motivo) {
       components: [welcomeContainer],
     });
 
-    const dbsql2 = getDBConnection(guild.id);
     const _nomeCategoria = ticketData.estacaoId
       ? (() => {
           const _e = getEstacao(guild.id, ticketData.estacaoId);
           return _e ? _e.nome : ticketData.nome || null;
         })()
       : ticketData.nome || null;
-    dbsql2.run(
-      `UPDATE tickets SET message_id = ?, nome_categoria = ?, motivo_abertura = ? WHERE ticket_id = ?`,
-      [msgTicket.id, _nomeCategoria, motivo || null, canalCriado.id],
-      (err) => {
-        if (err) {
-          console.error("❌ Erro ao salvar message_id do ticket:", err);
-        }
-        closeDB(dbsql2);
-      },
-    );
+    try {
+      await ticketRepo.atualizarTicket(canalCriado.id, {
+        message_id: msgTicket.id,
+        nome_categoria: _nomeCategoria,
+        motivo_abertura: motivo || null,
+      });
+    } catch (err) {
+      console.error("❌ Erro ao salvar message_id do ticket:", err);
+    }
 
     try {
       const _iaModule = require("../../events/ticket/ia-ticket");
@@ -1205,61 +1180,53 @@ module.exports = {
           await interaction.deferUpdate().catch(() => {});
 
           const estrelasNum = parseInt(estrelas);
-          const dbsql = getDBConnection(guildId);
 
-          dbsql.run(
-            `INSERT INTO avaliacoes (ticket_id, user_id, estrelas, comentario, avaliado_em) VALUES (?, ?, ?, ?, ?)`,
-            [
-              canalId,
-              interaction.user.id,
-              estrelasNum,
-              t("avaliacao_sem_comentario", guildId),
-              Date.now(),
-            ],
-            async function (err) {
-              closeDB(dbsql);
-              if (err) {
-                console.error("Erro ao salvar avaliação:", err);
-                return;
-              }
+          try {
+            await ticketRepo.inserirAvaliacao({
+              ticketId: canalId,
+              userId: interaction.user.id,
+              estrelas: estrelasNum,
+              comentario: t("avaliacao_sem_comentario", guildId),
+            });
+          } catch (err) {
+            console.error("Erro ao salvar avaliação:", err);
+            return;
+          }
 
-              const estrelinhas = (emojis.star || "⭐").repeat(estrelasNum);
-              const avaliacaoTexto =
-                estrelasNum === 5
-                  ? t("avaliacao_texto_5", guildId)
-                  : estrelasNum === 4
-                    ? t("avaliacao_texto_4", guildId)
-                    : estrelasNum === 3
-                      ? t("avaliacao_texto_3", guildId)
-                      : estrelasNum === 2
-                        ? t("avaliacao_texto_2", guildId)
-                        : t("avaliacao_texto_1", guildId);
+          const estrelinhas = (emojis.star || "⭐").repeat(estrelasNum);
+          const avaliacaoTexto =
+            estrelasNum === 5
+              ? t("avaliacao_texto_5", guildId)
+              : estrelasNum === 4
+                ? t("avaliacao_texto_4", guildId)
+                : estrelasNum === 3
+                  ? t("avaliacao_texto_3", guildId)
+                  : estrelasNum === 2
+                    ? t("avaliacao_texto_2", guildId)
+                    : t("avaliacao_texto_1", guildId);
 
-              const containerSucesso1 =
-                new ContainerBuilder().addTextDisplayComponents(
-                  new TextDisplayBuilder().setContent(
-                    `# ${emojis.star} ${t("avaliacao_recebida_titulo", guildId)}`,
-                  ),
-                  new TextDisplayBuilder().setContent(
-                    t("avaliacao_recebida_desc", guildId, { estrelinhas, texto: avaliacaoTexto }),
-                  ),
-                );
-
-              await interaction
-                .followUp({
-                  components: [containerSucesso1],
-                  flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-                })
-                .catch(() => {
-                  interaction.user
-                    .send({
-                      components: [containerSucesso1],
-                      flags: MessageFlags.IsComponentsV2,
-                    })
-                    .catch(console.error);
-                });
-            },
+          const containerSucesso1 = new ContainerBuilder().addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              `# ${emojis.star} ${t("avaliacao_recebida_titulo", guildId)}`,
+            ),
+            new TextDisplayBuilder().setContent(
+              t("avaliacao_recebida_desc", guildId, { estrelinhas, texto: avaliacaoTexto }),
+            ),
           );
+
+          await interaction
+            .followUp({
+              components: [containerSucesso1],
+              flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+            })
+            .catch(() => {
+              interaction.user
+                .send({
+                  components: [containerSucesso1],
+                  flags: MessageFlags.IsComponentsV2,
+                })
+                .catch(console.error);
+            });
           return;
         }
 
@@ -1300,7 +1267,7 @@ module.exports = {
       const dbPersonalizacaoModal = getPersonalizacaoDB(guildId);
       const config = dbPersonalizacaoModal.get("embedavaliacao") || {};
 
-      const dbsql = getDBConnection(guildId);
+      const dbsql = makeTicketDbAdapter(guildId);
 
       dbsql.get(
         `SELECT staff_id FROM tickets WHERE ticket_id = ?`,
@@ -1732,7 +1699,7 @@ module.exports = {
 
       if (customId === "assumir_ticket") {
         const guildId = guild.id;
-        const dbsql = getDBConnection(guildId);
+        const dbsql = makeTicketDbAdapter(guildId);
         const dbConfig = getConfigDB(guildId);
         const teamRoles = dbConfig.get("team") || [];
         const usersPerms = dbConfig.get("usersperms") || {};
@@ -2505,7 +2472,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       const guild = interaction.guild;
       const guildId = guild.id;
       const canalId = interaction.channel.id;
-      const dbsql = getDBConnection(guildId);
+      const dbsql = makeTicketDbAdapter(guildId);
 
       dbsql.run(
         `UPDATE tickets SET fechado_em = ?, fechado_id = ? WHERE ticket_id = ?`,
@@ -2921,7 +2888,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
 
         if (selected === "assumir_ticket") {
           const guildId = interaction.guild.id;
-          const dbsql = getDBConnection(guildId);
+          const dbsql = makeTicketDbAdapter(guildId);
           const member = interaction.member;
           const user = interaction.user;
           const dbConfig = getConfigDB(guildId);
@@ -3603,7 +3570,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       if (selected === "notificar_staff") {
         const guildId = interaction.guild.id;
         const canalId = interaction.channel.id;
-        const dbsql = getDBConnection(guildId);
+        const dbsql = makeTicketDbAdapter(guildId);
 
         dbsql.get(
           `SELECT staff_id FROM tickets WHERE ticket_id = ?`,
@@ -3978,7 +3945,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
       if (!canal) return;
 
       const guildId = guild.id;
-      const dbsql = getDBConnection(guildId);
+      const dbsql = makeTicketDbAdapter(guildId);
 
       dbsql.run(
         `UPDATE tickets SET fechado_em = ?, fechado_id = ? WHERE ticket_id = ?`,
@@ -4564,8 +4531,6 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
         });
       }
     }
-
-    const dbsql = getDBConnection(interaction.guildId);
 
     if (ticketData) {
       if (!systemAtivo) {

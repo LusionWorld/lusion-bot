@@ -13,80 +13,63 @@ const {
 } = require("discord.js");
 const path = require("path");
 const { JsonDatabase } = require("wio.db");
-const sqlite3 = require("sqlite3").verbose();
 const discordTranscripts = require("discord-html-transcripts");
 const Groq = require("groq-sdk");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const iaCooldowns = new Map();
 let currentKeyIndex = 0;
 
-const _dbConnectionPool = new Map();
-
-function getDBConnection(guildId) {
-  if (_dbConnectionPool.has(guildId)) return _dbConnectionPool.get(guildId);
-
-  const folderPath = path.resolve(
-    __dirname,
-    "../../../banco/ticket",
-    guildId,
-    "banco",
-  );
-
-  if (!require("fs").existsSync(folderPath)) {
-    require("fs").mkdirSync(folderPath, { recursive: true });
-  }
-
-  const dbPath = path.join(folderPath, "tickets.db");
-  const db = new sqlite3.Database(dbPath);
-
-  db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS tickets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guild_id TEXT NOT NULL,
-      ticket_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      staff_id TEXT DEFAULT NULL,
-      categoria TEXT,
-      criado_em INTEGER NOT NULL,
-      assumido_em INTEGER DEFAULT NULL,
-      fechado_em INTEGER DEFAULT NULL,
-      ia_pausada_por_staff INTEGER DEFAULT 0,
-      chat_historico TEXT DEFAULT '[]',
-      primeira_resposta_em INTEGER DEFAULT NULL,
-      respondido_id TEXT DEFAULT NULL,
-      fechado_id TEXT DEFAULT NULL,
-      message_id TEXT DEFAULT NULL,
-      motivo_abertura TEXT DEFAULT NULL,
-      nome_categoria TEXT DEFAULT NULL
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS contadores (
-      guild_id TEXT PRIMARY KEY,
-      abertos INTEGER DEFAULT 0,
-      assumidos INTEGER DEFAULT 0,
-      fechados INTEGER DEFAULT 0
-    )`);
-
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON tickets(guild_id)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_fechado ON tickets(guild_id, fechado_em)`);
-    db.run(`PRAGMA journal_mode=WAL`);
-    db.run(`ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]'`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN fechado_id TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN message_id TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN motivo_abertura TEXT DEFAULT NULL`, () => {});
-    db.run(`ALTER TABLE tickets ADD COLUMN nome_categoria TEXT DEFAULT NULL`, () => {});
-  });
-
-  _dbConnectionPool.set(guildId, db);
-  return db;
+function closeDB(_db) {
+  // no-op: mantido só por compatibilidade com chamadas antigas do SQLite.
 }
 
-function closeDB(_db) {
-  // conexões são mantidas no pool — não fechar
+/** Ver comentário equivalente em src/interactions/ticket/ticket.js. */
+function getDBConnection(guildId) {
+  const norm = (sql) => sql.replace(/\s+/g, " ").trim();
+
+  return {
+    run(sql, params, cb) {
+      const q = norm(sql);
+      (async () => {
+        try {
+          if (q.startsWith("UPDATE tickets SET fechado_em")) {
+            const [fechadoEm, fechadoId, ticketId] = params;
+            await ticketRepo.atualizarTicket(ticketId, {
+              fechado_em: fechadoEm,
+              fechado_id: fechadoId,
+            });
+          } else if (q.startsWith("UPDATE contadores SET fechados")) {
+            const gId = params[params.length - 1];
+            await ticketRepo.incrementarContador(gId, "fechados");
+          } else if (q.startsWith("INSERT INTO contadores")) {
+            const [gId] = params;
+            await ticketRepo.incrementarContador(gId, "fechados");
+          } else {
+            throw new Error(`getDBConnection: query .run() não reconhecida: ${q}`);
+          }
+          cb?.(null);
+        } catch (err) {
+          cb?.(err);
+        }
+      })();
+    },
+    get(sql, params, cb) {
+      const q = norm(sql);
+      (async () => {
+        try {
+          if (q.startsWith("SELECT * FROM contadores")) {
+            const row = await ticketRepo.getContadores(params[0]);
+            cb(null, row);
+          } else {
+            throw new Error(`getDBConnection: query .get() não reconhecida: ${q}`);
+          }
+        } catch (err) {
+          cb(err);
+        }
+      })();
+    },
+  };
 }
 
 function getConfigDB(guildId) {

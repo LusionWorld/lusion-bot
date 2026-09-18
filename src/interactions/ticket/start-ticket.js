@@ -1,177 +1,24 @@
 const fs = require("fs").promises;
 const fsSync = require("fs");
 const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
+const ticketRepo = require("../../utils/ticket/repository");
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 
-function criarBancoDados(dbPath) {
-  return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      db.serialize(() => {
-        db.run(
-          `
-          CREATE TABLE IF NOT EXISTS contadores (
-            guild_id TEXT PRIMARY KEY,
-            abertos INTEGER DEFAULT 0,
-            assumidos INTEGER DEFAULT 0,
-            fechados INTEGER DEFAULT 0
-          )
-        `,
-          (err) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-          },
-        );
-
-        db.run(
-          `
-          CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id TEXT NOT NULL,
-            ticket_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            staff_id TEXT,
-            respondido_id TEXT,
-            fechado_id TEXT,
-            categoria TEXT,
-            criado_em INTEGER NOT NULL,
-            assumido_em INTEGER,
-            primeira_resposta_em INTEGER,
-            fechado_em INTEGER,
-            motivo TEXT,
-            ia_pausada_por_staff INTEGER DEFAULT 0,
-            chat_historico TEXT DEFAULT '[]',
-            message_id TEXT DEFAULT NULL,
-            motivo_abertura TEXT DEFAULT NULL,
-            nome_categoria TEXT DEFAULT NULL
-          )
-        `,
-          (err) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-          },
-        );
-
-        db.run(
-          `
-          CREATE TABLE IF NOT EXISTS avaliacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            estrelas INTEGER NOT NULL,
-            comentario TEXT,
-            avaliado_em INTEGER NOT NULL
-          )
-        `,
-          (err) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-          },
-        );
-
-        db.close((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-    });
-  });
+/**
+ * O schema real (tickets/contadores/avaliacoes) já vive no Postgres via
+ * migration do Supabase — não há mais banco por guild pra criar. Isso só
+ * grava um arquivo marcador local, porque `criarEstruturaPadrao` usa
+ * `fsSync.existsSync(dbPath)` como sinal de "esta guild já foi configurada".
+ */
+async function criarBancoDados(dbPath) {
+  await fs.writeFile(dbPath, "");
 }
 
-async function migrarBancoDados(dbPath) {
-  return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      db.serialize(() => {
-        db.all(`PRAGMA table_info(tickets);`, (err, columns) => {
-          if (err) {
-            db.close();
-            return reject(err);
-          }
-
-          const existingColumns = columns.map((col) => col.name);
-          const columnsToAdd = [
-            { name: "message_id", type: "TEXT DEFAULT NULL" },
-            { name: "motivo_abertura", type: "TEXT DEFAULT NULL" },
-            { name: "nome_categoria", type: "TEXT DEFAULT NULL" },
-          ];
-
-          let added = 0;
-          columnsToAdd.forEach((col) => {
-            if (!existingColumns.includes(col.name)) {
-              db.run(
-                `ALTER TABLE tickets ADD COLUMN ${col.name} ${col.type}`,
-                (err) => {
-                  if (err && !err.message.includes("duplicate column")) {
-                    console.error(`Erro ao adicionar coluna ${col.name}:`, err);
-                  } else if (!err) {
-                    console.log(`✅ Coluna ${col.name} adicionada`);
-                    added++;
-                  }
-                },
-              );
-            }
-          });
-
-          db.all(
-            `SELECT name FROM sqlite_master WHERE type='table' AND name='avaliacoes';`,
-            (err, tables) => {
-              if (err) {
-                db.close();
-                return reject(err);
-              }
-
-              if (tables.length === 0) {
-                db.run(
-                  `
-                CREATE TABLE IF NOT EXISTS avaliacoes (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  ticket_id TEXT NOT NULL,
-                  user_id TEXT NOT NULL,
-                  estrelas INTEGER NOT NULL,
-                  comentario TEXT,
-                  avaliado_em INTEGER NOT NULL
-                )
-              `,
-                  (err) => {
-                    if (err) {
-                      console.error("Erro ao criar tabela avaliacoes:", err);
-                    } else {
-                      console.log("✅ Tabela avaliacoes criada");
-                    }
-                    db.close();
-                    resolve();
-                  },
-                );
-              } else {
-                db.close();
-                resolve();
-              }
-            },
-          );
-        });
-      });
-    });
-  });
-}
+/** Sem uso real após a migração pro Supabase (schema já é gerenciado por migration). */
+async function migrarBancoDados(_dbPath) {}
 
 async function criarEstruturaPadrao(guildId, isNewGuild = false) {
   if (
@@ -218,23 +65,11 @@ async function criarEstruturaPadrao(guildId, isNewGuild = false) {
     if (!fsSync.existsSync(dbPath)) {
       await criarBancoDados(dbPath);
 
-      await new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(dbPath);
-        db.run(
-          `INSERT OR IGNORE INTO contadores (guild_id, abertos, assumidos, fechados) VALUES (?, 0, 0, 0)`,
-          [guildId],
-          (err) => {
-            if (err) {
-              console.error("Erro ao inserir contador inicial:", err);
-              db.close();
-              reject(err);
-            } else {
-              db.close();
-              resolve();
-            }
-          },
-        );
-      });
+      try {
+        await ticketRepo.ensureContadores(guildId);
+      } catch (err) {
+        console.error("Erro ao inserir contador inicial:", err);
+      }
     }
 
     if (!fsSync.existsSync(configPath)) {
