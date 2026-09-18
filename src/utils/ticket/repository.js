@@ -88,6 +88,21 @@ async function listarTicketsAbertos(guildId) {
   return data ?? [];
 }
 
+/** Últimos tickets fechados de um usuário que tinham motivo de abertura preenchido. */
+async function listarTicketsFechadosComMotivo(guildId, userId, limit = 5) {
+  const { data, error } = await supabase
+    .from("tickets")
+    .select("ticket_id, motivo_abertura, criado_em")
+    .eq("guild_id", guildId)
+    .eq("user_id", userId)
+    .not("fechado_em", "is", null)
+    .not("motivo_abertura", "is", null)
+    .order("criado_em", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
 /**
  * Marca um ticket como fechado e incrementa o contador de fechados da guild.
  */
@@ -122,6 +137,7 @@ module.exports = {
   getTicket,
   atualizarTicket,
   listarTicketsAbertos,
+  listarTicketsFechadosComMotivo,
   fecharTicketDB,
   inserirAvaliacao,
 };

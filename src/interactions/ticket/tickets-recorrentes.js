@@ -10,15 +10,13 @@ const {
 
 const path = require("path");
 const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const Groq = require("groq-sdk");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const dbConnections = new Map();
 
 function getEmoji(raw) {
   if (!raw) return null;
@@ -26,20 +24,6 @@ function getEmoji(raw) {
   if (!match) return null;
   const [, name, id] = match;
   return { name, id };
-}
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) return dbConnections.get(guildId);
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  dbConnections.set(guildId, db);
-  return db;
 }
 
 function getConfigDB(guildId) {
@@ -65,16 +49,12 @@ function getConfigDB(guildId) {
 
 async function verificarTicketRecorrente(guildId, userId, motivoAtual) {
   try {
-    const db = getDBConnection(guildId);
     const config = require("../../../config.json");
     const iaKey = config["key-ia"] || config["key-ia2"];
     if (!iaKey) return null;
 
-    const tickets = await db
-      .allAsync(
-        `SELECT ticket_id, motivo_abertura, criado_em FROM tickets WHERE guild_id = ? AND user_id = ? AND fechado_em IS NOT NULL AND motivo_abertura IS NOT NULL ORDER BY criado_em DESC LIMIT 5`,
-        [guildId, userId],
-      )
+    const tickets = await ticketRepo
+      .listarTicketsFechadosComMotivo(guildId, userId, 5)
       .catch(() => []);
 
     if (tickets.length === 0) return null;

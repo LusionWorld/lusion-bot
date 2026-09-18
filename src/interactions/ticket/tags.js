@@ -15,15 +15,13 @@ const {
 
 const path = require("path");
 const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const { JsonDatabase } = require("wio.db");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const dbConnections = new Map();
 
 function getEmoji(raw) {
   if (!raw) return null;
@@ -34,27 +32,6 @@ function getEmoji(raw) {
 
 function safeEmoji(raw) {
   return getEmoji(raw) || undefined;
-}
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) return dbConnections.get(guildId);
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-
-  db.all(`PRAGMA table_info(tickets)`, [], (err, rows) => {
-    if (!err && rows && !rows.some((r) => r.name === "tags")) {
-      db.run(`ALTER TABLE tickets ADD COLUMN tags TEXT DEFAULT '[]'`);
-    }
-  });
-
-  dbConnections.set(guildId, db);
-  return db;
 }
 
 function getConfigDB(guildId) {
@@ -322,10 +299,7 @@ module.exports = {
         });
       }
 
-      const dbsql = getDBConnection(guildId);
-      const ticket = await dbsql
-        .getAsync("SELECT tags FROM tickets WHERE ticket_id = ?", [channelId])
-        .catch(() => null);
+      const ticket = await ticketRepo.getTicketByChannel(channelId).catch(() => null);
       let tagsAtuais = [];
       try {
         tagsAtuais = JSON.parse(ticket?.tags || "[]");
@@ -379,12 +353,8 @@ module.exports = {
         .map((i) => tagsCadastradas[i]?.nome)
         .filter(Boolean);
 
-      const dbsql = getDBConnection(guildId);
-      await dbsql
-        .runAsync("UPDATE tickets SET tags = ? WHERE ticket_id = ?", [
-          JSON.stringify(novasTags),
-          channelId,
-        ])
+      await ticketRepo
+        .atualizarTicket(channelId, { tags: JSON.stringify(novasTags) })
         .catch(() => {});
 
       const canal = interaction.guild.channels.cache.get(channelId);

@@ -1,11 +1,9 @@
 const { Events, ChannelType } = require("discord.js");
 const { JsonDatabase } = require("wio.db");
 const path = require("path");
-const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
 const Groq = require("groq-sdk");
-const { promisify } = require("util");
 const { t } = require("../../utils/i18n");
+const ticketRepo = require("../../utils/ticket/repository");
 
 function safeJsonParse(value, fallback = []) {
   if (value === null || value === undefined || value === "") return fallback;
@@ -21,67 +19,9 @@ function safeJsonParse(value, fallback = []) {
 const iaCooldowns = new Map();
 const staffLastMessage = new Map();
 let currentKeyIndex = 0;
-const dbConnections = new Map();
 const ticketWelcomeSent = new Set();
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) {
-    return dbConnections.get(guildId);
-  }
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
-  }
-  const dbPath = path.join(folderPath, "tickets.db");
-  const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error("Erro ao conectar ao banco:", err);
-  });
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  dbConnections.set(guildId, db);
-  initializeColumns(db).catch(console.error);
-  return db;
-}
-
-async function initializeColumns(db) {
-  try {
-    await db.runAsync(`
-      CREATE TABLE IF NOT EXISTS tickets (
-        ticket_id TEXT PRIMARY KEY,
-        guild_id TEXT NOT NULL,
-        assumido_em INTEGER DEFAULT NULL,
-        ia_pausada_por_staff INTEGER DEFAULT 0,
-        chat_historico TEXT DEFAULT '[]',
-        primeira_resposta_em INTEGER DEFAULT NULL,
-        respondido_id TEXT DEFAULT NULL
-      );
-    `);
-    const columns = await db.allAsync(`PRAGMA table_info(tickets);`);
-    if (!columns.some((col) => col.name === "ia_pausada_por_staff"))
-      await db.runAsync(
-        `ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0;`,
-      );
-    if (!columns.some((col) => col.name === "chat_historico"))
-      await db.runAsync(
-        `ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]';`,
-      );
-    if (!columns.some((col) => col.name === "primeira_resposta_em"))
-      await db.runAsync(
-        `ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL;`,
-      );
-    if (!columns.some((col) => col.name === "respondido_id"))
-      await db.runAsync(
-        `ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL;`,
-      );
-  } catch (error) {
-    console.error("Erro ao inicializar colunas:", error);
-  }
-}
 
 function getConfigDB(guildId) {
   return new JsonDatabase({
@@ -397,7 +337,6 @@ module.exports = {
     if (!autorTicket) return;
 
     try {
-      const dbsql = getDBConnection(guildId);
       const iaDB = getIAConfigDB(guildId);
       const pararStaffResponder = iaDB.get("parar_staff_responder");
 
@@ -408,27 +347,16 @@ module.exports = {
       const ehDonoTicket = message.author.id === autorTicket;
 
       if (ehStaff && !ehDonoTicket) {
-        const row = await dbsql.getAsync(
-          `SELECT primeira_resposta_em FROM tickets WHERE ticket_id = ?`,
-          [channelId],
-        );
+        const row = await ticketRepo.getTicketByChannel(channelId);
         if (row && !row.primeira_resposta_em) {
-          await dbsql.runAsync(
-            `UPDATE tickets SET primeira_resposta_em = ?, respondido_id = ? WHERE ticket_id = ?`,
-            [Date.now(), message.author.id, channelId],
-          );
+          await ticketRepo.atualizarTicket(channelId, {
+            primeira_resposta_em: Date.now(),
+            respondido_id: message.author.id,
+          });
         }
-        if (pararStaffResponder) {
-          await dbsql.runAsync(
-            `UPDATE tickets SET ia_pausada_por_staff = 1 WHERE ticket_id = ?`,
-            [channelId],
-          );
-        } else {
-          await dbsql.runAsync(
-            `UPDATE tickets SET ia_pausada_por_staff = 0 WHERE ticket_id = ?`,
-            [channelId],
-          );
-        }
+        await ticketRepo.atualizarTicket(channelId, {
+          ia_pausada_por_staff: pararStaffResponder ? 1 : 0,
+        });
         const staffKey = `${guildId}-${channelId}`;
         staffLastMessage.set(staffKey, Date.now());
         return;
@@ -489,10 +417,7 @@ module.exports = {
         if (agora - ultimoUso < cooldownTime) return;
       }
 
-      const ticketData = await dbsql.getAsync(
-        `SELECT * FROM tickets WHERE ticket_id = ? AND guild_id = ?`,
-        [channelId, guildId],
-      );
+      const ticketData = await ticketRepo.getTicket(guildId, channelId);
       if (!ticketData) return;
 
       const sistemaIAAtivo = iaDB.get("sistema_ativo");
@@ -548,10 +473,10 @@ module.exports = {
           0;
         const msInatividade = minutosInatividade * 60 * 1000;
         if (ultimoStaff > 0 && Date.now() - ultimoStaff >= msInatividade) {
-          await dbsql.runAsync(
-            `UPDATE tickets SET ia_pausada_por_staff = 0, assumido_em = NULL WHERE ticket_id = ?`,
-            [channelId],
-          );
+          await ticketRepo.atualizarTicket(channelId, {
+            ia_pausada_por_staff: 0,
+            assumido_em: null,
+          });
           ticketData.ia_pausada_por_staff = 0;
           ticketData.assumido_em = null;
         }
@@ -651,10 +576,9 @@ module.exports = {
         }
 
         historicoChat.push({ role: "assistant", content: mensagemIA });
-        await dbsql.runAsync(
-          `UPDATE tickets SET chat_historico = ? WHERE ticket_id = ?`,
-          [JSON.stringify(historicoChat), channelId],
-        );
+        await ticketRepo.atualizarTicket(channelId, {
+          chat_historico: JSON.stringify(historicoChat),
+        });
         try {
           iaDB.set(
             "stats_msgs_respondidas",

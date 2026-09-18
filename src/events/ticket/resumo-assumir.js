@@ -1,15 +1,10 @@
-const path = require("path");
-const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const {
   ContainerBuilder,
   TextDisplayBuilder,
   SeparatorBuilder,
   MessageFlags,
 } = require("discord.js");
-
-const PROJECT_ROOT = path.resolve(__dirname, "../../../");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const E = {
   clipboard: "<:clipboard:1454657428384780494>",
@@ -17,18 +12,6 @@ const E = {
   textc: "<:textc:1454657532646658090>",
   check: "<:check:1454657386278158397>",
 };
-
-function getDBConnection(guildId) {
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const dbPath = path.join(folderPath, "tickets.db");
-  const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error("[RESUMO] Erro ao conectar:", err);
-  });
-  db.configure("busyTimeout", 10000);
-  db.getAsync = promisify(db.get.bind(db));
-  return db;
-}
 
 async function chamarGroqAPI(messages) {
   const config = require("../../../config.json");
@@ -59,18 +42,7 @@ async function gerarResumoAoAssumir(client, guildId, channelId, staffId) {
     const channel = client.channels.cache.get(channelId);
     if (!channel) return null;
 
-    const dbsql = getDBConnection(guildId);
-    let ticketData;
-    try {
-      ticketData = await dbsql.getAsync(
-        `SELECT chat_historico FROM tickets WHERE ticket_id = ?`,
-        [channelId],
-      );
-    } finally {
-      try {
-        dbsql.close();
-      } catch {}
-    }
+    const ticketData = await ticketRepo.getTicketByChannel(channelId);
 
     let mensagensTexto = "";
 

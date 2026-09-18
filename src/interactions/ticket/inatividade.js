@@ -10,13 +10,11 @@ const {
 } = require("discord.js");
 const path = require("path");
 const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const { JsonDatabase } = require("wio.db");
+const ticketRepo = require("../../utils/ticket/repository");
 
 const { t } = require("../../utils/i18n");
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-const dbConnections = new Map();
 
 function getEmoji(raw) {
   if (!raw) return null;
@@ -24,32 +22,6 @@ function getEmoji(raw) {
   if (!match) return null;
   const [, name, id] = match;
   return { name, id };
-}
-
-function getDBConnection(guildId) {
-  if (dbConnections.has(guildId)) return dbConnections.get(guildId);
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  dbConnections.set(guildId, db);
-  db.all("PRAGMA table_info(tickets)", (err, cols) => {
-    if (err || !cols) return;
-    const names = cols.map((c) => c.name);
-    if (!names.includes("ultima_mensagem_em"))
-      db.run(
-        "ALTER TABLE tickets ADD COLUMN ultima_mensagem_em INTEGER DEFAULT NULL",
-      );
-    if (!names.includes("aviso_inatividade"))
-      db.run(
-        "ALTER TABLE tickets ADD COLUMN aviso_inatividade INTEGER DEFAULT 0",
-      );
-  });
-  return db;
 }
 
 function getConfigDB(guildId) {
@@ -105,11 +77,10 @@ module.exports = {
     ultimaMensagem.set(channel.id, Date.now());
 
     try {
-      const db = getDBConnection(message.guild.id);
-      await db.runAsync(
-        "UPDATE tickets SET ultima_mensagem_em = ?, aviso_inatividade = 0 WHERE ticket_id = ?",
-        [Date.now(), channel.id],
-      );
+      await ticketRepo.atualizarTicket(channel.id, {
+        ultima_mensagem_em: Date.now(),
+        aviso_inatividade: 0,
+      });
     } catch {}
   },
 };
@@ -138,17 +109,11 @@ async function verificarInatividade(client) {
       const horas_aviso = configDB.get("inatividade_horas_aviso") ?? 24;
       const horas_fechar = configDB.get("inatividade_horas_fechar") ?? 48;
 
-      const db = getDBConnection(guildId);
       const agora = Date.now();
       const msAviso = horas_aviso * 3600000;
       const msFechar = horas_fechar * 3600000;
 
-      const tickets = await db
-        .allAsync(
-          `SELECT ticket_id, user_id, ultima_mensagem_em, criado_em, aviso_inatividade FROM tickets WHERE guild_id = ? AND fechado_em IS NULL`,
-          [guildId],
-        )
-        .catch(() => []);
+      const tickets = await ticketRepo.listarTicketsAbertos(guildId).catch(() => []);
 
       for (const ticket of tickets) {
         const ultimaMens = ticket.ultima_mensagem_em || ticket.criado_em;
@@ -171,10 +136,7 @@ async function verificarInatividade(client) {
             });
             await new Promise((r) => setTimeout(r, 3000));
             await canal.delete("Fechado por inatividade").catch(() => {});
-            await db.runAsync(
-              "UPDATE tickets SET fechado_em = ? WHERE ticket_id = ?",
-              [agora, ticket.ticket_id],
-            );
+            await ticketRepo.atualizarTicket(ticket.ticket_id, { fechado_em: agora });
           } catch {}
           continue;
         }
@@ -214,10 +176,7 @@ async function verificarInatividade(client) {
               ],
               flags: MessageFlags.IsComponentsV2,
             });
-            await db.runAsync(
-              "UPDATE tickets SET aviso_inatividade = 1 WHERE ticket_id = ?",
-              [ticket.ticket_id],
-            );
+            await ticketRepo.atualizarTicket(ticket.ticket_id, { aviso_inatividade: 1 });
           } catch {}
         }
       }

@@ -1,8 +1,6 @@
 const path = require("path");
-const fs = require("fs");
-const sqlite3 = require("sqlite3").verbose();
-const { promisify } = require("util");
 const { t } = require("../../utils/i18n");
+const ticketRepo = require("../../utils/ticket/repository");
 const {
   ContainerBuilder,
   TextDisplayBuilder,
@@ -14,31 +12,6 @@ const {
 const discordTranscripts = require("discord-html-transcripts");
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-
-function getDBConnection(guildId) {
-  const folderPath = path.join(PROJECT_ROOT, "banco/ticket", guildId, "banco");
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-
-  const dbPath = path.join(folderPath, "tickets.db");
-  const db = new sqlite3.Database(dbPath);
-  db.configure("busyTimeout", 10000);
-  db.runAsync = promisify(db.run.bind(db));
-  db.getAsync = promisify(db.get.bind(db));
-  db.allAsync = promisify(db.all.bind(db));
-  db.run("PRAGMA journal_mode = WAL;");
-  db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON tickets(guild_id)`, () => {});
-  db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)`, () => {});
-  db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_fechado ON tickets(guild_id, fechado_em)`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN ia_pausada_por_staff INTEGER DEFAULT 0`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN chat_historico TEXT DEFAULT '[]'`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN primeira_resposta_em INTEGER DEFAULT NULL`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN respondido_id TEXT DEFAULT NULL`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN fechado_id TEXT DEFAULT NULL`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN message_id TEXT DEFAULT NULL`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN motivo_abertura TEXT DEFAULT NULL`, () => {});
-  db.run(`ALTER TABLE tickets ADD COLUMN nome_categoria TEXT DEFAULT NULL`, () => {});
-  return db;
-}
 
 function getConfigDB(guildId) {
   const { JsonDatabase } = require("wio.db");
@@ -77,32 +50,10 @@ async function fecharTicketPorIA(client, guildId, channelId) {
   const canal = guild.channels.cache.get(channelId);
   if (!canal) return;
 
-  const dbsql = getDBConnection(guildId);
   const motivo = t("ia_motivo_encerrado", guildId);
 
   try {
-    await dbsql.runAsync(
-      `UPDATE tickets SET fechado_em = ?, fechado_id = ? WHERE ticket_id = ?`,
-      [Date.now(), client.user.id, channelId],
-    );
-
-    try {
-      const row = await dbsql.getAsync(
-        `SELECT * FROM contadores WHERE guild_id = ?`,
-        [guildId],
-      );
-      if (row) {
-        await dbsql.runAsync(
-          `UPDATE contadores SET fechados = fechados + 1 WHERE guild_id = ?`,
-          [guildId],
-        );
-      } else {
-        await dbsql.runAsync(
-          `INSERT INTO contadores (guild_id, abertos, assumidos, fechados) VALUES (?, 0, 0, 1)`,
-          [guildId],
-        );
-      }
-    } catch {}
+    await ticketRepo.fecharTicketDB(guildId, channelId, client.user.id);
 
     const dbConfig = getConfigDB(guildId);
     const dbPersonalizacao = getPersonalizacaoDB(guildId);
@@ -264,10 +215,9 @@ async function fecharTicketPorIA(client, guildId, channelId) {
     setTimeout(async () => {
       await canal.delete().catch(() => {});
     }, 3000);
-  } finally {
-    try {
-      dbsql.close();
-    } catch {}
+  } catch (err) {
+    console.error("Erro ao fechar ticket por IA:", err);
+    throw err;
   }
 }
 

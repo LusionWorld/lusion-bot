@@ -12,10 +12,8 @@ const {
   ChannelType,
 } = require("discord.js");
 
-const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
-
 const { fecharTicket } = require("../../../utils/ticket/fecharTicket");
+const ticketRepo = require("../../../utils/ticket/repository");
 const { getEmojis } = require("../../../utils/emojis/emojiHelper");
 
 const emojis = getEmojis();
@@ -27,31 +25,8 @@ function getEmoji(raw) {
   return { name: match[1], id: match[2] };
 }
 
-const _dbPool = new Map();
-
-function getDB(guildId) {
-  if (_dbPool.has(guildId)) return _dbPool.get(guildId);
-  const dbPath = path.resolve(
-    __dirname,
-    "../../../../banco/ticket",
-    guildId,
-    "banco/tickets.db",
-  );
-  const db = new sqlite3.Database(dbPath);
-  db.run("PRAGMA journal_mode=WAL");
-  _dbPool.set(guildId, db);
-  return db;
-}
-
-function getTicketsAbertosDB(guildId) {
-  return new Promise((resolve, reject) => {
-    const db = getDB(guildId);
-    db.all(
-      `SELECT ticket_id FROM tickets WHERE guild_id = ? AND fechado_em IS NULL`,
-      [guildId],
-      (err, rows) => (err ? reject(err) : resolve(rows || [])),
-    );
-  });
+async function getTicketsAbertosDB(guildId) {
+  return ticketRepo.listarTicketsAbertos(guildId);
 }
 
 function getCanaisTicket(guild) {
