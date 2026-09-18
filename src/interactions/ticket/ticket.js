@@ -1919,7 +1919,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                     );
 
                   function parseEmojiLocal(raw, guild) {
-                    if (!raw) return null;
+                    if (!raw) return undefined;
 
                     const unicodeRegex =
                       /^[\p{Emoji}\p{Emoji_Presentation}\p{Extended_Pictographic}]+$/u;
@@ -3025,7 +3025,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                       );
 
                     function parseEmojiLocal(raw, guild) {
-                      if (!raw) return null;
+                      if (!raw) return undefined;
 
                       const unicodeRegex =
                         /^[\p{Emoji}\p{Emoji_Presentation}\p{Extended_Pictographic}]+$/u;

@@ -13,9 +13,9 @@ const { JsonDatabase } = require('wio.db')
 const path = require('path')
 const emojis = require('../../utils/emojis/emojis.json');
 function getEmoji(raw) {
-    if (!raw) return null;
+    if (!raw) return undefined;
     const match = raw.match(/^<a?:([^:]+):(\d+)>$/);
-    if (!match) return null;
+    if (!match) return undefined;
     const [, name, id] = match;
     return { name, id };
 }

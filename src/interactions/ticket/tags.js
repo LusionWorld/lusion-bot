@@ -24,9 +24,9 @@ const emojis = getEmojis();
 const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 
 function getEmoji(raw) {
-  if (!raw) return null;
+  if (!raw) return undefined;
   const match = raw.match(/^<a?:([^:]+):(\d+)>$/);
-  if (!match) return null;
+  if (!match) return undefined;
   return { name: match[1], id: match[2] };
 }
 

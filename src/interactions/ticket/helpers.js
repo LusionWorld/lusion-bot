@@ -41,9 +41,9 @@ const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
 function getEmoji(raw) {
-  if (!raw) return null;
+  if (!raw) return undefined;
   const match = raw.match(/^<a?:([^:]+):(\d+)>$/);
-  if (!match) return null;
+  if (!match) return undefined;
   const [, name, id] = match;
   return { name, id };
 }
