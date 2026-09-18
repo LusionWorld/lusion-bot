@@ -674,7 +674,9 @@ module.exports = {
             td.setContent(
               `${emojis.crown} **${data.title}**\n` +
               `${emojis.announcementc} ${channel}\n` +
-              `${emojis.clock} Closes <t:${endTs}:R>` +
+              (endsAt
+                ? `${emojis.clock} Closes <t:${Math.floor(endsAt / 1000)}:R>`
+                : `${emojis.clock} No time limit set`) +
               (data.roleId ? `\n${emojis.lock} Restricted to <@&${data.roleId}>` : '') +
               (data.resultsChannelId ? `\n${emojis.chart} Results → <#${data.resultsChannelId}>` : ''),
             ),

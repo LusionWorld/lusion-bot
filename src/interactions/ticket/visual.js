@@ -4447,36 +4447,36 @@ module.exports = {
 
         const buttonConfig = new ButtonBuilder()
           .setCustomId("configurar_ticket")
-          .setLabel(t("btn_configurar", gid))
+          .setLabel(t("btn_configurar", interaction.guildId))
           .setEmoji(getEmoji(emojis.settings))
           .setStyle(ButtonStyle.Primary);
 
         const buttonBanco = new ButtonBuilder()
           .setCustomId("banco_ticket")
-          .setLabel(t("btn_banco", gid))
+          .setLabel(t("btn_banco", interaction.guildId))
           .setEmoji(getEmoji(emojis.cardbox))
           .setStyle(ButtonStyle.Primary);
 
         const buttonPix = new ButtonBuilder()
           .setCustomId("pix_ticket")
-          .setLabel(t("btn_pix", gid))
+          .setLabel(t("btn_pix", interaction.guildId))
           .setEmoji(getEmoji(emojis.dollar))
           .setStyle(ButtonStyle.Primary);
 
         const enviarTicketBtn = new ButtonBuilder()
           .setCustomId("enviar_ticket_painel")
-          .setLabel(t("btn_enviar_ticket", gid))
+          .setLabel(t("btn_enviar_ticket", interaction.guildId))
           .setEmoji(getEmoji(emojis.embeds))
           .setStyle(ButtonStyle.Success);
 
         const iaSetupBtn = new ButtonBuilder()
           .setCustomId("ia_setup_inicial")
-          .setLabel(t("btn_ia_setup", gid))
+          .setLabel(t("btn_ia_setup", interaction.guildId))
           .setEmoji(getEmoji(emojis.bot))
           .setStyle(ButtonStyle.Success);
 
         const buttonSuporte = new ButtonBuilder()
-          .setLabel(t("btn_suporte", gid))
+          .setLabel(t("btn_suporte", interaction.guildId))
           .setEmoji(getEmoji(emojis.discord$))
           .setStyle(ButtonStyle.Link)
           .setURL("https://discord.gg/MmUB4H3uCM");
@@ -4484,13 +4484,13 @@ module.exports = {
         const components = [
           new ContainerBuilder().addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              t("painel_principal_titulo", gid, { guild: interaction.guild.name }),
+              t("painel_principal_titulo", interaction.guildId, { guild: interaction.guild.name }),
             ),
           ),
           new ContainerBuilder()
             .addTextDisplayComponents(
               new TextDisplayBuilder().setContent(
-                `${t("painel_principal_desc", gid)}\n\n-# Ping do bot: ${client.ws.ping}ms`,
+                `${t("painel_principal_desc", interaction.guildId)}\n\n-# Ping do bot: ${client.ws.ping}ms`,
               ),
             )
             .addSectionComponents(
