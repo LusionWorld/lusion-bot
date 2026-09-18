@@ -10,6 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.13.2",
     "chalk": "^5.3.0",

@@ -6,37 +6,17 @@ const {
   FileBuilder,
 } = require("discord.js");
 
-const fs = require("fs");
 const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
 const { JsonDatabase } = require("wio.db");
 const discordTranscripts = require("discord-html-transcripts");
 
 const { t } = require("../i18n");
 const { getEmojis } = require("../emojis/emojiHelper");
+const { fecharTicketDB } = require("./repository");
 
 const emojis = getEmojis();
 
 // ─── DB helpers ────────────────────────────────────────────────────────────
-
-const _dbPool = new Map();
-
-function getDBConnection(guildId) {
-  if (_dbPool.has(guildId)) return _dbPool.get(guildId);
-
-  const folderPath = path.resolve(
-    __dirname,
-    "../../../banco/ticket",
-    guildId,
-    "banco",
-  );
-  if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
-
-  const db = new sqlite3.Database(path.join(folderPath, "tickets.db"));
-  db.run("PRAGMA journal_mode=WAL");
-  _dbPool.set(guildId, db);
-  return db;
-}
 
 const _configCache = new Map();
 function getConfigDB(guildId) {
@@ -89,35 +69,9 @@ async function fecharTicket(guild, channelId, motivo, client, staffId) {
 
   const guildId = guild.id;
   const closerId = staffId || client.user.id;
-  const dbsql = getDBConnection(guildId);
 
-  // Atualiza banco
-  await new Promise((resolve) => {
-    dbsql.run(
-      `UPDATE tickets SET fechado_em = ?, fechado_id = ? WHERE ticket_id = ?`,
-      [Date.now(), closerId, channelId],
-      () => {
-        dbsql.get(
-          `SELECT * FROM contadores WHERE guild_id = ?`,
-          [guildId],
-          (err, row) => {
-            if (row) {
-              dbsql.run(
-                `UPDATE contadores SET fechados = ? WHERE guild_id = ?`,
-                [(row.fechados || 0) + 1, guildId],
-              );
-            } else {
-              dbsql.run(
-                `INSERT INTO contadores (guild_id, abertos, assumidos, fechados) VALUES (?, 0, 0, 1)`,
-                [guildId],
-              );
-            }
-            resolve();
-          },
-        );
-      },
-    );
-  });
+  // Atualiza banco (Supabase)
+  await fecharTicketDB(guildId, channelId, closerId);
 
   const dbConfig = getConfigDB(guildId);
   const logCfg = dbConfig.get("logs.log_fechamento") || {};
