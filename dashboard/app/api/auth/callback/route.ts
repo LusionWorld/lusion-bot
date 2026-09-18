@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCode, fetchCurrentUser } from "@/lib/discord";
 import { encodeSession, SESSION_COOKIE } from "@/lib/session";
+import { getAppOrigin } from "@/lib/appUrl";
 
 export async function GET(request: NextRequest) {
+  const origin = getAppOrigin();
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const savedState = request.cookies.get("oauth_state")?.value;
 
   if (!code || !state || !savedState || state !== savedState) {
-    return NextResponse.redirect(new URL("/login?error=state", request.url));
+    return NextResponse.redirect(new URL("/login?error=state", origin));
   }
 
   try {
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
       expiresAt: Date.now() + token.expires_in * 1000,
     });
 
-    const res = NextResponse.redirect(new URL("/", request.url));
+    const res = NextResponse.redirect(new URL("/", origin));
     res.cookies.set(SESSION_COOKIE, session, {
       httpOnly: true,
       secure: true,
@@ -36,6 +38,6 @@ export async function GET(request: NextRequest) {
     return res;
   } catch (err) {
     console.error("[auth/callback]", err);
-    return NextResponse.redirect(new URL("/login?error=oauth", request.url));
+    return NextResponse.redirect(new URL("/login?error=oauth", origin));
   }
 }
