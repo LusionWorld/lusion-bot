@@ -2150,7 +2150,7 @@ ON CONFLICT(guild_id) DO UPDATE SET assumidos = assumidos + 1`,
                   {
                     label: t("staff_opt_gerenciar_tags", guildId),
                     value: "gerenciar_tags",
-                    emoji: emojis.thread || "🏷️",
+                    emoji: getEmoji(emojis.thread) || { name: "🏷️" },
                   },
                 ]),
             ),

@@ -1,6 +1,7 @@
 const { Events, ChannelType } = require("discord.js");
 const { JsonDatabase } = require("wio.db");
 const path = require("path");
+const fs = require("fs");
 const Groq = require("groq-sdk");
 const { t } = require("../../utils/i18n");
 const ticketRepo = require("../../utils/ticket/repository");
