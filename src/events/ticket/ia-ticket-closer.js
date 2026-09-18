@@ -8,6 +8,7 @@ const {
   MessageFlags,
   ChannelType,
   FileBuilder,
+  AttachmentBuilder,
 } = require("discord.js");
 const discordTranscripts = require("discord-html-transcripts");
 
@@ -99,14 +100,23 @@ async function fecharTicketPorIA(client, guildId, channelId) {
       ).toString();
       transcriptFileName = `transcript-labz${ticketId}.html`;
 
-      transcriptAttachment = await discordTranscripts.createTranscript(canal, {
+      const transcriptBuffer = await discordTranscripts.createTranscript(canal, {
         limit: 1000,
-        returnBuffer: false,
+        returnType: "buffer",
         filename: transcriptFileName,
         footerText: "Labz Application - Transcript",
         saveImages: false,
         poweredBy: false,
       });
+      transcriptAttachment = new AttachmentBuilder(transcriptBuffer, {
+        name: transcriptFileName,
+      });
+
+      await ticketRepo
+        .atualizarTicket(channelId, { transcript_html: transcriptBuffer.toString("utf-8") })
+        .catch((err) =>
+          console.error("[IA-CLOSER] Erro ao salvar transcript no banco:", err.message),
+        );
     } catch {}
 
     if (logCfg.ativo === true && logCfg.canal) {

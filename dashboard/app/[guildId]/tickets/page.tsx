@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchGuildMember, fetchChannelName } from "@/lib/discordBot";
 import { StatCard } from "../stat-card";
+import { TranscriptButton } from "./transcript-button";
 
 export default async function TicketsPage({
   params,
@@ -99,14 +100,18 @@ export default async function TicketsPage({
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
-                    <a
-                      href={`https://discord.com/channels/${guildId}/${row.ticket_id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-accent hover:text-accent-hover hover:underline"
-                    >
-                      Abrir canal ↗
-                    </a>
+                    {row.fechado_em ? (
+                      <TranscriptButton guildId={guildId} ticketId={row.ticket_id} />
+                    ) : (
+                      <a
+                        href={`https://discord.com/channels/${guildId}/${row.ticket_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent hover:text-accent-hover hover:underline"
+                      >
+                        Abrir canal ↗
+                      </a>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-text-muted">{row.categoriaNome ?? "—"}</td>
                   <td className="px-4 py-2.5 text-text-muted">

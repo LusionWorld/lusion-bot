@@ -4,6 +4,7 @@ const {
   MessageFlags,
   ChannelType,
   FileBuilder,
+  AttachmentBuilder,
 } = require("discord.js");
 
 const path = require("path");
@@ -12,7 +13,7 @@ const discordTranscripts = require("discord-html-transcripts");
 
 const { t } = require("../i18n");
 const { getEmojis } = require("../emojis/emojiHelper");
-const { fecharTicketDB } = require("./repository");
+const { fecharTicketDB, atualizarTicket } = require("./repository");
 
 const emojis = getEmojis();
 
@@ -144,14 +145,23 @@ async function fecharTicket(guild, channelId, motivo, client, staffId) {
 
   let transcriptAttachment = null;
   try {
-    transcriptAttachment = await discordTranscripts.createTranscript(canal, {
+    const transcriptBuffer = await discordTranscripts.createTranscript(canal, {
       limit: 1000,
-      returnBuffer: false,
+      returnType: "buffer",
       filename: fileName,
       footerText: "Labz Application - Transcript",
       saveImages: false,
       poweredBy: false,
     });
+    transcriptAttachment = new AttachmentBuilder(transcriptBuffer, { name: fileName });
+
+    // Salva o transcript no Supabase pra o painel web poder mostrar a
+    // conversa completa depois que o canal do Discord já foi deletado.
+    await atualizarTicket(channelId, {
+      transcript_html: transcriptBuffer.toString("utf-8"),
+    }).catch((err) =>
+      console.error(`[fecharTicket] Erro ao salvar transcript no banco:`, err.message),
+    );
   } catch (err) {
     console.error(
       `[fecharTicket] Erro ao gerar transcript de ${canal.name}:`,
