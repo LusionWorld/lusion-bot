@@ -25,8 +25,6 @@ const {
   SeparatorSpacingSize,
 } = require("discord.js");
 
-const path = require("path");
-const { JsonDatabase } = require("wio.db");
 const { t, getGuildLocale, setGuildLocale, LOCALE_LABELS, SUPPORTED } = require("../../utils/i18n");
 
 const {
@@ -34,7 +32,9 @@ const {
   getConfigDB,
   getPersonalizacaoDB,
   getIAConfigDB,
+  ensureTicketConfigLoaded,
   getEstacoesDB,
+  ensureEstacoesLoaded,
   getEstacao,
   updateEstacao,
   deleteEstacao,
@@ -435,6 +435,9 @@ module.exports = {
           interaction.customId === "eq_user_select_modal" ||
           interaction.customId === "bl_select_user"));
     if (!isTicketPanelInteraction) return;
+
+    await ensureTicketConfigLoaded(interaction.guildId);
+    await ensureEstacoesLoaded(interaction.guildId);
 
     const { customId } = interaction;
 

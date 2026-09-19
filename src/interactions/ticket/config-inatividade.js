@@ -13,12 +13,9 @@ const {
   SectionBuilder,
 } = require("discord.js");
 
-const path = require("path");
-const fs = require("fs");
+const { ensureTicketConfigLoaded, getConfigDB } = require("../../utils/ticket/configRepository");
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
-
-const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 
 function be(btn, key) {
   if (!emojis[key]) return btn;
@@ -29,42 +26,6 @@ function be(btn, key) {
 
 function ei(key) {
   return emojis[key] || "";
-}
-
-function getConfigDB(guildId) {
-  const filePath = path.join(
-    PROJECT_ROOT,
-    "banco/ticket",
-    guildId,
-    "config.json",
-  );
-  function read() {
-    try {
-      return JSON.parse(fs.readFileSync(filePath, "utf8"));
-    } catch {
-      return {};
-    }
-  }
-  function write(data) {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 4), "utf8");
-  }
-  return {
-    get(key) {
-      return key.split(".").reduce((o, k) => o?.[k], read());
-    },
-    set(key, value) {
-      const data = read();
-      const keys = key.split(".");
-      let o = data;
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (!o[keys[i]]) o[keys[i]] = {};
-        o = o[keys[i]];
-      }
-      o[keys[keys.length - 1]] = value;
-      write(data);
-    },
-  };
 }
 
 function timestampRelativo(horas) {
@@ -190,6 +151,7 @@ module.exports = {
   async execute(client, interaction) {
     const { customId, guildId } = interaction;
     if (!guildId) return;
+    await ensureTicketConfigLoaded(guildId);
     const db = getConfigDB(guildId);
 
     if (customId === "config_inatividade_auto") {

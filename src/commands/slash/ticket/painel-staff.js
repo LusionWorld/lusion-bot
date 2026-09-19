@@ -8,10 +8,7 @@ const {
   PermissionsBitField
 } = require('discord.js')
 
-const fs = require('fs')
-const path = require('path')
-const { JsonDatabase } = require('wio.db')
-
+const { ensureTicketConfigLoaded, getConfigDB } = require("../../../utils/ticket/configRepository");
 const { getEmojis } = require("../../../utils/emojis/emojiHelper");
 const { t } = require("../../../utils/i18n");
 const emojis = getEmojis();
@@ -22,15 +19,6 @@ function getEmoji(raw) {
   if (!match) return undefined;
   const [, name, id] = match;
   return { name, id };
-}
-
-function getConfigDB(guildId) {
-  return new JsonDatabase({
-    databasePath: path.resolve(
-      __dirname,
-      `../../../../banco/ticket/${guildId}/config.json`,
-    ),
-  })
 }
 
 module.exports = {
@@ -61,19 +49,16 @@ module.exports = {
       })
     }
 
-    const configPath = path.resolve(
-      __dirname,
-      `../../../../banco/ticket/${guildId}/config.json`,
-    )
+    await ensureTicketConfigLoaded(guildId)
+    const db = getConfigDB(guildId)
 
-    if (!fs.existsSync(configPath)) {
+    if (Object.keys(db.all()).length === 0) {
       return interaction.reply({
         content: t('painel_staff_erro_config', guildId),
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    const db = getConfigDB(guildId)
     const teamRoles = db.get('team') || []
     const usersPerms = db.get('usersperms') || {}
 

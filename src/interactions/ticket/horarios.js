@@ -14,7 +14,7 @@ const {
   SeparatorBuilder,
 } = require("discord.js");
 
-const { getEmoji, getConfigDB } = require("./helpers");
+const { getEmoji, getConfigDB, ensureTicketConfigLoaded } = require("./helpers");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
@@ -153,6 +153,8 @@ module.exports = {
     if (interaction.replied || interaction.deferred) {
       return;
     }
+
+    await ensureTicketConfigLoaded(interaction.guildId);
 
     const guildId = interaction.guildId;
 

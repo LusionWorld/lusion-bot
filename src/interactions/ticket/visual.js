@@ -23,15 +23,14 @@ const {
   SeparatorSpacingSize,
 } = require("discord.js");
 
-const path = require("path");
-const { JsonDatabase } = require("wio.db");
-
 const {
   getEmoji,
   getConfigDB,
   getPersonalizacaoDB,
   getIAConfigDB,
+  ensureTicketConfigLoaded,
   getEstacoesDB,
+  ensureEstacoesLoaded,
   getEstacao,
   updateEstacao,
   deleteEstacao,
@@ -117,6 +116,9 @@ module.exports = {
 
     if (interaction._visualProcessed) return;
     interaction._visualProcessed = true;
+
+    await ensureTicketConfigLoaded(interaction.guildId);
+    await ensureEstacoesLoaded(interaction.guildId);
 
     if (customId === "configurar_botao") {
       const db = getPersonalizacaoDB(interaction.guild.id);

@@ -39,6 +39,7 @@ const {
   getConfigDB,
   getPersonalizacaoDB,
   getIAConfigDB,
+  ensureTicketConfigLoaded,
   getEstacoesDB,
   ensureEstacoesLoaded,
   getEstacao,
@@ -435,6 +436,7 @@ module.exports = {
     if (!customId) return;
 
     await ensureEstacoesLoaded(interaction.guildId);
+    await ensureTicketConfigLoaded(interaction.guildId);
 
     if (customId === "gerenciar_estacoes") {
       const db = getEstacoesDB(interaction.guildId);

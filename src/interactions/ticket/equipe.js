@@ -18,7 +18,7 @@ const {
   MessageFlags,
 } = require("discord.js");
 
-const { getEmoji, getConfigDB } = require("./helpers");
+const { getEmoji, getConfigDB, ensureTicketConfigLoaded } = require("./helpers");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
@@ -327,6 +327,8 @@ module.exports = {
 
     if (!interaction._fromPainel) return;
     if (!interaction.guild) return;
+
+    await ensureTicketConfigLoaded(interaction.guildId);
 
     const guildId = interaction.guildId;
     const db = getConfigDB(interaction.guild.id);

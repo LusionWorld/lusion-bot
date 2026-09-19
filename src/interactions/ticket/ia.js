@@ -31,7 +31,9 @@ const {
   getConfigDB,
   getPersonalizacaoDB,
   getIAConfigDB,
+  ensureTicketConfigLoaded,
   getEstacoesDB,
+  ensureEstacoesLoaded,
   getEstacao,
   updateEstacao,
   deleteEstacao,
@@ -567,6 +569,9 @@ module.exports = {
     if (!belongsToThis) return;
 
     if (!interaction._fromPainel) return;
+
+    await ensureTicketConfigLoaded(interaction.guildId);
+    await ensureEstacoesLoaded(interaction.guildId);
 
     if (customId === "ia_ticket" || customId === "ia_painel_page_1") {
       await initIAConfig(interaction.guildId);

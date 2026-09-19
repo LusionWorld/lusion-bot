@@ -24,17 +24,9 @@ const {
   SeparatorSpacingSize,
 } = require("discord.js");
 
-const path = require("path");
-const fs = require("fs");
-const { JsonDatabase } = require("wio.db");
 const { set } = require("date-fns");
 const config = require("../../../config.json");
 const Groq = require("groq-sdk");
-
-const _configDataCache = new Map();
-const _personalizacaoCache = new Map();
-const _iaConfigCache = new Map();
-const CONFIG_CACHE_TTL = 30000;
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
@@ -56,188 +48,16 @@ function getOnOffEmojiId(status) {
   return status ? getEmoji(emojis.on) : getEmoji(emojis.off);
 }
 
-function getPersonalizacaoDB(guildId) {
-  if (_personalizacaoCache.has(guildId)) return _personalizacaoCache.get(guildId);
-
-  const db = new JsonDatabase({
-    databasePath: path.resolve(
-      __dirname,
-      `../../../banco/ticket/${guildId}/personalizacao.json`,
-    ),
-  });
-
-  const embedsDefaults = {
-    embedavaliacao: {
-      title: `${emojis.star} Avalie o Atendimento`,
-      descricao: "Quantas estrelas você dá para o atendimento?",
-      descricaoRecebida: `${emojis.check} **Obrigado pela sua avaliação!**\n\n{estrelas} **({avaliacao})**{comentario}\n\n${emojis.sparks} Seu feedback é muito importante para nós!`,
-      color: "",
-    },
-    embedlogavaliacao: {
-      title: `${emojis.star} Nova Avaliação`,
-      descricao:
-        "**Usuário:** {user}\n**Ticket ID:** {ticket_id}\n**Avaliação:** {estrelas} **({avaliacao})**\n**Comentário:** {comentario}\n**Data:** {data}",
-      color: "",
-    },
-    embedassumido: {
-      title: "🎫 Seu Ticket foi Assumido",
-      descricao:
-        "Olá! O staff {staff} assumiu seu ticket.\n\nVocê será atendido em breve. Obrigado pela paciência!",
-      color: "",
-    },
-  };
-
-  Object.entries(embedsDefaults).forEach(([embedKey, defaultValue]) => {
-    if (!db.get(embedKey)) {
-      db.set(embedKey, defaultValue);
-    }
-  });
-
-  _personalizacaoCache.set(guildId, db);
-  return db;
-}
-
-function getConfigDB(guildId) {
-  if (!guildId || guildId === "null" || guildId === "undefined") {
-    throw new Error("GuildId inválido");
-  }
-
-  const filePath = path.resolve(
-    __dirname,
-    `../../../banco/ticket/${guildId}/config.json`,
-  );
-
-  function read() {
-    const now = Date.now();
-    const cached = _configDataCache.get(guildId);
-    if (cached && now - cached.time < CONFIG_CACHE_TTL) return cached.data;
-    try {
-      const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
-      _configDataCache.set(guildId, { data: JSON.parse(JSON.stringify(data)), time: now });
-      return data;
-    } catch {
-      return {};
-    }
-  }
-
-  function write(data) {
-    _configDataCache.set(guildId, { data: JSON.parse(JSON.stringify(data)), time: Date.now() });
-    try {
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 4), "utf8");
-    } catch (err) {
-      console.error("[CONFIG DB] Detalhes:", err);
-    }
-  }
-
-  return {
-    get(key) {
-      const data = read();
-      return key
-        .split(".")
-        .reduce((obj, k) => (obj != null ? obj[k] : undefined), data);
-    },
-    set(key, value) {
-      const data = read();
-      const keys = key.split(".");
-      let obj = data;
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (obj[keys[i]] == null || typeof obj[keys[i]] !== "object")
-          obj[keys[i]] = {};
-        obj = obj[keys[i]];
-      }
-      obj[keys[keys.length - 1]] = value;
-      write(data);
-    },
-    has(key) {
-      return this.get(key) !== undefined;
-    },
-    delete(key) {
-      const data = read();
-      const keys = key.split(".");
-      let obj = data;
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (obj[keys[i]] == null) return;
-        obj = obj[keys[i]];
-      }
-      delete obj[keys[keys.length - 1]];
-      write(data);
-    },
-    all() {
-      return read();
-    },
-  };
-}
-
-function getIAConfigDB(guildId) {
-  if (!guildId || guildId === "null" || guildId === "undefined") {
-    throw new Error("GuildId inválido");
-  }
-  if (_iaConfigCache.has(guildId)) return _iaConfigCache.get(guildId);
-  const db = new JsonDatabase({
-    databasePath: path.resolve(
-      __dirname,
-      `../../../banco/ticket/${guildId}/iaconfig.json`,
-    ),
-  });
-  _iaConfigCache.set(guildId, db);
-  return db;
-}
-
 const estacoesRepo = require("../../utils/ticket/estacoesRepository");
 const { safeParseEstacoes, ensureEstacoesLoaded, getEstacoesDB, criarEstacao, getEstacao, updateEstacao, deleteEstacao } = estacoesRepo;
 
-async function initIAConfig(guildId) {
-  const db = getIAConfigDB(guildId);
-  if (!db.has("sistema_ativo")) {
-    db.set("sistema_ativo", false);
-  }
-  if (!db.has("parar_ao_assumir")) {
-    db.set("parar_ao_assumir", true);
-  }
-  if (!db.has("parar_staff_responder")) {
-    db.set("parar_staff_responder", true);
-  }
-  if (!db.has("prompt_base")) {
-    db.set(
-      "prompt_base",
-      "Você é uma atendente virtual em um servidor do Discord. Responda sempre em português brasileiro de forma educada, prestativa e profissional. Ajude os usuários com suas dúvidas e problemas.",
-    );
-  }
-  if (!db.has("prompts_adicionais")) {
-    db.set("prompts_adicionais", []);
-  }
-  if (!db.has("mensagem_boas_vindas_ativo")) {
-    db.set("mensagem_boas_vindas_ativo", false);
-  }
-  if (!db.has("mensagem_boas_vindas")) {
-    db.set("mensagem_boas_vindas", " ");
-  }
-  if (!db.has("prompts_cargos")) {
-    db.set("prompts_cargos", "[]");
-  }
-  if (!db.has("transferencia_inteligente")) {
-    db.set("transferencia_inteligente", false);
-  }
-  if (!db.has("resumo_ao_assumir")) {
-    db.set("resumo_ao_assumir", false);
-  }
-  if (!db.has("resposta_container")) {
-    db.set("resposta_container", false);
-  }
-  if (!db.has("horario_ativo")) {
-    db.set("horario_ativo", false);
-  }
-  if (!db.has("encerramento_automatico")) {
-    db.set("encerramento_automatico", false);
-  }
-  if (!db.has("retomar_apos_inatividade")) {
-    db.set("retomar_apos_inatividade", false);
-  }
-  if (!db.has("minutos_inatividade_staff")) {
-    db.set("minutos_inatividade_staff", 15);
-  }
-}
+const configRepo = require("../../utils/ticket/configRepository");
+const { ensureTicketConfigLoaded, getConfigDB, getPersonalizacaoDB, getIAConfigDB } = configRepo;
+
+// initIAConfig é um no-op agora: getIAConfigDB() já aplica os defaults na
+// primeira leitura (via configRepository.js), mantido só por compatibilidade
+// com chamadas antigas.
+async function initIAConfig(_guildId) {}
 
 function criarPaginacaoBotoes(botoes, paginaAtual, estacaoId = null) {
   const BOTOES_POR_PAGINA = 5;
@@ -930,6 +750,7 @@ module.exports = {
   getPersonalizacaoDB,
   getConfigDB,
   getIAConfigDB,
+  ensureTicketConfigLoaded,
   getEstacoesDB,
   ensureEstacoesLoaded,
   criarEstacao,

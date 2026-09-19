@@ -12,16 +12,12 @@ const {
   StringSelectMenuBuilder,
 } = require("discord.js");
 
-const path = require("path");
-const fs = require("fs");
-const { JsonDatabase } = require("wio.db");
 const cron = require("node-cron");
 const ticketRepo = require("../../utils/ticket/repository");
+const { ensureTicketConfigLoaded, getConfigDB } = require("../../utils/ticket/configRepository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
-
-const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 
 function getEmoji(raw) {
   if (!raw) return undefined;
@@ -29,45 +25,6 @@ function getEmoji(raw) {
   if (!match) return undefined;
   const [, name, id] = match;
   return { name, id };
-}
-
-function getConfigDB(guildId) {
-  const filePath = path.join(
-    PROJECT_ROOT,
-    "banco/ticket",
-    guildId,
-    "config.json",
-  );
-  function read() {
-    try {
-      return JSON.parse(fs.readFileSync(filePath, "utf8"));
-    } catch {
-      return {};
-    }
-  }
-  function write(data) {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 4), "utf8");
-  }
-  return {
-    get(key) {
-      return key.split(".").reduce((o, k) => o?.[k], read());
-    },
-    set(key, value) {
-      const data = read();
-      const keys = key.split(".");
-      let o = data;
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (!o[keys[i]]) o[keys[i]] = {};
-        o = o[keys[i]];
-      }
-      o[keys[keys.length - 1]] = value;
-      write(data);
-    },
-    has(key) {
-      return this.get(key) !== undefined;
-    },
-  };
 }
 
 function formatarTempo(ms) {
@@ -82,6 +39,7 @@ function formatarTempo(ms) {
 }
 
 async function buildOverviewComponents(guildId, guild, options = {}) {
+  await ensureTicketConfigLoaded(guildId);
   const configDB = getConfigDB(guildId);
   const tagsConfig = configDB.get("tags_config") || {};
   const tagsCadastradas = tagsConfig.tags || [];
@@ -318,6 +276,7 @@ async function atualizarTodosOverviews(client) {
   const guilds = client.guilds.cache;
   for (const [guildId, guild] of guilds) {
     try {
+      await ensureTicketConfigLoaded(guildId);
       const configDB = getConfigDB(guildId);
       const overviewData = configDB.get("overview_painel");
       if (!overviewData?.ativo) continue;
@@ -377,6 +336,7 @@ module.exports = {
     );
     if (!isPublico && !interaction._fromPainel) return;
 
+    await ensureTicketConfigLoaded(guildId);
     const configDB = getConfigDB(guildId);
 
     if (customId.startsWith("overview_ir_ticket_")) {
