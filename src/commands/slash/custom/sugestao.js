@@ -1,6 +1,5 @@
 const { ApplicationCommandType, ApplicationCommandOptionType, MessageFlags, PermissionFlagsBits } = require('discord.js')
-const { JsonDatabase } = require('wio.db')
-const path = require('path')
+const sugestaoRepo = require('../../../utils/sugestao/repository')
 
 module.exports = {
     name: "sugestao",
@@ -47,12 +46,7 @@ module.exports = {
             })
         }
 
-        const dbPath = path.join(
-            __dirname,
-            `../../../../banco/sugestao/${interaction.guild.id}/config.json`
-        )
-        const db = new JsonDatabase({ databasePath: dbPath })
-
+        const guildId = interaction.guild.id
         const subcommand = interaction.options.getSubcommand()
 
         if (subcommand === 'configurar') {
@@ -66,8 +60,7 @@ module.exports = {
                 })
             }
 
-            db.set('canal_sugestao', canal.id)
-            db.set('ativo', true)
+            await sugestaoRepo.setConfig(guildId, { canal_sugestao: canal.id, ativo: true })
 
             return interaction.reply({
                 content: `✅ **Suggestions system configured!**\n\n📍 Channel: ${canal}\n\n💡 Now, whenever someone sends a message in that channel, a thread will be created automatically with voting buttons!`,
@@ -76,16 +69,16 @@ module.exports = {
         }
 
         if (subcommand === 'desativar') {
-            const ativo = db.get('ativo')
+            const config = await sugestaoRepo.getConfig(guildId)
 
-            if (!ativo) {
+            if (!config?.ativo) {
                 return interaction.reply({
                     content: '❌ The suggestions system is already disabled.',
                     flags: MessageFlags.Ephemeral
                 })
             }
 
-            db.set('ativo', false)
+            await sugestaoRepo.setConfig(guildId, { ativo: false })
 
             return interaction.reply({
                 content: '✅ **Suggestions system disabled successfully!**',
@@ -94,8 +87,9 @@ module.exports = {
         }
 
         if (subcommand === 'status') {
-            const ativo = db.get('ativo')
-            const canalId = db.get('canal_sugestao')
+            const config = await sugestaoRepo.getConfig(guildId)
+            const ativo = config?.ativo
+            const canalId = config?.canal_sugestao
 
             if (!ativo || !canalId) {
                 return interaction.reply({

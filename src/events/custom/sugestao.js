@@ -9,8 +9,7 @@ const {
     SeparatorSpacingSize,
     MessageFlags,
 } = require('discord.js')
-const { JsonDatabase } = require('wio.db')
-const path = require('path')
+const sugestaoRepo = require('../../utils/sugestao/repository')
 const emojis = require('../../utils/emojis/emojis.json');
 function getEmoji(raw) {
     if (!raw) return undefined;
@@ -25,30 +24,16 @@ module.exports = {
     async execute(client, message) {
         if (message.author.bot || !message.guild) return
 
-        const dbPath = path.join(
-            __dirname,
-            `../../../banco/sugestao/${message.guild.id}/config.json`
-        )
-
-        let db
+        let config
         try {
-            db = new JsonDatabase({ databasePath: dbPath })
+            config = await sugestaoRepo.getConfig(message.guild.id)
         } catch (err) {
             return
         }
 
-        const ativo = db.get('ativo')
-        const canalSugestao = db.get('canal_sugestao')
-
-        if (!ativo || message.channel.id !== canalSugestao) return
+        if (!config?.ativo || message.channel.id !== config?.canal_sugestao) return
 
         try {
-            const sugestoesPath = path.join(
-                __dirname,
-                `../../../banco/sugestao/${message.guild.id}/sugestoes.json`
-            )
-            const dbSugestoes = new JsonDatabase({ databasePath: sugestoesPath })
-
             const sugestaoId = `sugestao_${Date.now()}`
             const imageAttachments = message.attachments.filter(att => att.contentType?.startsWith('image/'))
             const conteudo = message.content || 'Suggestion with image'
@@ -143,7 +128,7 @@ module.exports = {
                 reason: 'Suggestion discussion thread created automatically'
             })
 
-            dbSugestoes.set(sugestaoId, {
+            await sugestaoRepo.createSugestao(message.guild.id, sugestaoId, {
                 autorId: message.author.id,
                 autorNome: message.author.username,
                 conteudo: conteudo,

@@ -12,9 +12,7 @@ const {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } = require('discord.js')
-const { JsonDatabase } = require('wio.db')
-const path = require('path')
-const fs = require('fs')
+const anuncioRepo = require('../../utils/anuncio/repository')
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
@@ -515,13 +513,7 @@ module.exports = {
 
         if (interaction.customId === 'voltar_anuncios_salvos') {
           try {
-            const dbPath = path.join(
-              __dirname,
-              `../../../banco/anuncio/${interaction.guild.id}/anuncio.json`,
-            )
-            const db = new JsonDatabase({ databasePath: dbPath })
-
-            const anuncios = db.all()
+            const anuncios = await anuncioRepo.getAll(interaction.guild.id)
             if (!anuncios || anuncios.length === 0) {
               const vazioContainer = new ContainerBuilder()
                 .setAccentColor(0xff0000)
@@ -595,14 +587,8 @@ module.exports = {
           }
 
           const guildId = interaction.guild.id
-          const dbPath = path.join(
-            __dirname,
-            `../../../banco/anuncio/${guildId}/anuncio.json`,
-          )
 
           try {
-            const db = new JsonDatabase({ databasePath: dbPath })
-
             const dadosParaSalvar = {
               nome: anuncio.nome,
               descricao: anuncio.descricao,
@@ -614,7 +600,7 @@ module.exports = {
               cor: anuncio.cor,
             }
 
-            db.set(anuncio.editingKey, dadosParaSalvar)
+            await anuncioRepo.set(guildId, anuncio.editingKey, dadosParaSalvar)
 
             return await interaction.reply({
               content: `✅ **Announcement "${anuncio.editingKey}" updated successfully!**`,
@@ -909,13 +895,7 @@ module.exports = {
 
     if (interaction.customId === 'anuncios_salvos') {
       try {
-        const dbPath = path.join(
-          __dirname,
-          `../../../banco/anuncio/${interaction.guild.id}/anuncio.json`,
-        )
-        const db = new JsonDatabase({ databasePath: dbPath })
-
-        const anuncios = db.all()
+        const anuncios = await anuncioRepo.getAll(interaction.guild.id)
         if (!anuncios || anuncios.length === 0) {
           const vazioContainer = new ContainerBuilder()
             .setAccentColor(0xff0000)
@@ -1190,14 +1170,9 @@ module.exports = {
         if (interaction.customId === 'select_anuncio_salvo') {
           const selectedKey = interaction.values[0]
           const guildId = interaction.guild.id
-          const dbPath = path.join(
-            __dirname,
-            `../../../banco/anuncio/${guildId}/anuncio.json`,
-          )
 
           try {
-            const db = new JsonDatabase({ databasePath: dbPath })
-            const anuncioSalvo = db.get(selectedKey)
+            const anuncioSalvo = await anuncioRepo.get(guildId, selectedKey)
 
             if (!anuncioSalvo) {
               return await interaction.reply({
@@ -1443,14 +1418,9 @@ module.exports = {
           }
 
           const guildId = interaction.guild.id
-          const dbPath = path.join(
-            __dirname,
-            `../../../banco/anuncio/${guildId}/anuncio.json`,
-          )
 
           try {
-            const db = new JsonDatabase({ databasePath: dbPath })
-            db.delete(anuncio.editingKey)
+            await anuncioRepo.remove(guildId, anuncio.editingKey)
 
             delete client.anuncioData[userId]
 
@@ -1472,10 +1442,6 @@ module.exports = {
           const nome = interaction.fields.getTextInputValue('nome_anuncio')
 
           const guildId = interaction.guild.id
-          const dbPath = path.join(
-            __dirname,
-            `../../../banco/anuncio/${guildId}/anuncio.json`,
-          )
 
           const anuncioData =
             client.anuncioData?.[`${interaction.user.id}_temp`] ||
@@ -1489,13 +1455,7 @@ module.exports = {
           }
 
           try {
-            const dirPath = path.dirname(dbPath)
-            if (!fs.existsSync(dirPath)) {
-              fs.mkdirSync(dirPath, { recursive: true })
-            }
-
-            const db = new JsonDatabase({ databasePath: dbPath })
-            const anunciosExistentes = db.all() || []
+            const anunciosExistentes = (await anuncioRepo.getAll(guildId)) || []
 
             if (anunciosExistentes.length >= 25) {
               return await interaction.reply({
@@ -1516,7 +1476,7 @@ module.exports = {
               cor: anuncioData.cor,
             }
 
-            db.set(nome, dadosParaSalvar)
+            await anuncioRepo.set(guildId, nome, dadosParaSalvar)
 
             console.log(`Announcement saved: ${nome}`, dadosParaSalvar)
 

@@ -10,8 +10,7 @@ const {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } = require('discord.js')
-const { JsonDatabase } = require('wio.db')
-const path = require('path')
+const sugestaoRepo = require('../../utils/sugestao/repository')
 const emojis = require('../../utils/emojis/emojis.json')
 
 function getEmoji(raw) {
@@ -45,12 +44,7 @@ module.exports = {
                 })
             }
 
-            const dbPath = path.join(
-                __dirname,
-                `../../../banco/sugestao/${interaction.guild.id}/sugestoes.json`
-            )
-            const db = new JsonDatabase({ databasePath: dbPath })
-            const sugestao = db.get(sugestaoId)
+            const sugestao = await sugestaoRepo.getSugestao(sugestaoId)
 
             if (!sugestao) {
                 return interaction.reply({
@@ -101,12 +95,7 @@ module.exports = {
             const statusInfo = STATUS_MAP[statusKey]
             if (!statusInfo) return
 
-            const dbPath = path.join(
-                __dirname,
-                `../../../banco/sugestao/${interaction.guild.id}/sugestoes.json`
-            )
-            const db = new JsonDatabase({ databasePath: dbPath })
-            const sugestao = db.get(sugestaoId)
+            const sugestao = await sugestaoRepo.getSugestao(sugestaoId)
 
             if (!sugestao) {
                 return interaction.reply({
@@ -115,7 +104,7 @@ module.exports = {
                 })
             }
 
-            db.set(`${sugestaoId}.status`, statusInfo.dbValue)
+            await sugestaoRepo.setStatus(sugestaoId, statusInfo.dbValue)
 
             try {
                 const msg = await interaction.channel.messages.fetch(sugestao.mensagemId).catch(() => null)
