@@ -40,6 +40,7 @@ const {
   getPersonalizacaoDB,
   getIAConfigDB,
   getEstacoesDB,
+  ensureEstacoesLoaded,
   getEstacao,
   updateEstacao,
   deleteEstacao,
@@ -432,6 +433,8 @@ module.exports = {
     if (!interaction._fromPainel) return;
 
     if (!customId) return;
+
+    await ensureEstacoesLoaded(interaction.guildId);
 
     if (customId === "gerenciar_estacoes") {
       const db = getEstacoesDB(interaction.guildId);

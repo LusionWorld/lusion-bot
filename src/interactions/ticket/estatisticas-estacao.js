@@ -8,36 +8,11 @@ const {
   MessageFlags,
 } = require("discord.js");
 
-const path = require("path");
-const { JsonDatabase } = require("wio.db");
 const ticketRepo = require("../../utils/ticket/repository");
+const { ensureEstacoesLoaded } = require("../../utils/ticket/estacoesRepository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
-
-const PROJECT_ROOT = path.resolve(__dirname, "../../../");
-
-function getEstacoesDB(guildId) {
-  return new JsonDatabase({
-    databasePath: path.join(
-      PROJECT_ROOT,
-      "banco/ticket",
-      guildId,
-      "estacoes.json",
-    ),
-  });
-}
-
-function getEstacoes(guildId) {
-  const db = getEstacoesDB(guildId);
-  const raw = db.get("estacoes");
-  if (Array.isArray(raw)) return raw;
-  try {
-    return JSON.parse(raw || "[]");
-  } catch {
-    return [];
-  }
-}
 
 function formatDuration(ms) {
   if (!ms || ms < 0) return "N/A";
@@ -49,7 +24,7 @@ function formatDuration(ms) {
 }
 
 async function buildEstatisticasEstacao(guildId, estacaoId) {
-  const estacoes = getEstacoes(guildId);
+  const estacoes = await ensureEstacoesLoaded(guildId);
   const estacao = estacoes.find((e) => e.id === estacaoId);
   if (!estacao) return null;
 

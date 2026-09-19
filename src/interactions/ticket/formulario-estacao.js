@@ -13,14 +13,10 @@ const {
   StringSelectMenuBuilder,
 } = require("discord.js");
 
-const path = require("path");
-const fs = require("fs");
-const { JsonDatabase } = require("wio.db");
+const { ensureEstacoesLoaded, getEstacao, updateEstacao } = require("../../utils/ticket/estacoesRepository");
 
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
-
-const PROJECT_ROOT = path.resolve(__dirname, "../../../");
 
 function safeEmoji(raw) {
   if (!raw) return undefined;
@@ -35,45 +31,6 @@ function getEmoji(raw) {
   if (!match) return undefined;
   const [, name, id] = match;
   return { name, id };
-}
-
-function getEstacoesDB(guildId) {
-  return new JsonDatabase({
-    databasePath: path.join(
-      PROJECT_ROOT,
-      "banco/ticket",
-      guildId,
-      "estacoes.json",
-    ),
-  });
-}
-
-function safeParseEstacoes(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function getEstacao(guildId, estacaoId) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-  return estacoes.find((e) => e.id === estacaoId);
-}
-
-function updateEstacao(guildId, estacaoId, data) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-  const idx = estacoes.findIndex((e) => e.id === estacaoId);
-  if (idx !== -1) {
-    estacoes[idx] = { ...estacoes[idx], ...data };
-    db.set("estacoes", JSON.stringify(estacoes));
-  }
 }
 
 function criarModalFormulario(estacao, customIdOverride) {
@@ -128,6 +85,8 @@ module.exports = {
     if (!interaction._fromPainel) return;
     const { customId, guildId } = interaction;
     if (!customId) return;
+
+    await ensureEstacoesLoaded(guildId);
 
     if (customId.startsWith("config_formulario_estacao_")) {
       const estacaoId = customId.replace("config_formulario_estacao_", "");

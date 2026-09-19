@@ -33,7 +33,6 @@ const Groq = require("groq-sdk");
 
 const _configDataCache = new Map();
 const _personalizacaoCache = new Map();
-const _estacoesCache = new Map();
 const _iaConfigCache = new Map();
 const CONFIG_CACHE_TTL = 30000;
 
@@ -185,93 +184,8 @@ function getIAConfigDB(guildId) {
   return db;
 }
 
-function safeParseEstacoes(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function getEstacoesDB(guildId) {
-  if (_estacoesCache.has(guildId)) return _estacoesCache.get(guildId);
-
-  const db = new JsonDatabase({
-    databasePath: path.resolve(
-      __dirname,
-      `../../../banco/ticket/${guildId}/estacoes.json`,
-    ),
-  });
-
-  if (!db.has("estacoes")) {
-    db.set("estacoes", JSON.stringify([]));
-  }
-
-  _estacoesCache.set(guildId, db);
-  return db;
-}
-
-function criarEstacao(guildId, nome) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-
-  const novaEstacao = {
-    id: Date.now().toString(),
-    nome: nome,
-    team: [],
-    usersperms: {},
-    horario_ativo: false,
-    schedule: {},
-    mensagem_fora_horario: "Fora do horário de atendimento.",
-    limite_tickets: 0,
-    embedprincipal: {
-      title: "",
-      descricao: "",
-      color: "",
-      botoes: [],
-      selects: [],
-      banner: "",
-      messageId: null,
-      channelId: null,
-    },
-  };
-
-  estacoes.push(novaEstacao);
-  db.set("estacoes", JSON.stringify(estacoes));
-
-  return novaEstacao;
-}
-
-function getEstacao(guildId, estacaoId) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-  return estacoes.find((e) => e.id === estacaoId);
-}
-
-function updateEstacao(guildId, estacaoId, dados) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-  const index = estacoes.findIndex((e) => e.id === estacaoId);
-
-  if (index !== -1) {
-    estacoes[index] = { ...estacoes[index], ...dados };
-    db.set("estacoes", JSON.stringify(estacoes));
-    return true;
-  }
-  return false;
-}
-
-function deleteEstacao(guildId, estacaoId) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-  const filtered = estacoes.filter((e) => e.id !== estacaoId);
-  db.set("estacoes", JSON.stringify(filtered));
-  return filtered.length < estacoes.length;
-}
+const estacoesRepo = require("../../utils/ticket/estacoesRepository");
+const { safeParseEstacoes, ensureEstacoesLoaded, getEstacoesDB, criarEstacao, getEstacao, updateEstacao, deleteEstacao } = estacoesRepo;
 
 async function initIAConfig(guildId) {
   const db = getIAConfigDB(guildId);
@@ -1017,6 +931,7 @@ module.exports = {
   getConfigDB,
   getIAConfigDB,
   getEstacoesDB,
+  ensureEstacoesLoaded,
   criarEstacao,
   getEstacao,
   updateEstacao,

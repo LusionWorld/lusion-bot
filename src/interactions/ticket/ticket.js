@@ -56,38 +56,7 @@ function isValidUrl(url) {
   return trimmed.startsWith("http://") || trimmed.startsWith("https://");
 }
 
-function safeParseEstacoes(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function getEstacao(guildId, estacaoId) {
-  const db = getEstacoesDB(guildId);
-  const estacoes = safeParseEstacoes(db.get("estacoes"));
-  return estacoes.find((e) => e.id === estacaoId);
-}
-
-function getEstacoesDB(guildId) {
-  const db = new JsonDatabase({
-    databasePath: path.resolve(
-      __dirname,
-      `../../../banco/ticket/${guildId}/estacoes.json`,
-    ),
-  });
-
-  if (!db.has("estacoes")) {
-    db.set("estacoes", []);
-  }
-
-  return db;
-}
+const { safeParseEstacoes, ensureEstacoesLoaded, getEstacao, getEstacoesDB } = require("../../utils/ticket/estacoesRepository");
 
 
 const ticketRepo = require("../../utils/ticket/repository");
@@ -1056,6 +1025,8 @@ module.exports = {
         ));
 
     if (!isTicketInteraction) return;
+
+    await ensureEstacoesLoaded(interaction.guildId);
 
     if (
       interaction.isStringSelectMenu() &&
