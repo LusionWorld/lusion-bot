@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchGuildMember, fetchChannelName } from "@/lib/discordBot";
 import { StatCard } from "../stat-card";
 import { TranscriptButton } from "./transcript-button";
+import { TicketActions } from "./ticket-actions";
 
 export default async function TicketsPage({
   params,
@@ -29,7 +30,7 @@ export default async function TicketsPage({
       .not("fechado_em", "is", null),
     supabaseAdmin
       .from("tickets")
-      .select("ticket_id, user_id, criado_em, fechado_em, categoria, nome_categoria")
+      .select("ticket_id, user_id, criado_em, fechado_em, assumido_em, categoria, nome_categoria")
       .eq("guild_id", guildId)
       .order("criado_em", { ascending: false })
       .limit(10),
@@ -85,6 +86,7 @@ export default async function TicketsPage({
                 <th className="px-4 py-2.5 font-medium">Categoria</th>
                 <th className="px-4 py-2.5 font-medium">Criado em</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -119,6 +121,15 @@ export default async function TicketsPage({
                   </td>
                   <td className="px-4 py-2.5">
                     <StatusBadge fechado={!!row.fechado_em} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {!row.fechado_em && (
+                      <TicketActions
+                        guildId={guildId}
+                        ticketId={row.ticket_id}
+                        assumido={!!row.assumido_em}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}

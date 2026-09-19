@@ -250,6 +250,8 @@ process.on("SIGTERM", () => {
 
     client.emit("clientReady", client);
 
+    require("./src/server/internalApi").startInternalApi(client);
+
     startMemoryMonitoring();
 
     if (!global.gc) {
