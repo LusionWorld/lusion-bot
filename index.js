@@ -242,6 +242,8 @@ process.on("SIGTERM", () => {
     require("./src/utils/emojis/emojiHelper").installSafeEmoji();
     // ══════════════════════════════════════════════════════════
 
+    await require("./src/server/backfillLocalJson").runBackfill();
+
     require("./src/handlers/eventsHandler")(client);
     require("./src/handlers/descriptionHandler")(client);
 
