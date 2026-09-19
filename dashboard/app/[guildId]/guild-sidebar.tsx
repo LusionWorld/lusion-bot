@@ -14,7 +14,10 @@ type NavItem = {
 const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "Geral",
-    items: [{ href: "", label: "Visão geral", icon: HomeIcon }],
+    items: [
+      { href: "", label: "Visão geral", icon: HomeIcon },
+      { href: "/ajuda", label: "Ajuda", icon: HelpIcon },
+    ],
   },
   {
     label: "Módulos",
@@ -209,6 +212,21 @@ function DotsIcon(props: React.SVGProps<SVGSVGElement>) {
       <circle cx="5" cy="10" r="1.3" fill="currentColor" />
       <circle cx="10" cy="10" r="1.3" fill="currentColor" />
       <circle cx="15" cy="10" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+function HelpIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" {...props}>
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M7.8 8a2.2 2.2 0 1 1 3.1 2c-.7.4-1 .8-1 1.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="10" cy="13.7" r="0.6" fill="currentColor" />
     </svg>
   );
 }
