@@ -375,7 +375,7 @@ async function extendPoll(client, guildId, pollId, addMs) {
 
 async function rescheduleActivePolls(client) {
   try {
-    const guildIds = db.getAllGuildIds()
+    const guildIds = await db.getAllGuildIds()
     const now = Date.now()
     let total = 0
 

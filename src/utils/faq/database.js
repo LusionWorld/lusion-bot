@@ -1,147 +1,193 @@
-const sqlite3 = require('sqlite3').verbose()
-const path    = require('path')
-const fs      = require('fs')
-
-const pool = new Map()
+const supabase = require("../db/supabase");
 
 function getConnection(guildId) {
-  if (pool.has(guildId)) return pool.get(guildId)
-
-  const dbPath = path.join(__dirname, `../../../banco/faq/${guildId}/faq.db`)
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true })
-  const db = new sqlite3.Database(dbPath)
-
-  function run(sql, params = []) {
-    return new Promise((resolve, reject) =>
-      db.run(sql, params, function (err) { if (err) reject(err); else resolve(this) })
-    )
-  }
-  function get(sql, params = []) {
-    return new Promise((resolve, reject) =>
-      db.get(sql, params, (err, row) => { if (err) reject(err); else resolve(row) })
-    )
-  }
-  function all(sql, params = []) {
-    return new Promise((resolve, reject) =>
-      db.all(sql, params, (err, rows) => { if (err) reject(err); else resolve(rows) })
-    )
-  }
-
-  const ready = (async () => {
-    await run(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`)
-    await run(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id       INTEGER PRIMARY KEY AUTOINCREMENT,
-        value    TEXT NOT NULL UNIQUE,
-        label    TEXT NOT NULL,
-        position INTEGER NOT NULL DEFAULT 0
-      )
-    `)
-    await run(`
-      CREATE TABLE IF NOT EXISTS questions (
-        id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_value TEXT NOT NULL,
-        question       TEXT NOT NULL,
-        answer         TEXT NOT NULL,
-        position       INTEGER NOT NULL DEFAULT 0
-      )
-    `)
-    await run(`
-      CREATE TABLE IF NOT EXISTS analytics (
-        id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_value TEXT NOT NULL,
-        question_id    INTEGER NOT NULL,
-        accessed_at    TEXT NOT NULL DEFAULT (datetime('now'))
-      )
-    `)
-  })()
-
-  ready.catch(err => console.error(`[FAQ] DB init error (${guildId}):`, err))
-
-  const conn = {
-    db, run, get, all, ready,
-
+  return {
     async getConfig(key, def = null) {
-      const r = await get('SELECT value FROM config WHERE key = ?', [key])
-      return r ? r.value : def
+      const { data, error } = await supabase
+        .from("faq_config")
+        .select("value")
+        .eq("guild_id", guildId)
+        .eq("key", key)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? data.value : def;
     },
     async setConfig(key, val) {
-      return run('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', [key, String(val)])
+      const { error } = await supabase
+        .from("faq_config")
+        .upsert({ guild_id: guildId, key, value: String(val) }, { onConflict: "guild_id, key" });
+      if (error) throw error;
     },
 
     // ── Categories ───────────────────────────────────────────────────────────
     async getCategories() {
-      return all('SELECT * FROM categories ORDER BY position ASC, id ASC')
+      const { data, error } = await supabase
+        .from("faq_categories")
+        .select("*")
+        .eq("guild_id", guildId)
+        .order("position", { ascending: true })
+        .order("id", { ascending: true });
+      if (error) throw error;
+      return data || [];
     },
     async addCategory(value, label) {
-      const r = await get('SELECT COUNT(*) as c FROM categories')
-      return run(
-        'INSERT OR IGNORE INTO categories (value, label, position) VALUES (?, ?, ?)',
-        [value, label, r.c],
-      )
+      const { count, error: countError } = await supabase
+        .from("faq_categories")
+        .select("*", { count: "exact", head: true })
+        .eq("guild_id", guildId);
+      if (countError) throw countError;
+      const { error } = await supabase
+        .from("faq_categories")
+        .upsert(
+          { guild_id: guildId, value, label, position: count || 0 },
+          { onConflict: "guild_id, value", ignoreDuplicates: true },
+        );
+      if (error) throw error;
     },
     async updateCategory(value, label) {
-      return run('UPDATE categories SET label = ? WHERE value = ?', [label, value])
+      const { error } = await supabase
+        .from("faq_categories")
+        .update({ label })
+        .eq("guild_id", guildId)
+        .eq("value", value);
+      if (error) throw error;
     },
     async removeCategory(value) {
-      await run('DELETE FROM categories WHERE value = ?', [value])
-      await run('DELETE FROM questions WHERE category_value = ?', [value])
+      const { error } = await supabase
+        .from("faq_categories")
+        .delete()
+        .eq("guild_id", guildId)
+        .eq("value", value);
+      if (error) throw error;
+      const { error: qError } = await supabase
+        .from("faq_questions")
+        .delete()
+        .eq("guild_id", guildId)
+        .eq("category_value", value);
+      if (qError) throw qError;
     },
 
     // ── Questions ────────────────────────────────────────────────────────────
     async getQuestions(categoryValue) {
-      return all(
-        'SELECT * FROM questions WHERE category_value = ? ORDER BY position ASC, id ASC',
-        [categoryValue],
-      )
+      const { data, error } = await supabase
+        .from("faq_questions")
+        .select("*")
+        .eq("guild_id", guildId)
+        .eq("category_value", categoryValue)
+        .order("position", { ascending: true })
+        .order("id", { ascending: true });
+      if (error) throw error;
+      return data || [];
     },
     async getQuestion(id) {
-      return get('SELECT * FROM questions WHERE id = ?', [id])
+      const { data, error } = await supabase
+        .from("faq_questions")
+        .select("*")
+        .eq("guild_id", guildId)
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
     async getTotalQuestions() {
-      const r = await get('SELECT COUNT(*) as c FROM questions')
-      return r?.c ?? 0
+      const { count, error } = await supabase
+        .from("faq_questions")
+        .select("*", { count: "exact", head: true })
+        .eq("guild_id", guildId);
+      if (error) throw error;
+      return count || 0;
     },
     async addQuestion(categoryValue, question, answer) {
-      const r = await get('SELECT COUNT(*) as c FROM questions WHERE category_value = ?', [categoryValue])
-      return run(
-        'INSERT INTO questions (category_value, question, answer, position) VALUES (?, ?, ?, ?)',
-        [categoryValue, question, answer, r.c],
-      )
+      const { count, error: countError } = await supabase
+        .from("faq_questions")
+        .select("*", { count: "exact", head: true })
+        .eq("guild_id", guildId)
+        .eq("category_value", categoryValue);
+      if (countError) throw countError;
+      const { error } = await supabase
+        .from("faq_questions")
+        .insert({ guild_id: guildId, category_value: categoryValue, question, answer, position: count || 0 });
+      if (error) throw error;
     },
     async updateQuestion(id, question, answer) {
-      return run('UPDATE questions SET question = ?, answer = ? WHERE id = ?', [question, answer, id])
+      const { error } = await supabase
+        .from("faq_questions")
+        .update({ question, answer })
+        .eq("guild_id", guildId)
+        .eq("id", id);
+      if (error) throw error;
     },
     async removeQuestion(id) {
-      return run('DELETE FROM questions WHERE id = ?', [id])
+      const { error } = await supabase
+        .from("faq_questions")
+        .delete()
+        .eq("guild_id", guildId)
+        .eq("id", id);
+      if (error) throw error;
     },
 
     // ── Analytics ────────────────────────────────────────────────────────────
     async logAccess(categoryValue, questionId) {
-      return run(
-        'INSERT INTO analytics (category_value, question_id) VALUES (?, ?)',
-        [categoryValue, questionId],
-      ).catch(() => {})
+      const { error } = await supabase
+        .from("faq_analytics")
+        .insert({ guild_id: guildId, category_value: categoryValue, question_id: questionId, accessed_at: Date.now() });
+      if (error) console.error(`[FAQ] logAccess error (${guildId}):`, error.message);
     },
     async getAnalytics() {
-      const total      = await get('SELECT COUNT(*) as total FROM analytics')
-      const byCategory = await all(
-        'SELECT category_value, COUNT(*) as count FROM analytics GROUP BY category_value ORDER BY count DESC LIMIT 10',
-      )
-      const byQuestion = await all(`
-        SELECT q.question, q.category_value, COUNT(a.id) as count
-        FROM analytics a LEFT JOIN questions q ON a.question_id = q.id
-        GROUP BY a.question_id ORDER BY count DESC LIMIT 10
-      `)
-      return { total: total?.total ?? 0, byCategory, byQuestion }
+      const { count: total, error: totalError } = await supabase
+        .from("faq_analytics")
+        .select("*", { count: "exact", head: true })
+        .eq("guild_id", guildId);
+      if (totalError) throw totalError;
+
+      const { data: rows, error: rowsError } = await supabase
+        .from("faq_analytics")
+        .select("category_value, question_id")
+        .eq("guild_id", guildId);
+      if (rowsError) throw rowsError;
+
+      const byCategoryMap = new Map();
+      const byQuestionMap = new Map();
+      for (const row of rows || []) {
+        byCategoryMap.set(row.category_value, (byCategoryMap.get(row.category_value) || 0) + 1);
+        if (row.question_id != null) {
+          byQuestionMap.set(row.question_id, (byQuestionMap.get(row.question_id) || 0) + 1);
+        }
+      }
+
+      const byCategory = [...byCategoryMap.entries()]
+        .map(([category_value, count]) => ({ category_value, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      const topQuestionIds = [...byQuestionMap.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([id]) => id);
+
+      let byQuestion = [];
+      if (topQuestionIds.length) {
+        const { data: questions, error: qError } = await supabase
+          .from("faq_questions")
+          .select("id, question, category_value")
+          .eq("guild_id", guildId)
+          .in("id", topQuestionIds);
+        if (qError) throw qError;
+        const questionMap = new Map((questions || []).map((q) => [q.id, q]));
+        byQuestion = topQuestionIds.map((id) => ({
+          question: questionMap.get(id)?.question ?? null,
+          category_value: questionMap.get(id)?.category_value ?? null,
+          count: byQuestionMap.get(id),
+        }));
+      }
+
+      return { total: total || 0, byCategory, byQuestion };
     },
     async clearAnalytics() {
-      return run('DELETE FROM analytics')
+      const { error } = await supabase.from("faq_analytics").delete().eq("guild_id", guildId);
+      if (error) throw error;
     },
   }
-
-  pool.set(guildId, conn)
-  return conn
 }
 
 module.exports = { getConnection }
