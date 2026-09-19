@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const {
   ButtonBuilder,
   ActionRowBuilder,
@@ -12,33 +10,61 @@ const {
   MessageFlags,
 } = require('discord.js');
 
+const pixRepository = require('../../utils/pix/repository');
 const { getEmojis } = require("../../utils/emojis/emojiHelper");
 const emojis = getEmojis();
 
-function getEmoji(raw) {
-  if (!raw) return undefined;
-  const match = raw.match(/^<a?:([^:]+):(\d+)>$/);
-  if (!match) return undefined;
-  const [, name, id] = match;
-  return { name, id };
-}
+function buildConfigContainer(configData) {
+  const buttonConfigPix = new ButtonBuilder()
+    .setCustomId('configurar_dados_pix')
+    .setLabel('Dados PIX')
+    .setEmoji(emojis.pixbsr)
+    .setStyle(ButtonStyle.Primary);
 
-function converterCorHex(cor) {
-  if (!cor || cor.trim() === '') return null;
+  const buttonConfigContainer = new ButtonBuilder()
+    .setCustomId('configurar_container_pix')
+    .setLabel('Container')
+    .setEmoji(emojis.embeds)
+    .setStyle(ButtonStyle.Primary);
 
-  let corLimpa = cor.trim();
+  const buttonVoltar = new ButtonBuilder()
+    .setCustomId('voltar_inicio')
+    .setLabel('Voltar')
+    .setEmoji(emojis.home)
+    .setStyle(ButtonStyle.Secondary);
 
-  if (corLimpa.startsWith('#')) {
-    corLimpa = corLimpa.slice(1);
-  } else if (corLimpa.startsWith('0x')) {
-    corLimpa = corLimpa.slice(2);
-  }
+  const row = new ActionRowBuilder().addComponents(
+    buttonConfigPix,
+    buttonConfigContainer,
+    buttonVoltar,
+  );
 
-  if (!/^[0-9A-Fa-f]{6}$/.test(corLimpa)) {
-    return null;
-  }
-
-  return parseInt(corLimpa, 16);
+  return new ContainerBuilder()
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent('# Configuração Pix'),
+      new TextDisplayBuilder().setContent(
+        'Para chaves Pix do tipo telefone, sempre adicione o código do país +55 antes do número.\nClique nos botões abaixo para configurar ou voltar.',
+      ),
+      new TextDisplayBuilder().setContent(
+        `**Chave**\n||${configData.chave || 'Não configurada'}||`,
+      ),
+      new TextDisplayBuilder().setContent(
+        `**Nome**\n||${configData.nome || 'Não configurado'}||`,
+      ),
+      new TextDisplayBuilder().setContent(
+        `**Título**\n${configData.titulo || 'PIX gerado com sucesso'}`,
+      ),
+      new TextDisplayBuilder().setContent(
+        `**Imagem QR Code**\n${configData.imagem_qrcode || 'Não configurada'}`,
+      ),
+      new TextDisplayBuilder().setContent(
+        `**Descrição**\n${configData.descricao || 'Não configurada'}`,
+      ),
+      new TextDisplayBuilder().setContent(
+        `**Cor**\n${configData.cor || 'Sem cor (padrão)'}`,
+      ),
+    )
+    .addActionRowComponents(row);
 }
 
 module.exports = {
@@ -46,8 +72,6 @@ module.exports = {
     if (!interaction.guild) return;
 
     const guildId = interaction.guild.id;
-    const pixPath = path.resolve(__dirname, `../../../banco/pix/${guildId}`);
-    const configFile = path.join(pixPath, 'config.json');
 
     // ============= BOTÕES =============
 
@@ -58,85 +82,16 @@ module.exports = {
 
       if (interaction.customId === 'pix_ticket') {
         await interaction.deferUpdate();
-        if (!fs.existsSync(pixPath)) fs.mkdirSync(pixPath, { recursive: true });
-        if (!fs.existsSync(configFile)) {
-          const initialData = {
-            chave: '',
-            nome: '',
-            cidade: 'SAO PAULO',
-            valor: null,
-            descricao: '',
-            txid: '',
-            imagemQrcode: '',
-            titulo: 'PIX gerado com sucesso',
-            cor: '',
-          };
-          fs.writeFileSync(configFile, JSON.stringify(initialData, null, 2));
-        }
-
-        const configData = JSON.parse(fs.readFileSync(configFile, 'utf8'));
-
-        const buttonConfigPix = new ButtonBuilder()
-          .setCustomId('configurar_dados_pix')
-          .setLabel('Dados PIX')
-          .setEmoji(emojis.pixbsr)
-          .setStyle(ButtonStyle.Primary);
-
-        const buttonConfigContainer = new ButtonBuilder()
-          .setCustomId('configurar_container_pix')
-          .setLabel('Container')
-          .setEmoji(emojis.embeds)
-          .setStyle(ButtonStyle.Primary);
-
-        const buttonVoltar = new ButtonBuilder()
-          .setCustomId('voltar_inicio')
-          .setLabel('Voltar')
-          .setEmoji(emojis.home)
-          .setStyle(ButtonStyle.Secondary);
-
-        const row = new ActionRowBuilder().addComponents(
-          buttonConfigPix,
-          buttonConfigContainer,
-          buttonVoltar,
-        );
-
-        const container = new ContainerBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent('# Configuração Pix'),
-            new TextDisplayBuilder().setContent(
-              'Para chaves Pix do tipo telefone, sempre adicione o código do país +55 antes do número.\nClique nos botões abaixo para configurar ou voltar.',
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Chave**\n||${configData.chave || 'Não configurada'}||`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Nome**\n||${configData.nome || 'Não configurado'}||`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Título**\n${configData.titulo || 'PIX gerado com sucesso'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Imagem QR Code**\n${configData.imagemQrcode || 'Não configurada'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Descrição**\n${configData.descricao || 'Não configurada'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Cor**\n${configData.cor || 'Sem cor (padrão)'}`,
-            ),
-          )
-          .addActionRowComponents(row);
+        const configData = await pixRepository.ensureConfig(guildId);
 
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,
-          components: [container],
+          components: [buildConfigContainer(configData)],
         });
       }
 
       if (interaction.customId === 'configurar_dados_pix') {
-        const configData = fs.existsSync(configFile)
-          ? JSON.parse(fs.readFileSync(configFile, 'utf8'))
-          : { chave: '', nome: '' };
+        const configData = (await pixRepository.getConfig(guildId)) || { chave: '', nome: '' };
 
         const modal = new ModalBuilder()
           .setCustomId('modal_dados_pix')
@@ -167,14 +122,12 @@ module.exports = {
       }
 
       if (interaction.customId === 'configurar_container_pix') {
-        const configData = fs.existsSync(configFile)
-          ? JSON.parse(fs.readFileSync(configFile, 'utf8'))
-          : {
-            titulo: 'PIX gerado com sucesso',
-            imagemQrcode: '',
-            descricao: '',
-            cor: '',
-          };
+        const configData = (await pixRepository.getConfig(guildId)) || {
+          titulo: 'PIX gerado com sucesso',
+          imagem_qrcode: '',
+          descricao: '',
+          cor: '',
+        };
 
         const modal = new ModalBuilder()
           .setCustomId('modal_container_pix')
@@ -194,7 +147,7 @@ module.exports = {
           .setStyle(TextInputStyle.Short)
           .setPlaceholder('Link do QR Code. Deixe vazio para não usar.')
           .setRequired(false)
-          .setValue(configData.imagemQrcode || '');
+          .setValue(configData.imagem_qrcode || '');
 
         const inputDescricao = new TextInputBuilder()
           .setCustomId('descricao_pix')
@@ -235,69 +188,12 @@ module.exports = {
         const chave = interaction.fields.getTextInputValue('chave_pix');
         const nome = interaction.fields.getTextInputValue('nome_pix');
 
-        let configData = fs.existsSync(configFile)
-          ? JSON.parse(fs.readFileSync(configFile, 'utf8'))
-          : {};
-
-        configData.chave = chave;
-        configData.nome = nome;
-
-        fs.writeFileSync(configFile, JSON.stringify(configData, null, 2));
-
-        const buttonConfigPix = new ButtonBuilder()
-          .setCustomId('configurar_dados_pix')
-          .setLabel('Dados PIX')
-          .setEmoji(emojis.pixbsr)
-          .setStyle(ButtonStyle.Primary);
-
-        const buttonConfigContainer = new ButtonBuilder()
-          .setCustomId('configurar_container_pix')
-          .setLabel('Container')
-          .setEmoji(emojis.embeds)
-          .setStyle(ButtonStyle.Primary);
-
-        const buttonVoltar = new ButtonBuilder()
-          .setCustomId('voltar_inicio')
-          .setLabel('Voltar')
-          .setEmoji(emojis.home)
-          .setStyle(ButtonStyle.Secondary);
-
-        const row = new ActionRowBuilder().addComponents(
-          buttonConfigPix,
-          buttonConfigContainer,
-          buttonVoltar,
-        );
-
-        const container = new ContainerBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent('# Configuração Pix'),
-            new TextDisplayBuilder().setContent(
-              'Para chaves Pix do tipo telefone, sempre adicione o código do país +55 antes do número.\nClique nos botões abaixo para configurar ou voltar.',
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Chave**\n||${configData.chave || 'Não configurada'}||`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Nome**\n||${configData.nome || 'Não configurado'}||`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Título**\n${configData.titulo || 'PIX gerado com sucesso'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Imagem QR Code**\n${configData.imagemQrcode || 'Não configurada'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Descrição**\n${configData.descricao || 'Não configurada'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Cor**\n${configData.cor || 'Sem cor (padrão)'}`,
-            ),
-          )
-          .addActionRowComponents(row);
+        await pixRepository.setConfig(guildId, { chave, nome });
+        const configData = await pixRepository.getConfig(guildId);
 
         await interaction.update({
           flags: MessageFlags.IsComponentsV2,
-          components: [container],
+          components: [buildConfigContainer(configData)],
         });
       }
 
@@ -307,71 +203,17 @@ module.exports = {
         const descricao = interaction.fields.getTextInputValue('descricao_pix');
         const cor = interaction.fields.getTextInputValue('cor_pix');
 
-        let configData = fs.existsSync(configFile)
-          ? JSON.parse(fs.readFileSync(configFile, 'utf8'))
-          : {};
-
-        configData.titulo = titulo || 'PIX gerado com sucesso';
-        configData.imagemQrcode = imagemQrcode;
-        configData.descricao = descricao;
-        configData.cor = cor || '';
-
-        fs.writeFileSync(configFile, JSON.stringify(configData, null, 2));
-
-        const buttonConfigPix = new ButtonBuilder()
-          .setCustomId('configurar_dados_pix')
-          .setLabel('Dados PIX')
-          .setEmoji(emojis.pixbsr)
-          .setStyle(ButtonStyle.Primary);
-
-        const buttonConfigContainer = new ButtonBuilder()
-          .setCustomId('configurar_container_pix')
-          .setLabel('Container')
-          .setEmoji(emojis.embeds)
-          .setStyle(ButtonStyle.Primary);
-
-        const buttonVoltar = new ButtonBuilder()
-          .setCustomId('voltar_inicio')
-          .setLabel('Voltar')
-          .setEmoji(emojis.home)
-          .setStyle(ButtonStyle.Secondary);
-
-        const row = new ActionRowBuilder().addComponents(
-          buttonConfigPix,
-          buttonConfigContainer,
-          buttonVoltar,
-        );
-
-        const container = new ContainerBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent('# Configuração Pix'),
-            new TextDisplayBuilder().setContent(
-              'Para chaves Pix do tipo telefone, sempre adicione o código do país +55 antes do número.\nClique nos botões abaixo para configurar ou voltar.',
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Chave**\n||${configData.chave || 'Não configurada'}||`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Nome**\n||${configData.nome || 'Não configurado'}||`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Título**\n${configData.titulo || 'PIX gerado com sucesso'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Imagem QR Code**\n${configData.imagemQrcode || 'Não configurada'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Descrição**\n${configData.descricao || 'Não configurada'}`,
-            ),
-            new TextDisplayBuilder().setContent(
-              `**Cor**\n${configData.cor || 'Sem cor (padrão)'}`,
-            ),
-          )
-          .addActionRowComponents(row);
+        await pixRepository.setConfig(guildId, {
+          titulo: titulo || 'PIX gerado com sucesso',
+          imagem_qrcode: imagemQrcode,
+          descricao,
+          cor: cor || '',
+        });
+        const configData = await pixRepository.getConfig(guildId);
 
         await interaction.update({
           flags: MessageFlags.IsComponentsV2,
-          components: [container],
+          components: [buildConfigContainer(configData)],
         });
       }
     }

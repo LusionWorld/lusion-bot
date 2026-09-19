@@ -14,8 +14,7 @@ const {
   SeparatorSpacingSize,
 } = require("discord.js");
 const QRCode = require("qrcode");
-const fs = require("fs");
-const path = require("path");
+const pixRepository = require("../../../utils/pix/repository");
 
 function tlv(id, value) {
   const v = String(value || "");
@@ -127,19 +126,18 @@ module.exports = {
 
     try {
       const guildId = interaction.guild.id;
-      const filePath = path.resolve(__dirname, `../../../../banco/pix/${guildId}/config.json`);
+      const configData = await pixRepository.getConfig(guildId);
 
-      if (!fs.existsSync(filePath)) {
+      if (!configData) {
         return interaction.editReply({
           content: "❌ Configuração do Pix não encontrada para esta guild. Vá ate o painel de tickets e configure.",
         });
       }
 
-      const configData = JSON.parse(fs.readFileSync(filePath, "utf8"));
       let chave = configData.chave || "";
       const nome = configData.nome || "";
       const cidade = configData.cidade || "SAO PAULO";
-      const imagemQrcode = configData.imagemQrcode || "";
+      const imagemQrcode = configData.imagem_qrcode || "";
       const titulo = configData.titulo || "PIX gerado com sucesso";
       const cor = configData.cor || "";
 

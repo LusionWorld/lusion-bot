@@ -20,7 +20,7 @@ function isValidURL(str) {
 }
 
 async function assignAutoRoles(member, config) {
-  if (!config || config.auto_roles_ativo !== 1) return
+  if (!config || !config.auto_roles_ativo) return
   const roleIds = config.auto_roles || []
   if (!roleIds.length) return
 
@@ -49,7 +49,7 @@ module.exports = {
     await assignAutoRoles(member, config)
 
     try {
-      if (!config || config.ativo !== 1) return
+      if (!config || !config.ativo) return
 
       const accentColor =
         config.cor && isValidHexColor(config.cor)

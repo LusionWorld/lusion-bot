@@ -41,7 +41,7 @@ function hexToDecimal(hex) {
 
 async function buildMainPanel(guild) {
   const config = await db.getConfig(guild.id)
-  const ativo = config?.ativo === 1
+  const ativo = !!config?.ativo
 
   return new ContainerBuilder()
     .addTextDisplayComponents(td =>
@@ -276,7 +276,7 @@ function buildConfigPanel(data) {
 }
 
 function buildAutoRolePanel(guild, config) {
-  const ativo = config?.auto_roles_ativo === 1
+  const ativo = !!config?.auto_roles_ativo
   const roles = config?.auto_roles || []
 
   const roleSel = new RoleSelectMenuBuilder()
@@ -452,7 +452,7 @@ module.exports = {
         const data = await ensureData()
         const config = await db.getConfig(guildId)
         await db.saveConfig(guildId, {
-          ativo: config?.ativo === 1,
+          ativo: !!config?.ativo,
           descricao: data.descricao,
           imagem: data.imagem,
           thumbnail: data.thumbnail,

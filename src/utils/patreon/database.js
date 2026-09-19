@@ -1,8 +1,4 @@
-const sqlite3 = require('sqlite3').verbose()
-const path    = require('path')
-const fs      = require('fs')
-
-const pool = new Map()
+const supabase = require("../db/supabase");
 
 const DEFAULT_TIERS = [
   { id: 'resident',  name: 'Resident',  price: '$5/month',  benefits: JSON.stringify(['Access to dev-log', 'Early previews', 'Support the project']),            sort_order: 1 },
@@ -11,87 +7,94 @@ const DEFAULT_TIERS = [
 ]
 
 function getConnection(guildId) {
-  if (pool.has(guildId)) return pool.get(guildId)
+  const seeded = { done: false };
 
-  const dbPath = path.join(__dirname, `../../../banco/patreon/${guildId}/patreon.db`)
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true })
-
-  const db = new sqlite3.Database(dbPath)
-
-  function run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      db.run(sql, params, function(err) { if (err) reject(err); else resolve(this) })
-    })
-  }
-  function get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      db.get(sql, params, (err, row) => { if (err) reject(err); else resolve(row) })
-    })
-  }
-  function all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      db.all(sql, params, (err, rows) => { if (err) reject(err); else resolve(rows) })
-    })
-  }
-
-  const ready = (async () => {
-    await run(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`)
-    await run(`
-      CREATE TABLE IF NOT EXISTS tiers (
-        id         TEXT PRIMARY KEY,
-        name       TEXT NOT NULL,
-        price      TEXT NOT NULL,
-        benefits   TEXT NOT NULL DEFAULT '[]',
-        sort_order INTEGER NOT NULL DEFAULT 0
-      )
-    `)
-
-    const count = await get('SELECT COUNT(*) as c FROM tiers')
-    if (!count?.c) {
-      for (const t of DEFAULT_TIERS) {
-        await run(
-          'INSERT OR IGNORE INTO tiers (id, name, price, benefits, sort_order) VALUES (?, ?, ?, ?, ?)',
-          [t.id, t.name, t.price, t.benefits, t.sort_order],
-        )
-      }
+  async function ensureSeeded() {
+    if (seeded.done) return;
+    seeded.done = true;
+    const { count, error } = await supabase
+      .from("patreon_tiers")
+      .select("*", { count: "exact", head: true })
+      .eq("guild_id", guildId);
+    if (error) throw error;
+    if (!count) {
+      const rows = DEFAULT_TIERS.map((t) => ({
+        guild_id: guildId,
+        id: t.id,
+        name: t.name,
+        price: t.price,
+        benefits: JSON.parse(t.benefits),
+        sort_order: t.sort_order,
+      }));
+      const { error: insertError } = await supabase.from("patreon_tiers").insert(rows);
+      if (insertError) throw insertError;
     }
-  })()
+  }
 
-  ready.catch(err => console.error(`[Patreon] DB init error (${guildId}):`, err))
-
-  const conn = {
-    db, run, get, all, ready,
-
+  return {
     async getConfig(key, def = null) {
-      const r = await get('SELECT value FROM config WHERE key = ?', [key])
-      return r ? r.value : def
+      const { data, error } = await supabase
+        .from("patreon_config")
+        .select("value")
+        .eq("guild_id", guildId)
+        .eq("key", key)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? data.value : def;
     },
     async setConfig(key, val) {
-      return run('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', [key, String(val)])
+      const { error } = await supabase
+        .from("patreon_config")
+        .upsert({ guild_id: guildId, key, value: String(val) }, { onConflict: "guild_id, key" });
+      if (error) throw error;
     },
     async deleteConfig(key) {
-      return run('DELETE FROM config WHERE key = ?', [key])
+      const { error } = await supabase
+        .from("patreon_config")
+        .delete()
+        .eq("guild_id", guildId)
+        .eq("key", key);
+      if (error) throw error;
     },
 
     async getTiers() {
-      return all('SELECT * FROM tiers ORDER BY sort_order ASC')
+      await ensureSeeded();
+      const { data, error } = await supabase
+        .from("patreon_tiers")
+        .select("*")
+        .eq("guild_id", guildId)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data || []).map((row) => ({ ...row, benefits: JSON.stringify(row.benefits || []) }));
     },
     async getTier(id) {
-      return get('SELECT * FROM tiers WHERE id = ?', [id])
+      await ensureSeeded();
+      const { data, error } = await supabase
+        .from("patreon_tiers")
+        .select("*")
+        .eq("guild_id", guildId)
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return { ...data, benefits: JSON.stringify(data.benefits || []) };
     },
     async upsertTier({ id, name, price, benefits, sort_order = 0 }) {
-      return run(
-        'INSERT OR REPLACE INTO tiers (id, name, price, benefits, sort_order) VALUES (?, ?, ?, ?, ?)',
-        [id, name, price, JSON.stringify(benefits), sort_order],
-      )
+      const { error } = await supabase.from("patreon_tiers").upsert(
+        { guild_id: guildId, id, name, price, benefits, sort_order },
+        { onConflict: "guild_id, id" },
+      );
+      if (error) throw error;
     },
     async removeTier(id) {
-      return run('DELETE FROM tiers WHERE id = ?', [id])
+      const { error } = await supabase
+        .from("patreon_tiers")
+        .delete()
+        .eq("guild_id", guildId)
+        .eq("id", id);
+      if (error) throw error;
     },
   }
-
-  pool.set(guildId, conn)
-  return conn
 }
 
 module.exports = { getConnection, DEFAULT_TIERS }
