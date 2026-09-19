@@ -49,7 +49,7 @@ module.exports = {
 
     const { guild } = interaction
     const config         = await db.getConfig(guild.id)
-    const ativo          = config?.ativo === 1
+    const ativo          = !!config?.ativo
     const canalLogs      = config?.canal_logs
     const leaderboard    = await db.getLeaderboard(guild.id)
     const totalValidos   = leaderboard.reduce((a, r) => a + (r.validos || 0), 0)

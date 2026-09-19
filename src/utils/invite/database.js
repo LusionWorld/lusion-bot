@@ -1,344 +1,214 @@
-const sqlite3 = require('sqlite3').verbose()
-const path = require('path')
-const fs = require('fs')
-
-// ─── Pool de conexões por servidor ───────────────────────────────────────────
-
-const pool = new Map()     // guildId → { db, ready, run, get, all }
-
-function getConnection(guildId) {
-  if (pool.has(guildId)) return pool.get(guildId)
-
-  const dbPath = path.join(__dirname, `../../../banco/convite/${guildId}/invite.db`)
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true })
-
-  const db = new sqlite3.Database(dbPath)
-
-  function run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      db.run(sql, params, function (err) {
-        if (err) reject(err)
-        else resolve(this)
-      })
-    })
-  }
-
-  function get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      db.get(sql, params, (err, row) => {
-        if (err) reject(err)
-        else resolve(row)
-      })
-    })
-  }
-
-  function all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      db.all(sql, params, (err, rows) => {
-        if (err) reject(err)
-        else resolve(rows)
-      })
-    })
-  }
-
-  async function addCol(table, column, definition) {
-    try {
-      await run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
-    } catch (e) {
-      if (!e.message.includes('duplicate column')) throw e
-    }
-  }
-
-  const ready = (async () => {
-    // ── Core tables ──────────────────────────────────────────────────────────
-    await run(`
-      CREATE TABLE IF NOT EXISTS invite_config (
-        guild_id              TEXT PRIMARY KEY,
-        ativo                 INTEGER DEFAULT 0,
-        canal_logs            TEXT,
-        canal_ranking         TEXT,
-        milestone_interval    INTEGER DEFAULT 10,
-        min_days_qualified    INTEGER DEFAULT 7,
-        criteria_min_messages INTEGER DEFAULT 5,
-        criteria_min_channels INTEGER DEFAULT 1,
-        criteria_diff_days    INTEGER DEFAULT 1,
-        criteria_check_spam   INTEGER DEFAULT 1
-      )
-    `)
-    await run(`
-      CREATE TABLE IF NOT EXISTS invite_stats (
-        guild_id TEXT,
-        user_id  TEXT,
-        total    INTEGER DEFAULT 0,
-        validos  INTEGER DEFAULT 0,
-        saiu     INTEGER DEFAULT 0,
-        bonus    INTEGER DEFAULT 0,
-        PRIMARY KEY (guild_id, user_id)
-      )
-    `)
-    await run(`
-      CREATE TABLE IF NOT EXISTS invite_membros (
-        guild_id       TEXT,
-        member_id      TEXT,
-        inviter_id     TEXT,
-        invite_code    TEXT,
-        entrou         INTEGER,
-        saiu           INTEGER DEFAULT 0,
-        status         TEXT DEFAULT 'pending',
-        qualified_at   INTEGER DEFAULT NULL,
-        ever_qualified INTEGER DEFAULT 0,
-        PRIMARY KEY (guild_id, member_id)
-      )
-    `)
-    // ── Activity tracking ────────────────────────────────────────────────────
-    await run(`
-      CREATE TABLE IF NOT EXISTS invite_member_activity (
-        guild_id      TEXT,
-        member_id     TEXT,
-        message_count INTEGER DEFAULT 0,
-        channels_used TEXT    DEFAULT '[]',
-        days_active   TEXT    DEFAULT '[]',
-        flagged_spam  INTEGER DEFAULT 0,
-        PRIMARY KEY (guild_id, member_id)
-      )
-    `)
-    // ── Reward roles ─────────────────────────────────────────────────────────
-    await run(`
-      CREATE TABLE IF NOT EXISTS invite_reward_roles (
-        id            INTEGER PRIMARY KEY AUTOINCREMENT,
-        guild_id      TEXT,
-        role_id       TEXT,
-        min_qualified INTEGER DEFAULT 10,
-        permanent     INTEGER DEFAULT 1,
-        duration_days INTEGER DEFAULT 7
-      )
-    `)
-    // ── Active temporary reward assignments ──────────────────────────────────
-    await run(`
-      CREATE TABLE IF NOT EXISTS invite_active_rewards (
-        guild_id   TEXT,
-        user_id    TEXT,
-        role_id    TEXT,
-        expires_at INTEGER,
-        PRIMARY KEY (guild_id, user_id, role_id)
-      )
-    `)
-
-    // ── Migrations (old columns that may not exist) ──────────────────────────
-    const oldCols = [
-      ['invite_config', 'qualifying_role_id',      'TEXT'],
-      ['invite_config', 'canal_ranking',            'TEXT'],
-      ['invite_config', 'canal_ranking_pinned',     'TEXT'],
-      ['invite_config', 'ranking_message_id',       'TEXT'],
-      ['invite_config', 'milestone_interval',       'INTEGER DEFAULT 10'],
-      ['invite_config', 'criteria_min_messages',    'INTEGER DEFAULT 5'],
-      ['invite_config', 'criteria_min_channels',    'INTEGER DEFAULT 1'],
-      ['invite_config', 'criteria_diff_days',       'INTEGER DEFAULT 1'],
-      ['invite_config', 'criteria_check_spam',      'INTEGER DEFAULT 1'],
-      ['invite_membros', 'status',         "TEXT DEFAULT 'pending'"],
-      ['invite_membros', 'qualified_at',   'INTEGER DEFAULT NULL'],
-      ['invite_membros', 'ever_qualified', 'INTEGER DEFAULT 0'],
-    ]
-    for (const [t, c, d] of oldCols) await addCol(t, c, d)
-  })()
-
-  ready.catch(err => console.error(`❌ Erro ao inicializar banco (${guildId}):`, err))
-
-  const conn = { db, run, get, all, ready }
-  pool.set(guildId, conn)
-  return conn
-}
-
-// ─── Helpers internos ────────────────────────────────────────────────────────
-
-async function r(guildId, sql, params = []) {
-  const c = getConnection(guildId); await c.ready; return c.run(sql, params)
-}
-async function g(guildId, sql, params = []) {
-  const c = getConnection(guildId); await c.ready; return c.get(sql, params)
-}
-async function a(guildId, sql, params = []) {
-  const c = getConnection(guildId); await c.ready; return c.all(sql, params)
-}
+const supabase = require("../db/supabase");
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 async function getConfig(guildId) {
-  return g(guildId, 'SELECT * FROM invite_config WHERE guild_id = ?', [guildId])
+  const { data, error } = await supabase
+    .from("invite_config")
+    .select("*")
+    .eq("guild_id", guildId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function setConfigField(guildId, patch) {
+  const { error } = await supabase
+    .from("invite_config")
+    .upsert({ guild_id: guildId, ...patch }, { onConflict: "guild_id" });
+  if (error) throw error;
 }
 
 async function setAtivo(guildId, ativo) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, ativo) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET ativo = excluded.ativo`,
-    [guildId, ativo ? 1 : 0]
-  )
+  await setConfigField(guildId, { ativo: !!ativo });
 }
 
 async function setCanalLogs(guildId, canalId) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, canal_logs) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET canal_logs = excluded.canal_logs`,
-    [guildId, canalId]
-  )
+  await setConfigField(guildId, { canal_logs: canalId });
 }
 
 async function setCanalRankingPinned(guildId, canalId) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, canal_ranking_pinned) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET canal_ranking_pinned = excluded.canal_ranking_pinned`,
-    [guildId, canalId]
-  )
+  await setConfigField(guildId, { canal_ranking_pinned: canalId });
 }
 
 async function setRankingMessageId(guildId, messageId) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, ranking_message_id) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET ranking_message_id = excluded.ranking_message_id`,
-    [guildId, messageId]
-  )
+  await setConfigField(guildId, { ranking_message_id: messageId });
 }
 
 async function setCanalRanking(guildId, canalId) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, canal_ranking) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET canal_ranking = excluded.canal_ranking`,
-    [guildId, canalId]
-  )
+  await setConfigField(guildId, { canal_ranking: canalId });
 }
 
 async function setMilestoneInterval(guildId, interval) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, milestone_interval) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET milestone_interval = excluded.milestone_interval`,
-    [guildId, interval]
-  )
+  await setConfigField(guildId, { milestone_interval: interval });
 }
 
 async function setMinDaysQualified(guildId, days) {
-  await r(guildId,
-    `INSERT INTO invite_config (guild_id, min_days_qualified) VALUES (?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET min_days_qualified = excluded.min_days_qualified`,
-    [guildId, days]
-  )
+  await setConfigField(guildId, { min_days_qualified: days });
 }
 
 async function setCriteria(guildId, { minMessages, minChannels, diffDays, checkSpam }) {
-  await r(guildId,
-    `INSERT INTO invite_config
-       (guild_id, criteria_min_messages, criteria_min_channels, criteria_diff_days, criteria_check_spam)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(guild_id) DO UPDATE SET
-       criteria_min_messages = excluded.criteria_min_messages,
-       criteria_min_channels = excluded.criteria_min_channels,
-       criteria_diff_days    = excluded.criteria_diff_days,
-       criteria_check_spam   = excluded.criteria_check_spam`,
-    [guildId,
-      minMessages  ?? 5,
-      minChannels  ?? 1,
-      diffDays     ? 1 : 0,
-      checkSpam    ? 1 : 0]
-  )
+  await setConfigField(guildId, {
+    criteria_min_messages: minMessages ?? 5,
+    criteria_min_channels: minChannels ?? 1,
+    criteria_diff_days: diffDays ? 1 : 0,
+    criteria_check_spam: !!checkSpam,
+  });
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 
 async function getStats(guildId, userId) {
-  return g(guildId, 'SELECT * FROM invite_stats WHERE guild_id = ? AND user_id = ?', [guildId, userId])
+  const { data, error } = await supabase
+    .from("invite_stats")
+    .select("*")
+    .eq("guild_id", guildId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function upsertStats(guildId, userId, data) {
-  await r(guildId,
-    `INSERT INTO invite_stats (guild_id, user_id, total, validos, saiu, bonus) VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT(guild_id, user_id) DO UPDATE SET
-       total   = excluded.total,
-       validos = excluded.validos,
-       saiu    = excluded.saiu,
-       bonus   = excluded.bonus`,
-    [guildId, userId, data.total || 0, data.validos || 0, data.saiu || 0, data.bonus || 0]
-  )
+  const { error } = await supabase.from("invite_stats").upsert(
+    {
+      guild_id: guildId,
+      user_id: userId,
+      total: data.total || 0,
+      validos: data.validos || 0,
+      saiu: data.saiu || 0,
+      bonus: data.bonus || 0,
+    },
+    { onConflict: "guild_id, user_id" },
+  );
+  if (error) throw error;
 }
 
 async function addValido(guildId, userId) {
-  await r(guildId,
-    `INSERT INTO invite_stats (guild_id, user_id, total, validos) VALUES (?, ?, 1, 1)
-     ON CONFLICT(guild_id, user_id) DO UPDATE SET total = total + 1, validos = validos + 1`,
-    [guildId, userId]
-  )
+  const { error } = await supabase.rpc("incrementar_invite_stat", {
+    p_guild_id: guildId,
+    p_user_id: userId,
+    p_coluna: "total",
+    p_delta: 1,
+  });
+  if (error) throw error;
+  const { error: error2 } = await supabase.rpc("incrementar_invite_stat", {
+    p_guild_id: guildId,
+    p_user_id: userId,
+    p_coluna: "validos",
+    p_delta: 1,
+  });
+  if (error2) throw error2;
 }
 
 async function decrementValido(guildId, userId) {
-  await r(guildId,
-    `UPDATE invite_stats SET
-       validos = MAX(0, validos - 1),
-       saiu    = saiu + 1
-     WHERE guild_id = ? AND user_id = ?`,
-    [guildId, userId]
-  )
+  const { error } = await supabase.rpc("incrementar_invite_stat", {
+    p_guild_id: guildId,
+    p_user_id: userId,
+    p_coluna: "validos",
+    p_delta: -1,
+  });
+  if (error) throw error;
+  const { error: error2 } = await supabase.rpc("incrementar_invite_stat", {
+    p_guild_id: guildId,
+    p_user_id: userId,
+    p_coluna: "saiu",
+    p_delta: 1,
+  });
+  if (error2) throw error2;
 }
 
 async function getLeaderboard(guildId, limit = 10) {
-  return a(guildId,
-    `SELECT *, MAX(0, validos + bonus - saiu) AS total_real
-     FROM invite_stats
-     WHERE guild_id = ?
-     ORDER BY (validos + bonus - saiu) DESC
-     LIMIT ?`,
-    [guildId, limit]
-  )
+  const { data, error } = await supabase
+    .from("invite_stats")
+    .select("*")
+    .eq("guild_id", guildId);
+  if (error) throw error;
+  const rows = (data || []).map((row) => ({
+    ...row,
+    total_real: Math.max(0, row.validos + row.bonus - row.saiu),
+  }));
+  rows.sort((a, b) => b.total_real - a.total_real);
+  return rows.slice(0, limit);
 }
 
 async function resetGuild(guildId) {
-  await r(guildId, 'DELETE FROM invite_stats          WHERE guild_id = ?', [guildId])
-  await r(guildId, 'DELETE FROM invite_membros        WHERE guild_id = ?', [guildId])
-  await r(guildId, 'DELETE FROM invite_member_activity WHERE guild_id = ?', [guildId])
-  await r(guildId, 'DELETE FROM invite_active_rewards  WHERE guild_id = ?', [guildId])
+  const tables = ["invite_stats", "invite_membros", "invite_member_activity", "invite_active_rewards"];
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().eq("guild_id", guildId);
+    if (error) throw error;
+  }
 }
 
 async function resetUser(guildId, userId) {
-  await r(guildId, 'DELETE FROM invite_stats WHERE guild_id = ? AND user_id = ?', [guildId, userId])
+  const { error } = await supabase
+    .from("invite_stats")
+    .delete()
+    .eq("guild_id", guildId)
+    .eq("user_id", userId);
+  if (error) throw error;
 }
 
 // ─── Membros ─────────────────────────────────────────────────────────────────
 
 async function getMembro(guildId, memberId) {
-  return g(guildId, 'SELECT * FROM invite_membros WHERE guild_id = ? AND member_id = ?', [guildId, memberId])
+  const { data, error } = await supabase
+    .from("invite_membros")
+    .select("*")
+    .eq("guild_id", guildId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 async function setMembro(guildId, memberId, data) {
-  await r(guildId,
-    `INSERT INTO invite_membros (guild_id, member_id, inviter_id, invite_code, entrou, saiu, status, qualified_at, ever_qualified)
-     VALUES (?, ?, ?, ?, ?, 0, 'pending', NULL, 0)
-     ON CONFLICT(guild_id, member_id) DO UPDATE SET
-       inviter_id   = excluded.inviter_id,
-       invite_code  = excluded.invite_code,
-       entrou       = excluded.entrou,
-       saiu         = 0,
-       status       = 'pending',
-       qualified_at = NULL`,
-    [guildId, memberId, data.inviterId, data.inviteCode, data.entrou]
-  )
+  const { error } = await supabase.from("invite_membros").upsert(
+    {
+      guild_id: guildId,
+      member_id: memberId,
+      inviter_id: data.inviterId,
+      invite_code: data.inviteCode,
+      entrou: data.entrou,
+      saiu: false,
+      status: "pending",
+      qualified_at: null,
+    },
+    { onConflict: "guild_id, member_id" },
+  );
+  if (error) throw error;
 }
 
 async function markMembroSaiu(guildId, memberId) {
-  await r(guildId,
-    'UPDATE invite_membros SET saiu = 1 WHERE guild_id = ? AND member_id = ?',
-    [guildId, memberId]
-  )
+  const { error } = await supabase
+    .from("invite_membros")
+    .update({ saiu: true })
+    .eq("guild_id", guildId)
+    .eq("member_id", memberId);
+  if (error) throw error;
 }
 
 async function getPendingMembers(guildId) {
-  return a(guildId,
-    `SELECT * FROM invite_membros WHERE guild_id = ? AND status = 'pending' AND saiu = 0`,
-    [guildId]
-  )
+  const { data, error } = await supabase
+    .from("invite_membros")
+    .select("*")
+    .eq("guild_id", guildId)
+    .eq("status", "pending")
+    .eq("saiu", false);
+  if (error) throw error;
+  return data || [];
 }
 
 async function getPendingByInviter(guildId, inviterId) {
-  return a(guildId,
-    `SELECT * FROM invite_membros WHERE guild_id = ? AND inviter_id = ? AND status = 'pending' AND saiu = 0`,
-    [guildId, inviterId]
-  )
+  const { data, error } = await supabase
+    .from("invite_membros")
+    .select("*")
+    .eq("guild_id", guildId)
+    .eq("inviter_id", inviterId)
+    .eq("status", "pending")
+    .eq("saiu", false);
+  if (error) throw error;
+  return data || [];
 }
 
 /**
@@ -346,17 +216,19 @@ async function getPendingByInviter(guildId, inviterId) {
  * Returns inviter_id on success, null if already qualified or no record.
  */
 async function qualifyMember(guildId, memberId) {
-  const membro = await getMembro(guildId, memberId)
-  if (!membro || membro.ever_qualified || membro.status !== 'pending') return null
+  const membro = await getMembro(guildId, memberId);
+  if (!membro || membro.ever_qualified || membro.status !== "pending") return null;
 
-  const now = Date.now()
-  await r(guildId,
-    `UPDATE invite_membros SET status = 'qualified', qualified_at = ?, ever_qualified = 1
-     WHERE guild_id = ? AND member_id = ?`,
-    [now, guildId, memberId]
-  )
-  await addValido(guildId, membro.inviter_id)
-  return membro.inviter_id
+  const now = Date.now();
+  const { error } = await supabase
+    .from("invite_membros")
+    .update({ status: "qualified", qualified_at: now, ever_qualified: true })
+    .eq("guild_id", guildId)
+    .eq("member_id", memberId);
+  if (error) throw error;
+
+  await addValido(guildId, membro.inviter_id);
+  return membro.inviter_id;
 }
 
 /**
@@ -364,112 +236,128 @@ async function qualifyMember(guildId, memberId) {
  * action: 'skip' | 'pending_left' | 'qualified_left'
  */
 async function handleMemberLeave(guildId, memberId) {
-  const membro = await getMembro(guildId, memberId)
-  if (!membro || membro.saiu) return { action: 'skip' }
+  const membro = await getMembro(guildId, memberId);
+  if (!membro || membro.saiu) return { action: "skip" };
 
-  await markMembroSaiu(guildId, memberId)
+  await markMembroSaiu(guildId, memberId);
 
-  if (membro.status === 'pending') {
-    return { action: 'pending_left', inviterId: membro.inviter_id }
+  if (membro.status === "pending") {
+    return { action: "pending_left", inviterId: membro.inviter_id };
   }
-  if (membro.status === 'qualified') {
-    return { action: 'qualified_left', inviterId: membro.inviter_id }
+  if (membro.status === "qualified") {
+    return { action: "qualified_left", inviterId: membro.inviter_id };
   }
-  return { action: 'skip' }
+  return { action: "skip" };
 }
 
 // ─── Member Activity ──────────────────────────────────────────────────────────
 
 async function getActivity(guildId, memberId) {
-  const row = await g(guildId,
-    'SELECT * FROM invite_member_activity WHERE guild_id = ? AND member_id = ?',
-    [guildId, memberId]
-  )
-  if (!row) return null
+  const { data, error } = await supabase
+    .from("invite_member_activity")
+    .select("*")
+    .eq("guild_id", guildId)
+    .eq("member_id", memberId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
   return {
-    ...row,
-    channels_used: JSON.parse(row.channels_used || '[]'),
-    days_active:   JSON.parse(row.days_active   || '[]'),
-  }
+    ...data,
+    channels_used: data.channels_used || [],
+    days_active: data.days_active || [],
+  };
 }
 
 async function trackMessage(guildId, memberId, channelId) {
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-  const existing = await getActivity(guildId, memberId)
-  const channels = existing?.channels_used || []
-  const days     = existing?.days_active   || []
+  const existing = await getActivity(guildId, memberId);
+  const channels = existing?.channels_used || [];
+  const days = existing?.days_active || [];
 
-  if (!channels.includes(channelId)) channels.push(channelId)
-  if (!days.includes(today))         days.push(today)
+  if (!channels.includes(channelId)) channels.push(channelId);
+  if (!days.includes(today)) days.push(today);
 
-  await r(guildId,
-    `INSERT INTO invite_member_activity (guild_id, member_id, message_count, channels_used, days_active)
-     VALUES (?, ?, 1, ?, ?)
-     ON CONFLICT(guild_id, member_id) DO UPDATE SET
-       message_count = message_count + 1,
-       channels_used = excluded.channels_used,
-       days_active   = excluded.days_active`,
-    [guildId, memberId, JSON.stringify(channels), JSON.stringify(days)]
-  )
+  const { error } = await supabase.from("invite_member_activity").upsert(
+    {
+      guild_id: guildId,
+      member_id: memberId,
+      message_count: (existing?.message_count || 0) + 1,
+      channels_used: channels,
+      days_active: days,
+    },
+    { onConflict: "guild_id, member_id" },
+  );
+  if (error) throw error;
 }
 
-async function flagSpam(guildId, memberId, flag = 1) {
-  await r(guildId,
-    `INSERT INTO invite_member_activity (guild_id, member_id, flagged_spam)
-     VALUES (?, ?, ?)
-     ON CONFLICT(guild_id, member_id) DO UPDATE SET flagged_spam = excluded.flagged_spam`,
-    [guildId, memberId, flag]
-  )
+async function flagSpam(guildId, memberId, flag = true) {
+  const { error } = await supabase
+    .from("invite_member_activity")
+    .upsert({ guild_id: guildId, member_id: memberId, flagged_spam: !!flag }, { onConflict: "guild_id, member_id" });
+  if (error) throw error;
 }
 
 // ─── Reward Roles ─────────────────────────────────────────────────────────────
 
 async function getRewardRoles(guildId) {
-  return a(guildId,
-    'SELECT * FROM invite_reward_roles WHERE guild_id = ? ORDER BY min_qualified ASC',
-    [guildId]
-  )
+  const { data, error } = await supabase
+    .from("invite_reward_roles")
+    .select("*")
+    .eq("guild_id", guildId)
+    .order("min_qualified", { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
 async function addRewardRole(guildId, roleId, minQualified, permanent, durationDays) {
-  await r(guildId,
-    `INSERT INTO invite_reward_roles (guild_id, role_id, min_qualified, permanent, duration_days)
-     VALUES (?, ?, ?, ?, ?)`,
-    [guildId, roleId, minQualified, permanent ? 1 : 0, durationDays || 7]
-  )
+  const { error } = await supabase.from("invite_reward_roles").insert({
+    guild_id: guildId,
+    role_id: roleId,
+    min_qualified: minQualified,
+    permanent: !!permanent,
+    duration_days: durationDays || 7,
+  });
+  if (error) throw error;
 }
 
 async function removeRewardRole(guildId, id) {
-  await r(guildId,
-    'DELETE FROM invite_reward_roles WHERE guild_id = ? AND id = ?',
-    [guildId, id]
-  )
+  const { error } = await supabase
+    .from("invite_reward_roles")
+    .delete()
+    .eq("guild_id", guildId)
+    .eq("id", id);
+  if (error) throw error;
 }
 
 // ─── Active Temporary Rewards ─────────────────────────────────────────────────
 
 async function addActiveReward(guildId, userId, roleId, expiresAt) {
-  await r(guildId,
-    `INSERT INTO invite_active_rewards (guild_id, user_id, role_id, expires_at)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(guild_id, user_id, role_id) DO UPDATE SET expires_at = excluded.expires_at`,
-    [guildId, userId, roleId, expiresAt]
-  )
+  const { error } = await supabase.from("invite_active_rewards").upsert(
+    { guild_id: guildId, user_id: userId, role_id: roleId, expires_at: expiresAt },
+    { onConflict: "guild_id, user_id, role_id" },
+  );
+  if (error) throw error;
 }
 
 async function getExpiredRewards(guildId) {
-  return a(guildId,
-    'SELECT * FROM invite_active_rewards WHERE guild_id = ? AND expires_at <= ?',
-    [guildId, Date.now()]
-  )
+  const { data, error } = await supabase
+    .from("invite_active_rewards")
+    .select("*")
+    .eq("guild_id", guildId)
+    .lte("expires_at", Date.now());
+  if (error) throw error;
+  return data || [];
 }
 
 async function removeActiveReward(guildId, userId, roleId) {
-  await r(guildId,
-    'DELETE FROM invite_active_rewards WHERE guild_id = ? AND user_id = ? AND role_id = ?',
-    [guildId, userId, roleId]
-  )
+  const { error } = await supabase
+    .from("invite_active_rewards")
+    .delete()
+    .eq("guild_id", guildId)
+    .eq("user_id", userId)
+    .eq("role_id", roleId);
+  if (error) throw error;
 }
 
 module.exports = {
@@ -486,4 +374,4 @@ module.exports = {
   getRewardRoles, addRewardRole, removeRewardRole,
   // Active temporary rewards
   addActiveReward, getExpiredRewards, removeActiveReward,
-}
+};

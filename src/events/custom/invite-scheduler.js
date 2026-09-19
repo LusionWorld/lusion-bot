@@ -1,7 +1,6 @@
 const { Events, ContainerBuilder, SeparatorSpacingSize, MessageFlags } = require('discord.js')
 const db = require('../../utils/invite/database')
-const fs = require('fs')
-const path = require('path')
+const supabase = require('../../utils/db/supabase')
 
 const { getEmojis } = require('../../utils/emojis/emojiHelper')
 const emojis = getEmojis()
@@ -208,14 +207,16 @@ async function checkGuild(client, guildId) {
 // ─── Scheduler loop ───────────────────────────────────────────────────────────
 
 async function runScheduler(client) {
-  const conviteDir = path.join(__dirname, '../../../banco/convite')
-  if (!fs.existsSync(conviteDir)) return
+  const { data: guildIds, error } = await supabase
+    .from('invite_config')
+    .select('guild_id')
+    .eq('ativo', true)
+  if (error) {
+    console.error('❌ Erro ao listar guilds do invite tracker:', error.message)
+    return
+  }
 
-  const guildDirs = fs.readdirSync(conviteDir, { withFileTypes: true })
-    .filter(d => d.isDirectory())
-    .map(d => d.name)
-
-  for (const guildId of guildDirs) {
+  for (const { guild_id: guildId } of guildIds || []) {
     await checkGuild(client, guildId).catch(err =>
       console.error(`❌ Erro no scheduler (guild ${guildId}):`, err.message)
     )

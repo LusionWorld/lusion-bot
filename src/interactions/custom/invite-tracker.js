@@ -32,7 +32,7 @@ function getEmoji(raw) {
 
 async function buildMainPanel(guild) {
   const config = await db.getConfig(guild.id)
-  const ativo          = config?.ativo === 1
+  const ativo          = !!config?.ativo
   const canalLogs      = config?.canal_logs
   const leaderboard    = await db.getLeaderboard(guild.id)
   const totalValidos   = leaderboard.reduce((a, r) => a + (r.validos || 0), 0)
@@ -107,7 +107,7 @@ async function buildMainPanel(guild) {
 
 async function buildConfigPanel(guild, extraMsg = null) {
   const config = await db.getConfig(guild.id)
-  const ativo           = config?.ativo === 1
+  const ativo           = !!config?.ativo
   const canalLogs       = config?.canal_logs
   const canalRanking    = config?.canal_ranking
   const milestone       = config?.milestone_interval ?? 10
@@ -197,7 +197,7 @@ async function buildCriteriaPanel(guild, extraMsg = null) {
   const minMessages = config?.criteria_min_messages ?? 5
   const minChannels = config?.criteria_min_channels ?? 1
   const diffDays    = (config?.criteria_diff_days ?? 1) === 1
-  const checkSpam   = (config?.criteria_check_spam ?? 1) === 1
+  const checkSpam   = config?.criteria_check_spam ?? true
 
   const info = [
     `${emojis.message} **Min messages:** ${minMessages}`,
@@ -373,7 +373,7 @@ module.exports = {
     // ── Toggle ────────────────────────────────────────────────────────────────
     if (id === 'invite_toggle') {
       const config = await db.getConfig(guild.id)
-      await db.setAtivo(guild.id, !(config?.ativo === 1))
+      await db.setAtivo(guild.id, !(!!config?.ativo))
       return interaction.update({
         components: [await buildConfigPanel(guild)],
         flags: MessageFlags.IsComponentsV2,
@@ -517,7 +517,7 @@ module.exports = {
         minMessages: val,
         minChannels: config?.criteria_min_channels ?? 1,
         diffDays:    (config?.criteria_diff_days ?? 1) === 1,
-        checkSpam:   (config?.criteria_check_spam ?? 1) === 1,
+        checkSpam:   config?.criteria_check_spam ?? true,
       })
       return interaction.update({
         components: [await buildCriteriaPanel(guild, `${emojis.success} Minimum messages set to **${val}**!`)],
@@ -550,7 +550,7 @@ module.exports = {
         minMessages: config?.criteria_min_messages ?? 5,
         minChannels: val,
         diffDays:    (config?.criteria_diff_days ?? 1) === 1,
-        checkSpam:   (config?.criteria_check_spam ?? 1) === 1,
+        checkSpam:   config?.criteria_check_spam ?? true,
       })
       return interaction.update({
         components: [await buildCriteriaPanel(guild, `${emojis.success} Minimum channels set to **${val}**!`)],
@@ -565,7 +565,7 @@ module.exports = {
         minMessages: config?.criteria_min_messages ?? 5,
         minChannels: config?.criteria_min_channels ?? 1,
         diffDays:    !current,
-        checkSpam:   (config?.criteria_check_spam ?? 1) === 1,
+        checkSpam:   config?.criteria_check_spam ?? true,
       })
       return interaction.update({
         components: [await buildCriteriaPanel(guild, `${emojis.success} Activity on different days **${!current ? 'enabled' : 'disabled'}**!`)],
@@ -575,7 +575,7 @@ module.exports = {
 
     if (id === 'invite_toggle_spam_check') {
       const config = await db.getConfig(guild.id)
-      const current = (config?.criteria_check_spam ?? 1) === 1
+      const current = config?.criteria_check_spam ?? true
       await db.setCriteria(guild.id, {
         minMessages: config?.criteria_min_messages ?? 5,
         minChannels: config?.criteria_min_channels ?? 1,
