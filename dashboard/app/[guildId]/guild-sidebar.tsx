@@ -22,6 +22,9 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
       { href: "/tickets", label: "Tickets", icon: TicketIcon },
       { href: "/moderacao", label: "Moderação", icon: ShieldIcon },
       { href: "/convites", label: "Convites", icon: InviteIcon },
+      { href: "/enquetes", label: "Enquetes", icon: PollIcon },
+      { href: "/faq", label: "FAQ", icon: FaqIcon },
+      { href: "/outros", label: "Outros módulos", icon: DotsIcon },
     ],
   },
 ];
@@ -168,6 +171,44 @@ function InviteIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeWidth="1.4"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+function PollIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" {...props}>
+      <path
+        d="M5 11v4M10 7v8M15 3v12"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function FaqIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" {...props}>
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M7.8 8a2.2 2.2 0 1 1 3.1 2c-.7.4-1 .8-1 1.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="10" cy="13.7" r="0.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DotsIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" {...props}>
+      <circle cx="5" cy="10" r="1.3" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.3" fill="currentColor" />
     </svg>
   );
 }

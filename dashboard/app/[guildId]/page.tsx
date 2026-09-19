@@ -62,6 +62,21 @@ export default async function GuildOverviewPage({
           title="Convites"
           description="Ranking de convites e cargos de recompensa."
         />
+        <ModuleCard
+          href={`/${guildId}/enquetes`}
+          title="Enquetes"
+          description="Enquetes ativas e histórico de votação."
+        />
+        <ModuleCard
+          href={`/${guildId}/faq`}
+          title="FAQ"
+          description="Categorias, perguntas e acessos registrados."
+        />
+        <ModuleCard
+          href={`/${guildId}/outros`}
+          title="Outros módulos"
+          description="PIX, Patreon, Tradutor, Onboarding, Supporter e Ask a Question."
+        />
       </section>
     </div>
   );
