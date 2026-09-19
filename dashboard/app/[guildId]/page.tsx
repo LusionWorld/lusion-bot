@@ -53,11 +53,15 @@ export default async function GuildOverviewPage({
           description="Estatísticas, tickets recentes e atividade de suporte."
         />
         <ModuleCard
+          href={`/${guildId}/moderacao`}
           title="Moderação"
           description="Anti-nuke, anti-flood e logs de moderação."
-          soon
         />
-        <ModuleCard title="Convites" description="Ranking de convites e cargos de recompensa." soon />
+        <ModuleCard
+          href={`/${guildId}/convites`}
+          title="Convites"
+          description="Ranking de convites e cargos de recompensa."
+        />
       </section>
     </div>
   );

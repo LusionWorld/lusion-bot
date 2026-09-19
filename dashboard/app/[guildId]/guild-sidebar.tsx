@@ -4,7 +4,14 @@ import { usePathname } from "next/navigation";
 import type { DiscordGuild } from "@/lib/discord";
 import { guildIconUrl } from "@/lib/discord";
 
-const NAV_SECTIONS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: (props: React.SVGProps<SVGSVGElement>) => JSX.Element;
+  soon?: boolean;
+};
+
+const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "Geral",
     items: [{ href: "", label: "Visão geral", icon: HomeIcon }],
@@ -13,8 +20,8 @@ const NAV_SECTIONS = [
     label: "Módulos",
     items: [
       { href: "/tickets", label: "Tickets", icon: TicketIcon },
-      { href: "/moderacao", label: "Moderação", icon: ShieldIcon, soon: true },
-      { href: "/convites", label: "Convites", icon: InviteIcon, soon: true },
+      { href: "/moderacao", label: "Moderação", icon: ShieldIcon },
+      { href: "/convites", label: "Convites", icon: InviteIcon },
     ],
   },
 ];
